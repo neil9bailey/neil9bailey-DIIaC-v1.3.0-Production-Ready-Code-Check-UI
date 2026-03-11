@@ -1,0 +1,102 @@
+name: diiac_v120
+
+services:
+  governance-runtime:
+    image: python:3.11-slim
+    working_dir: /app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt && python app.py"
+    environment:
+      APP_ENV: development
+      STRICT_DETERMINISTIC_MODE: "true"
+      ADMIN_AUTH_ENABLED: "false"
+      SIGNING_ENABLED: "true"
+      SIGNING_KEY_ID: diiac-local-dev
+      GOVERNANCE_BUILD_HASH: local-compose
+      # ── Azure Key Vault signing — set SIGNING_PROVIDER=azure-keyvault to enable ──
+      # Uncomment azure-keyvault-keys + azure-identity in requirements.txt first.
+      # See DIIAC_KEY_VAULT_PLAN.md for full customer deployment guide.
+      SIGNING_PROVIDER: ${SIGNING_PROVIDER:-local}
+      KEYVAULT_URL: ${KEYVAULT_URL:-}
+      KEYVAULT_KEY_NAME: ${KEYVAULT_KEY_NAME:-diiac-signing-v1}
+      KEYVAULT_KEY_VERSION: ${KEYVAULT_KEY_VERSION:-}
+      # Customer-managed vault: set KEYVAULT_TENANT_ID to the customer's Azure AD tenant.
+      # Mirrors ENTRA_EXPECTED_TENANT_ID — DIIaC holds sign-only, customer owns the key.
+      KEYVAULT_TENANT_ID: ${KEYVAULT_TENANT_ID:-}
+      # Azure credential — Managed Identity is used automatically in Azure.
+      # For local dev / cross-tenant SP: set AZURE_CLIENT_ID + AZURE_CLIENT_SECRET.
+      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID:-}
+      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET:-}
+      AZURE_TENANT_ID: ${AZURE_TENANT_ID:-}
+    ports:
+      - "${RUNTIME_HOST_PORT:-8000}:8000"
+    volumes:
+      - ./:/app
+      - diiac-artifacts:/app/artifacts
+      - diiac-exports:/app/exports
+      - diiac-audit-exports:/app/audit_exports
+      - diiac-human-input:/app/human_input
+    restart: unless-stopped
+
+  backend-ui-bridge:
+    build:
+      context: ./backend-ui-bridge
+      dockerfile: Dockerfile
+      args:
+        GOVERNANCE_BUILD_HASH: local-compose
+    depends_on:
+      - governance-runtime
+    environment:
+      APP_ENV: development
+      PYTHON_BASE_URL: http://governance-runtime:8000
+      STRICT_DETERMINISTIC_MODE: "true"
+      SIGNING_ENABLED: "true"
+      SIGNING_KEY_ID: diiac-local-dev
+      LLM_INGESTION_ENABLED: ${LLM_INGESTION_ENABLED:-false}
+      LLM_STUB_ENABLED: ${LLM_STUB_ENABLED:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      COPILOT_MODEL: ${COPILOT_MODEL:-gpt-4o}
+      # Entra ID authentication (leave unset for legacy header auth)
+      AUTH_MODE: ${AUTH_MODE:-}
+      ENTRA_ROLE_CLAIM: ${ENTRA_ROLE_CLAIM:-roles}
+      ENTRA_EXPECTED_TENANT_ID: ${ENTRA_EXPECTED_TENANT_ID:-}
+      ENTRA_EXPECTED_AUDIENCE: ${ENTRA_EXPECTED_AUDIENCE:-}
+      ENTRA_EXPECTED_ISSUERS: ${ENTRA_EXPECTED_ISSUERS:-}
+      ENTRA_GROUP_TO_ROLE_JSON: ${ENTRA_GROUP_TO_ROLE_JSON:-}
+      ENTRA_PRINCIPAL_TO_ROLE_JSON: ${ENTRA_PRINCIPAL_TO_ROLE_JSON:-}
+      ENTRA_OIDC_DISCOVERY_URL: ${ENTRA_OIDC_DISCOVERY_URL:-}
+      ENTRA_JWKS_URI: ${ENTRA_JWKS_URI:-}
+      ENTRA_JWT_HS256_SECRET: ${ENTRA_JWT_HS256_SECRET:-}
+      # Ledger anchoring flags
+      LEDGER_APPEND_ENABLED: ${LEDGER_APPEND_ENABLED:-true}
+      LEDGER_FREEZE: ${LEDGER_FREEZE:-false}
+      LEDGER_PATH: ${LEDGER_PATH:-}
+      LEDGER_TAIL_MAX: ${LEDGER_TAIL_MAX:-200}
+    ports:
+      - "${BRIDGE_HOST_PORT:-3001}:3001"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend-ui-bridge
+    environment:
+      VITE_API_BASE: http://localhost:3001
+      # Entra ID OIDC — .env is excluded by .dockerignore so vars are injected here.
+      # Defaults match Frontend/.env (public app-registration identifiers, not secrets).
+      VITE_ENTRA_CLIENT_ID: ${VITE_ENTRA_CLIENT_ID:-b726558d-f1c6-48f7-8a3d-72d5db818d0f}
+      VITE_ENTRA_TENANT_ID: ${VITE_ENTRA_TENANT_ID:-1384b1c5-2bae-45a1-a4b4-e94e3315eb41}
+      VITE_ENTRA_REDIRECT_URI: ${VITE_ENTRA_REDIRECT_URI:-http://localhost:5173/auth/callback}
+      VITE_ENTRA_GROUP_MAP: ${VITE_ENTRA_GROUP_MAP:-{"81786818-de16-4115-b061-92fce74b00bd":{"role":"admin"},"9c7dd0d4-5b44-4811-b167-e52df21092d8":{"role":"standard"}}}
+    ports:
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
+    restart: unless-stopped
+
+volumes:
+  diiac-artifacts:
+  diiac-exports:
+  diiac-audit-exports:
+  diiac-human-input:

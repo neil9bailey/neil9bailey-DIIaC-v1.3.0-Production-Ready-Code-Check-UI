@@ -1,0 +1,53 @@
+name: Replay Gate Enforcement
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  replay-gate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend-ui-bridge
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install bridge dependencies
+        run: npm ci
+
+      - name: Start bridge (isolated workspace)
+        run: |
+          export WORKSPACE=/tmp/diiac-workspace
+          mkdir -p /tmp/diiac-workspace
+          node server.js &
+          echo $! > /tmp/bridge.pid
+          sleep 3
+
+      - name: Run replay batch gate (if execution list provided)
+        # tools/ lives at repo root so we step out of the working-directory default
+        working-directory: .
+        run: |
+          if [ -f tools/replay-gate.executions.txt ]; then
+            node tools/verify-replay-batch.js \
+              --base http://localhost:3001 \
+              --file tools/replay-gate.executions.txt
+          else
+            echo "No tools/replay-gate.executions.txt found — skipping replay gate (no executions to verify)."
+          fi
+
+      - name: Upload replay certificates (if any)
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-attestations
+          path: /tmp/diiac-workspace/artefacts/decision-packs/**/attestations/*.json
+          if-no-files-found: ignore

@@ -1,0 +1,9 @@
+Flask==3.1.0
+cryptography==44.0.1
+
+# ── Azure Key Vault signing (SIGNING_PROVIDER=azure-keyvault) ─────────────────
+# Uncomment when deploying with HSM-backed key custody on Azure.
+# See DIIAC_KEY_VAULT_PLAN.md for full setup and customer deployment instructions.
+#
+# azure-keyvault-keys==4.9.0
+# azure-identity==1.17.0

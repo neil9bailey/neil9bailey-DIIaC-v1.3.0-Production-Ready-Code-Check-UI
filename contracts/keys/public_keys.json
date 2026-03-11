@@ -1,0 +1,14 @@
+{
+  "keys": [
+    {
+      "key_id": "test-es256-key",
+      "algorithm": "ES256",
+      "public_key_b64": "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEKMXr/ZesqSh7CDFC8vJtHbtZeRXIPys7sRhpNzq5WA0C6sIunl1Qsj80RtNpiHguE4DzckmYB8y1h4P97Eqag=="
+    },
+    {
+      "key_id": "ephemeral-local-ed25519",
+      "algorithm": "Ed25519",
+      "public_key_b64": "tvsQeXHKKxTcj9+QpOSdoZ+AbnJF4i9qXsoyWat1fzc="
+    }
+  ]
+}
