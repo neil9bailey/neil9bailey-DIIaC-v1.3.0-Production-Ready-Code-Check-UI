@@ -1,0 +1,98 @@
+body {
+  margin: 0;
+  padding: 8px;
+  background: #fff;
+  color: #111;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.app-container {
+  max-width: none;
+}
+
+.enterprise-header {
+  margin-bottom: 18px;
+}
+
+.brand-title {
+  margin: 0 0 8px 0;
+  font-size: 52px;
+  font-weight: 700;
+}
+
+.brand-product {
+  display: block;
+  font-size: 36px;
+  line-height: 1.2;
+}
+
+.brand-right {
+  margin-top: 8px;
+}
+
+.customer-label {
+  font-size: 36px;
+}
+
+.role-toggle {
+  margin-top: 2px;
+  font-size: 34px;
+}
+
+.role-toggle select,
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+  font-size: 28px;
+}
+
+.main-content {
+  margin-top: 8px;
+}
+
+.panel {
+  margin: 16px 0;
+}
+
+.panel h2 {
+  margin: 0 0 12px 0;
+  font-size: 48px;
+  font-weight: 700;
+}
+
+.panel p,
+.panel div,
+label,
+.status,
+.muted-text {
+  font-size: 32px;
+}
+
+.textarea-console,
+textarea {
+  width: 100%;
+  min-height: 190px;
+  box-sizing: border-box;
+}
+
+hr {
+  margin: 10px 0;
+}
+
+.tab-row,
+.button-row,
+.metrics-grid,
+.id-row {
+  display: block;
+}
+
+.metric-card {
+  margin: 12px 0;
+}
+
+.enterprise-footer {
+  margin-top: 16px;
+  font-size: 30px;
+}
