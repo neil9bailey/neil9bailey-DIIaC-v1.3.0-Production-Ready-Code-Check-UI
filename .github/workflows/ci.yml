@@ -1,0 +1,161 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "claude/**"
+      - "release/**"
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Python runtime: lint + test ───────────────────────────────────────────
+  runtime-test:
+    name: Runtime — Lint & Test (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install runtime dependencies
+        run: pip install -r requirements.txt
+
+      - name: Install dev dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Lint with Ruff
+        run: ruff check app.py tests/
+
+      - name: Syntax check
+        run: python3 -m py_compile app.py
+
+      - name: Run pytest with coverage
+        env:
+          APP_ENV: development
+          ADMIN_AUTH_ENABLED: "false"
+        run: pytest -q --cov=app --cov-report=xml --cov-report=term-missing tests/
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: matrix.python-version == '3.11'
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 7
+
+  # ── Node.js bridge: syntax check + audit ─────────────────────────────────
+  bridge-check:
+    name: Bridge — Syntax & Audit (Node.js)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: backend-ui-bridge/package-lock.json
+
+      - name: Install bridge dependencies
+        working-directory: backend-ui-bridge
+        run: npm ci
+
+      - name: Syntax check server.js
+        working-directory: backend-ui-bridge
+        run: node --check server.js
+
+      - name: npm audit (moderate+)
+        working-directory: backend-ui-bridge
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  # ── Frontend: build check ─────────────────────────────────────────────────
+  frontend-build:
+    name: Frontend — Build Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: Frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: Frontend
+        run: npm ci
+
+      - name: TypeScript build check
+        working-directory: Frontend
+        env:
+          VITE_API_BASE: http://localhost:3001
+        run: npm run build
+
+      - name: npm audit (moderate+)
+        working-directory: Frontend
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+  # ── E2E smoke test (runtime only, no LLM) ────────────────────────────────
+  e2e-smoke:
+    name: E2E — Runtime Smoke Test
+    runs-on: ubuntu-latest
+    needs: [runtime-test]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install runtime dependencies
+        run: pip install -r requirements.txt
+
+      - name: Start governance runtime
+        env:
+          APP_ENV: development
+          ADMIN_AUTH_ENABLED: "false"
+          FLASK_RUN_PORT: "8000"
+        run: |
+          python3 -c "from app import create_app; app = create_app(); app.run(host='127.0.0.1', port=8000)" &
+          sleep 3
+          curl -sf http://127.0.0.1:8000/health || (echo "Runtime failed to start" && exit 1)
+
+      - name: Run E2E smoke test
+        run: python3 scripts_e2e_runtime_smoke.py
+
+      - name: Run production readiness check
+        run: python3 scripts_production_readiness_check.py
+
+  # ── All checks gate ──────────────────────────────────────────────────────
+  ci-pass:
+    name: CI — All Checks Passed
+    runs-on: ubuntu-latest
+    needs: [runtime-test, bridge-check, frontend-build]
+    steps:
+      - run: echo "All CI checks passed."

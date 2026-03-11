@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-ui-bridge
+  namespace: diiac
+  labels:
+    app.kubernetes.io/name: diiac
+    app.kubernetes.io/component: backend-ui-bridge
+    app.kubernetes.io/version: "1.2.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend-ui-bridge
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: backend-ui-bridge
+        app.kubernetes.io/name: diiac
+        app.kubernetes.io/component: backend-ui-bridge
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+
+      containers:
+        - name: backend-ui-bridge
+          image: ghcr.io/neil9bailey/diiac-bridge:v1.2.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3001
+              protocol: TCP
+
+          env:
+            - name: PYTHON_BASE_URL
+              value: "http://governance-runtime:8000"
+            - name: LLM_INGESTION_ENABLED
+              value: "true"
+            - name: LLM_STUB_ENABLED
+              value: "false"
+            - name: OPENAI_MODEL
+              value: "gpt-4o-mini"
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: diiac-secrets
+                  key: OPENAI_API_KEY
+            # Entra ID — uncomment and populate for production SSO:
+            # - name: AUTH_MODE
+            #   value: entra_jwt_rs256
+            # - name: ENTRA_TENANT_ID
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: diiac-secrets
+            #       key: ENTRA_TENANT_ID
+            # - name: ENTRA_CLIENT_ID
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: diiac-secrets
+            #       key: ENTRA_CLIENT_ID
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 2
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-ui-bridge
+  namespace: diiac
+  labels:
+    app.kubernetes.io/name: diiac
+    app.kubernetes.io/component: backend-ui-bridge
+spec:
+  selector:
+    app: backend-ui-bridge
+  ports:
+    - name: http
+      port: 3001
+      targetPort: 3001
+      protocol: TCP
+  type: ClusterIP

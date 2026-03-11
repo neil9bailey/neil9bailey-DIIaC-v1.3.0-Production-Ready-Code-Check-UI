@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: diiac
+  labels:
+    app.kubernetes.io/name: diiac
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/version: "1.2.0"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: frontend
+        app.kubernetes.io/name: diiac
+        app.kubernetes.io/component: frontend
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1002
+        runAsGroup: 1002
+
+      containers:
+        - name: frontend
+          image: ghcr.io/neil9bailey/diiac-frontend:v1.2.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5173
+              protocol: TCP
+
+          env:
+            - name: VITE_API_BASE
+              value: "https://diiac.your-domain.com/api"
+              # Override with your actual domain or Ingress path.
+            # Entra ID:
+            # - name: VITE_ENTRA_CLIENT_ID
+            #   value: "REPLACE"
+            # - name: VITE_ENTRA_TENANT_ID
+            #   value: "REPLACE"
+            # - name: VITE_ENTRA_REDIRECT_URI
+            #   value: "https://diiac.your-domain.com"
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 5173
+            initialDelaySeconds: 20
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 5173
+            initialDelaySeconds: 15
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 2
+
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "256Mi"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+
+      restartPolicy: Always
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: diiac
+  labels:
+    app.kubernetes.io/name: diiac
+    app.kubernetes.io/component: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 5173
+      targetPort: 5173
+      protocol: TCP
+  type: ClusterIP

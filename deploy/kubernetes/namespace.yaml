@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: diiac
+  labels:
+    app.kubernetes.io/name: diiac
+    app.kubernetes.io/version: "1.2.0"

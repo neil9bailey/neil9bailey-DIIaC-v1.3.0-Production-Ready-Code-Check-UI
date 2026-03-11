@@ -1,0 +1,75 @@
+name: diiac_v120
+
+services:
+  governance-runtime:
+    image: python:3.11-slim
+    working_dir: /app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt && python app.py"
+    environment:
+      APP_ENV: development
+      STRICT_DETERMINISTIC_MODE: "true"
+      ADMIN_AUTH_ENABLED: "false"
+      SIGNING_ENABLED: "true"
+      SIGNING_KEY_ID: diiac-local-dev
+      GOVERNANCE_BUILD_HASH: local-compose
+    ports:
+      - "${RUNTIME_HOST_PORT:-8000}:8000"
+    volumes:
+      - ./:/app
+      - diiac-artifacts:/app/artifacts
+      - diiac-exports:/app/exports
+      - diiac-audit-exports:/app/audit_exports
+      - diiac-human-input:/app/human_input
+    restart: unless-stopped
+
+  backend-ui-bridge:
+    build:
+      context: ./backend-ui-bridge
+      dockerfile: Dockerfile
+      args:
+        GOVERNANCE_BUILD_HASH: local-compose
+    depends_on:
+      - governance-runtime
+    environment:
+      APP_ENV: development
+      PYTHON_BASE_URL: http://governance-runtime:8000
+      STRICT_DETERMINISTIC_MODE: "true"
+      SIGNING_ENABLED: "true"
+      SIGNING_KEY_ID: diiac-local-dev
+      LLM_INGESTION_ENABLED: ${LLM_INGESTION_ENABLED:-false}
+      LLM_STUB_ENABLED: ${LLM_STUB_ENABLED:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # Entra ID authentication (leave unset for legacy header auth)
+      AUTH_MODE: ${AUTH_MODE:-}
+      ENTRA_ROLE_CLAIM: ${ENTRA_ROLE_CLAIM:-roles}
+      ENTRA_EXPECTED_TENANT_ID: ${ENTRA_EXPECTED_TENANT_ID:-}
+      ENTRA_EXPECTED_AUDIENCE: ${ENTRA_EXPECTED_AUDIENCE:-}
+      ENTRA_EXPECTED_ISSUERS: ${ENTRA_EXPECTED_ISSUERS:-}
+      ENTRA_GROUP_TO_ROLE_JSON: ${ENTRA_GROUP_TO_ROLE_JSON:-}
+      ENTRA_PRINCIPAL_TO_ROLE_JSON: ${ENTRA_PRINCIPAL_TO_ROLE_JSON:-}
+      ENTRA_OIDC_DISCOVERY_URL: ${ENTRA_OIDC_DISCOVERY_URL:-}
+      ENTRA_JWKS_URI: ${ENTRA_JWKS_URI:-}
+      ENTRA_JWT_HS256_SECRET: ${ENTRA_JWT_HS256_SECRET:-}
+    ports:
+      - "${BRIDGE_HOST_PORT:-3001}:3001"
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    depends_on:
+      - backend-ui-bridge
+    environment:
+      VITE_API_BASE: http://localhost:3001
+    ports:
+      - "${FRONTEND_HOST_PORT:-5173}:5173"
+    restart: unless-stopped
+
+volumes:
+  diiac-artifacts:
+  diiac-exports:
+  diiac-audit-exports:
+  diiac-human-input:
