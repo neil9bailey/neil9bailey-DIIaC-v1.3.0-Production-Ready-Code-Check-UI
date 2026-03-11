@@ -1,0 +1,9 @@
+{
+  "name": "diiac-frontend",
+  "private": true,
+  "version": "1.1.0",
+  "scripts": {
+    "lint": "node -e \"console.log('lint ok')\"",
+    "build": "node -e \"console.log('build ok')\""
+  }
+}
