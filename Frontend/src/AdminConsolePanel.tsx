@@ -1,0 +1,258 @@
+import { useMemo, useState } from "react";
+import {
+  downloadAuditExport,
+  fetchAdminDbStatus,
+  fetchAdminHealth,
+  fetchAdminLogs,
+  fetchAdminMetrics,
+  fetchContainerStatus,
+  fetchExecutionLogs,
+  fetchServiceStatus,
+  generateAuditExport,
+  runDbCompact,
+  verifyExecution,
+  type AdminDbStatusResponse,
+  type AdminHealthResponse,
+  type AdminMetricsResponse,
+  type ContainerStatusResponse,
+  type JsonObject,
+  type ServiceStatusResponse,
+  type VerifyExecutionResponse,
+} from "./api";
+
+interface Props {
+  role: string;
+  executionId: string | null;
+}
+
+type AdminTab = "overview" | "exports" | "logs" | "db";
+
+function pretty(data: unknown): string {
+  return JSON.stringify(data, null, 2);
+}
+
+function countRows(data: JsonObject | JsonObject[] | null): number {
+  if (!data) return 0;
+  if (Array.isArray(data)) return data.length;
+  if (Array.isArray(data.logs)) return data.logs.length;
+  return 1;
+}
+
+export default function AdminConsolePanel({ role, executionId }: Props) {
+  const [tab, setTab] = useState<AdminTab>("overview");
+  const [showRaw, setShowRaw] = useState(false);
+  const [targetExecutionId, setTargetExecutionId] = useState(executionId || "");
+  const [health, setHealth] = useState<AdminHealthResponse | null>(null);
+  const [metrics, setMetrics] = useState<AdminMetricsResponse | null>(null);
+  const [serviceStatus, setServiceStatus] = useState<ServiceStatusResponse | null>(null);
+  const [containerStatus, setContainerStatus] = useState<ContainerStatusResponse | null>(null);
+  const [verification, setVerification] = useState<VerifyExecutionResponse | null>(null);
+  const [backendLogs, setBackendLogs] = useState<JsonObject | JsonObject[] | null>(null);
+  const [ledgerLogs, setLedgerLogs] = useState<JsonObject | JsonObject[] | null>(null);
+  const [executionLogs, setExecutionLogs] = useState<JsonObject | null>(null);
+  const [dbStatus, setDbStatus] = useState<AdminDbStatusResponse | null>(null);
+  const [dbMaintenance, setDbMaintenance] = useState<JsonObject | null>(null);
+  const [auditPayload, setAuditPayload] = useState<JsonObject | null>(null);
+  const [status, setStatus] = useState("");
+
+  const effectiveExecutionId = useMemo(() => targetExecutionId.trim() || executionId || "", [targetExecutionId, executionId]);
+
+  if (role !== "admin") return null;
+
+  async function loadOverview() {
+    try {
+      setStatus("Refreshing service status, metrics, containers, and DB integrity...");
+      const [h, m, s, c, db] = await Promise.all([
+        fetchAdminHealth(),
+        fetchAdminMetrics(),
+        fetchServiceStatus(),
+        fetchContainerStatus(),
+        fetchAdminDbStatus(),
+      ]);
+      setHealth(h);
+      setMetrics(m);
+      setServiceStatus(s);
+      setContainerStatus(c);
+      setDbStatus(db);
+      setStatus("Overview refreshed.");
+    } catch (err: unknown) {
+      console.error(err);
+      setStatus("Failed to refresh overview.");
+    }
+  }
+
+  async function loadLogs(source: "backend" | "ledger") {
+    try {
+      setStatus(`Loading ${source} logs...`);
+      const logs = await fetchAdminLogs(source);
+      if (source === "backend") setBackendLogs(logs);
+      if (source === "ledger") setLedgerLogs(logs);
+      setStatus(`${source} logs loaded.`);
+    } catch (err: unknown) {
+      console.error(err);
+      setStatus(`Failed to load ${source} logs.`);
+    }
+  }
+
+  async function loadExecutionLogsAndVerify() {
+    if (!effectiveExecutionId) {
+      setStatus("Execution ID is required.");
+      return;
+    }
+
+    try {
+      setStatus("Loading execution logs + verification...");
+      const [logs, verify] = await Promise.all([
+        fetchExecutionLogs(effectiveExecutionId),
+        verifyExecution(effectiveExecutionId),
+      ]);
+      setExecutionLogs(logs);
+      setVerification(verify);
+      setStatus("Execution logs + verification loaded.");
+    } catch (err: unknown) {
+      console.error(err);
+      setStatus("Failed to load execution logs/verification.");
+    }
+  }
+
+  async function generateAudit() {
+    if (!effectiveExecutionId) {
+      setStatus("Execution ID is required.");
+      return;
+    }
+
+    try {
+      setStatus("Generating audit export...");
+      const audit = await generateAuditExport([effectiveExecutionId]);
+      const download = await downloadAuditExport(audit.audit_export_id);
+      setAuditPayload({
+        audit_export_id: audit.audit_export_id,
+        download_url: audit.download_url,
+        bundle: download,
+      });
+      setStatus("Audit export generated + downloaded.");
+    } catch (err: unknown) {
+      console.error(err);
+      setStatus("Failed to generate audit export.");
+    }
+  }
+
+  async function compactDb() {
+    try {
+      setStatus("Running DB maintenance (VACUUM)...");
+      const op = await runDbCompact();
+      setDbMaintenance(op);
+      setDbStatus(await fetchAdminDbStatus());
+      setStatus("DB maintenance completed.");
+    } catch (err: unknown) {
+      console.error(err);
+      setStatus("DB maintenance failed.");
+    }
+  }
+
+  return (
+    <div className="panel">
+      <h2>DIIaC™ Operations Dashboard</h2>
+      <p className="muted-text">
+        Service health, export operations, logs, and database maintenance in one structured admin dashboard.
+      </p>
+
+      <div className="tab-row">
+        <button className={tab === "overview" ? "btn-primary" : "btn-secondary"} onClick={() => setTab("overview")}>Overview</button>
+        <button className={tab === "exports" ? "btn-primary" : "btn-secondary"} onClick={() => setTab("exports")}>Exports</button>
+        <button className={tab === "logs" ? "btn-primary" : "btn-secondary"} onClick={() => setTab("logs")}>Logs</button>
+        <button className={tab === "db" ? "btn-primary" : "btn-secondary"} onClick={() => setTab("db")}>DB Maintenance</button>
+        <button className="btn-secondary" onClick={() => setShowRaw(!showRaw)}>{showRaw ? "Hide raw JSON" : "Show raw JSON"}</button>
+      </div>
+
+      <div className="id-row">
+        <label>Execution ID:</label>
+        <input value={targetExecutionId} onChange={(e) => setTargetExecutionId(e.target.value)} placeholder="execution-id" />
+      </div>
+
+      {status && <div className="status">{status}</div>}
+
+      {tab === "overview" && (
+        <>
+          <div className="button-row">
+            <button onClick={() => void loadOverview()}>Refresh Overview</button>
+          </div>
+          <div className="metrics-grid">
+            <div className="metric-card"><h4>Service Status</h4><p>{serviceStatus?.overall_ok ? "Operational" : "Check required"}</p></div>
+            <div className="metric-card"><h4>Runtime Health</h4><p>{health?.status || "Unknown"}</p></div>
+            <div className="metric-card"><h4>Ledger Records</h4><p>{metrics?.ledger_record_count ?? health?.ledger_record_count ?? 0}</p></div>
+            <div className="metric-card"><h4>Container Visibility</h4><p>{containerStatus?.available ? "Available" : "Unavailable"}</p></div>
+          </div>
+          <div className="metrics-grid">
+            <div className="metric-card"><h4>Executions Total</h4><p>{metrics?.executions_total ?? 0}</p></div>
+            <div className="metric-card"><h4>Signed Recent</h4><p>{metrics?.signed_recent_executions ?? 0}</p></div>
+            <div className="metric-card"><h4>DB Path</h4><p>{dbStatus?.db_path || "n/a"}</p></div>
+            <div className="metric-card"><h4>Key Registry Integrity</h4><p>{String(dbStatus?.integrity?.key_registry_ok ?? false)}</p></div>
+          </div>
+        </>
+      )}
+
+      {tab === "exports" && (
+        <>
+          <div className="button-row">
+            <button onClick={() => void loadExecutionLogsAndVerify()}>Validate Execution</button>
+            <button onClick={() => void generateAudit()}>Generate Audit Export</button>
+          </div>
+          <div className="metrics-grid">
+            <div className="metric-card"><h4>Execution</h4><p>{effectiveExecutionId || "Not set"}</p></div>
+            <div className="metric-card"><h4>Verification</h4><p>{verification?.status || "Not run"}</p></div>
+            <div className="metric-card"><h4>Signature Present</h4><p>{String(verification?.signature_present ?? false)}</p></div>
+            <div className="metric-card"><h4>Audit Export</h4><p>{String(auditPayload?.audit_export_id || "Not generated")}</p></div>
+          </div>
+        </>
+      )}
+
+      {tab === "logs" && (
+        <>
+          <div className="button-row">
+            <button onClick={() => void loadLogs("backend")}>Load Backend Logs</button>
+            <button onClick={() => void loadLogs("ledger")}>Load Ledger Logs</button>
+            <button onClick={() => void loadExecutionLogsAndVerify()}>Load Execution Logs</button>
+          </div>
+          <div className="metrics-grid">
+            <div className="metric-card"><h4>Backend Logs</h4><p>{countRows(backendLogs)}</p></div>
+            <div className="metric-card"><h4>Ledger Logs</h4><p>{countRows(ledgerLogs)}</p></div>
+            <div className="metric-card"><h4>Execution Logs</h4><p>{countRows(executionLogs)}</p></div>
+            <div className="metric-card"><h4>Routes Instrumented</h4><p>{metrics?.routes ? Object.keys(metrics.routes).length : 0}</p></div>
+          </div>
+        </>
+      )}
+
+      {tab === "db" && (
+        <>
+          <div className="button-row">
+            <button onClick={() => void fetchAdminDbStatus().then(setDbStatus)}>Refresh DB Status</button>
+            <button onClick={() => void compactDb()}>Run DB Compact</button>
+          </div>
+          <div className="metrics-grid">
+            <div className="metric-card"><h4>Role Inputs</h4><p>{dbStatus?.tables?.role_inputs ?? 0}</p></div>
+            <div className="metric-card"><h4>Executions</h4><p>{dbStatus?.tables?.executions ?? 0}</p></div>
+            <div className="metric-card"><h4>Backend Logs</h4><p>{dbStatus?.tables?.backend_logs ?? 0}</p></div>
+            <div className="metric-card"><h4>Ledger Logs</h4><p>{dbStatus?.tables?.ledger_logs ?? 0}</p></div>
+          </div>
+        </>
+      )}
+
+      {showRaw && (
+        <>
+          {health && <pre className="console-box">{pretty(health)}</pre>}
+          {metrics && <pre className="console-box">{pretty(metrics)}</pre>}
+          {serviceStatus && <pre className="console-box">{pretty(serviceStatus)}</pre>}
+          {containerStatus && <pre className="console-box">{pretty(containerStatus)}</pre>}
+          {verification && <pre className="console-box">{pretty(verification)}</pre>}
+          {executionLogs && <pre className="console-box">{pretty(executionLogs)}</pre>}
+          {auditPayload && <pre className="console-box">{pretty(auditPayload)}</pre>}
+          {backendLogs && <pre className="console-box">{pretty(backendLogs)}</pre>}
+          {ledgerLogs && <pre className="console-box">{pretty(ledgerLogs)}</pre>}
+          {dbStatus && <pre className="console-box">{pretty(dbStatus)}</pre>}
+          {dbMaintenance && <pre className="console-box">{pretty(dbMaintenance)}</pre>}
+        </>
+      )}
+    </div>
+  );
+}

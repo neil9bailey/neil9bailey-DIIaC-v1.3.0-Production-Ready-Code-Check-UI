@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.pytest_cache/
+audit_exports/
+artifacts/
+*.pyc
+exports/
+
+# Local secrets/env files
+.env
+.env.*
+!.env.example
