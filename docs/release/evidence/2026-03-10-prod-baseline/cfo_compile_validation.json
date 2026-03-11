@@ -1,0 +1,71 @@
+{
+  "role_submission_status": 201,
+  "compile_status": 201,
+  "execution_id": "e118509c-3ae1-5989-b6da-7fc208eaaa76",
+  "decision_status": "recommended",
+  "selected_vendor": "Palo Alto Networks",
+  "confidence_score": 88.31,
+  "verify_execution": {
+    "execution_id": "e118509c-3ae1-5989-b6da-7fc208eaaa76",
+    "ledger_match": true,
+    "ledger_record_hash": "dff0a501224bf051d286913ea0e147b184670b0e733f91b2adeabe8897416575",
+    "manifest_hash": "0240dcac80a864dfcf5348e13b23b3b1973a3c09aac7ed6180b3c4dadc30bf2e",
+    "merkle_root": "9e8a462f09e98103163f49236db200723b0380fc6e8b9d2e2449a786464ded30",
+    "pack_hash": "b779298313860b568c2495b45dcd019aa1c211b03a0daf9ffb01467f53fbd2dc",
+    "signature_present": true,
+    "status": "VERIFIABLE"
+  },
+  "verify_pack": {
+    "hash_valid": true,
+    "manifest_consistent": true,
+    "overall_valid": true,
+    "signature_valid": true
+  },
+  "decision_pack_zip": "F:\\code\\diiac\\diiac_v1.2.1_codex\\docs\\release\\evidence\\2026-03-10-prod-baseline\\decision-pack_e118509c-3ae1-5989-b6da-7fc208eaaa76.zip",
+  "quality_gate_failures": [],
+  "control_failure_reasons": [],
+  "policy_pack_summary": [
+    {
+      "pack_id": "eu_ai_act_deployer_v1",
+      "fail_count": 0
+    },
+    {
+      "pack_id": "uk_ai_governance_v1",
+      "fail_count": 0
+    }
+  ],
+  "llm_freshness": "CURRENT",
+  "llm_audit_timestamp": "2026-03-10T11:30:34.547423+00:00",
+  "llm_audit_timestamp_source": "payload.llm_audit_timestamp",
+  "llm_provider_reported_timestamp": "2023-10-10T12:00:00Z",
+  "llm_analysis_raw_audit_freshness": "CURRENT",
+  "replay_certificate": {
+    "execution_id": "e118509c-3ae1-5989-b6da-7fc208eaaa76",
+    "strict_deterministic_mode": true,
+    "context_hash": "c2e45fd2b7b7a3bc43f222379be19130fd08037788aca6e5b55081706018074d",
+    "input_snapshot_hash": "c2e45fd2b7b7a3bc43f222379be19130fd08037788aca6e5b55081706018074d",
+    "expected_execution_id": "e118509c-3ae1-5989-b6da-7fc208eaaa76",
+    "pack_hash": "b779298313860b568c2495b45dcd019aa1c211b03a0daf9ffb01467f53fbd2dc",
+    "manifest_hash": "0240dcac80a864dfcf5348e13b23b3b1973a3c09aac7ed6180b3c4dadc30bf2e",
+    "signed_at": "2026-03-10T11:30:34.551063+00:00",
+    "status": "REPLAY_READY"
+  },
+  "signed_export_sigmeta": {
+    "signing_key_id": "diiac-vendorlogic-prod",
+    "signed_at": "2026-03-10T11:30:34.551063+00:00",
+    "pack_hash": "b779298313860b568c2495b45dcd019aa1c211b03a0daf9ffb01467f53fbd2dc",
+    "manifest_hash": "0240dcac80a864dfcf5348e13b23b3b1973a3c09aac7ed6180b3c4dadc30bf2e",
+    "merkle_root": "9e8a462f09e98103163f49236db200723b0380fc6e8b9d2e2449a786464ded30"
+  },
+  "checks": {
+    "llm_freshness_current": true,
+    "no_freshness_gate_failure": true,
+    "no_quality_gate_failures": true,
+    "replay_status_verifiable": true,
+    "signature_present": true,
+    "verify_pack_overall_valid": true,
+    "replay_status_replay_ready": true,
+    "replay_execution_match": true,
+    "signature_metadata_present": true
+  }
+}

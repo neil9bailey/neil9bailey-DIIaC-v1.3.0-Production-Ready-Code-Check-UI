@@ -1,0 +1,121 @@
+name: diiac_v121_codex
+
+services:
+  governance-runtime:
+    image: python:3.11-slim
+    working_dir: /app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt && python app.py"
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      STRICT_DETERMINISTIC_MODE: "true"
+      ADMIN_AUTH_ENABLED: ${ADMIN_AUTH_ENABLED:-false}
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
+      SIGNING_ENABLED: "true"
+      SIGNING_KEY_ID: ${SIGNING_KEY_ID:-diiac-local-dev}
+      SIGNING_PRIVATE_KEY_PEM: ${SIGNING_PRIVATE_KEY_PEM:-}
+      GOVERNANCE_BUILD_HASH: local-compose
+    ports:
+      - "${RUNTIME_HOST_PORT:-8100}:8000"
+    volumes:
+      - ./:/app:ro
+      - diiac-artifacts:/app/artifacts
+      - diiac-exports:/app/exports
+      - diiac-audit-exports:/app/audit_exports
+      - diiac-human-input:/app/human_input
+      - diiac-state:/app/state
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  bridge-state-init:
+    image: busybox:1.36
+    command: ["sh", "-c", "mkdir -p /state && chown -R 999:999 /state"]
+    volumes:
+      - diiac-bridge-state:/state
+    restart: "no"
+
+  backend-ui-bridge:
+    build:
+      context: ./backend-ui-bridge
+      dockerfile: Dockerfile
+      args:
+        GOVERNANCE_BUILD_HASH: local-compose
+    depends_on:
+      governance-runtime:
+        condition: service_healthy
+      bridge-state-init:
+        condition: service_completed_successfully
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      PYTHON_BASE_URL: http://governance-runtime:8000
+      STRICT_DETERMINISTIC_MODE: "true"
+      SIGNING_ENABLED: "true"
+      SIGNING_KEY_ID: ${SIGNING_KEY_ID:-diiac-local-dev}
+      SIGNING_PRIVATE_KEY_PEM: ${SIGNING_PRIVATE_KEY_PEM:-}
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
+      LLM_INGESTION_ENABLED: ${LLM_INGESTION_ENABLED:-true}
+      LLM_STUB_ENABLED: ${LLM_STUB_ENABLED:-false}
+      LLM_PROVIDER_MODE: ${LLM_PROVIDER_MODE:-copilot_only}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      COPILOT_MODEL: ${COPILOT_MODEL:-gpt-4o}
+      FRONTEND_HOST_PORT: ${FRONTEND_HOST_PORT:-5174}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-}
+      BRIDGE_STATE_PATH: ${BRIDGE_STATE_PATH:-/workspace/state/operations_state.json}
+      # Entra ID authentication (leave unset for legacy header auth)
+      AUTH_MODE: ${AUTH_MODE:-}
+      ENTRA_ROLE_CLAIM: ${ENTRA_ROLE_CLAIM:-roles}
+      ENTRA_EXPECTED_TENANT_ID: ${ENTRA_EXPECTED_TENANT_ID:-}
+      ENTRA_EXPECTED_AUDIENCE: ${ENTRA_EXPECTED_AUDIENCE:-}
+      ENTRA_EXPECTED_ISSUERS: ${ENTRA_EXPECTED_ISSUERS:-}
+      ENTRA_GROUP_TO_ROLE_JSON: ${ENTRA_GROUP_TO_ROLE_JSON:-}
+      ENTRA_PRINCIPAL_TO_ROLE_JSON: ${ENTRA_PRINCIPAL_TO_ROLE_JSON:-}
+      ENTRA_OIDC_DISCOVERY_URL: ${ENTRA_OIDC_DISCOVERY_URL:-}
+      ENTRA_JWKS_URI: ${ENTRA_JWKS_URI:-}
+      ENTRA_JWT_HS256_SECRET: ${ENTRA_JWT_HS256_SECRET:-}
+    ports:
+      - "${BRIDGE_HOST_PORT:-3101}:3001"
+    volumes:
+      - diiac-bridge-state:/workspace/state
+      - diiac-artifacts:/workspace/artifacts:ro
+      - diiac-exports:/workspace/exports:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3001/auth/status').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:${BRIDGE_HOST_PORT:-3101}}
+        VITE_ENTRA_CLIENT_ID: ${VITE_ENTRA_CLIENT_ID:-}
+        VITE_ENTRA_TENANT_ID: ${VITE_ENTRA_TENANT_ID:-}
+        VITE_ENTRA_REDIRECT_URI: ${VITE_ENTRA_REDIRECT_URI:-http://localhost:${FRONTEND_HOST_PORT:-5174}/auth/callback}
+        VITE_ENTRA_GROUP_MAP: ${VITE_ENTRA_GROUP_MAP:-}
+        VITE_LLM_PROVIDER_MODE: ${VITE_LLM_PROVIDER_MODE:-copilot_only}
+    depends_on:
+      backend-ui-bridge:
+        condition: service_healthy
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-http://localhost:3101}
+      VITE_LLM_PROVIDER_MODE: ${VITE_LLM_PROVIDER_MODE:-copilot_only}
+    ports:
+      - "${FRONTEND_HOST_PORT:-5174}:5173"
+    restart: unless-stopped
+
+volumes:
+  diiac-artifacts:
+  diiac-exports:
+  diiac-audit-exports:
+  diiac-human-input:
+  diiac-state:
+  diiac-bridge-state:

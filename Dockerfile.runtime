@@ -1,0 +1,75 @@
+# DIIaC v1.2.0 — Governance Runtime Dockerfile
+# Multi-stage build for a lean production image.
+
+ARG DIIAC_VERSION=1.2.0
+
+# ── Build stage ───────────────────────────────────────────────────────────────
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+# Install pip-tools for deterministic dependency resolution
+RUN pip install --no-cache-dir pip==24.0 pip-tools==7.4.1
+
+# Copy dependency files
+COPY requirements.txt pyproject.toml ./
+
+# Install runtime deps into /install prefix
+RUN pip install --no-cache-dir \
+    --prefix=/install \
+    -r requirements.txt
+
+# ── Runtime stage ──────────────────────────────────────────────────────────────
+FROM python:3.11-slim AS runtime
+
+ARG DIIAC_VERSION
+LABEL org.opencontainers.image.title="DIIaC Governance Runtime"
+LABEL org.opencontainers.image.description="DIIaC v${DIIAC_VERSION} — Deterministic Infrastructure Intelligence as Code"
+LABEL org.opencontainers.image.version="${DIIAC_VERSION}"
+LABEL org.opencontainers.image.licenses="Proprietary"
+
+# Non-root user
+RUN useradd --no-create-home --shell /bin/false --uid 1000 diiac
+
+# Workspace directories (will be volume-mounted in production)
+RUN mkdir -p \
+    /workspace/artefacts \
+    /workspace/exports \
+    /workspace/audit_exports \
+    /workspace/human_input \
+    /workspace/ledger \
+    /workspace/state && \
+    chown -R diiac:diiac /workspace
+
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /install /usr/local
+
+# Copy application source
+COPY app.py persistence.py ./
+COPY contracts/ ./contracts/
+
+# Set ownership
+RUN chown -R diiac:diiac /app
+
+USER diiac
+
+# Environment defaults (override via docker-compose or K8s env)
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    APP_ENV=production \
+    ADMIN_AUTH_ENABLED=true \
+    STRICT_DETERMINISTIC_MODE=true \
+    FLASK_RUN_HOST=0.0.0.0 \
+    FLASK_RUN_PORT=8000
+
+EXPOSE 8000
+
+# Retry-safe network options for environments with transient connectivity issues
+ENV PIP_DEFAULT_TIMEOUT=100
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
+
+CMD ["python3", "app.py"]

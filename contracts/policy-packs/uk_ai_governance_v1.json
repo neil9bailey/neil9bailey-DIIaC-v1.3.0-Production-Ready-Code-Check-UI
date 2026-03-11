@@ -1,0 +1,45 @@
+{
+  "pack_id": "uk_ai_governance_v1",
+  "version": "1.0.0",
+  "jurisdiction": "UK",
+  "scope": "deployer",
+  "enforce": true,
+  "controls": [
+    {
+      "control_id": "UK-GDPR-ART5-ACCOUNTABILITY",
+      "title": "Accountability and governance traceability",
+      "reference": "UK GDPR Article 5(2)",
+      "required_signals": ["logging_enabled", "traceability_present", "human_oversight_present"]
+    },
+    {
+      "control_id": "UK-GDPR-ART22-HUMAN-INTERVENTION",
+      "title": "Human intervention and challenge pathway",
+      "reference": "UK GDPR Article 22",
+      "required_signals": ["human_oversight_present", "governance_modes_present"]
+    },
+    {
+      "control_id": "UK-DPA-2018-RISK-ASSESSMENT",
+      "title": "Risk assessment present in decision workflow",
+      "reference": "Data Protection Act 2018 governance obligations",
+      "required_signals": ["risk_assessment_present", "non_negotiables_present"]
+    },
+    {
+      "control_id": "UK-DUAA-2025-QUALITY-ASSURANCE",
+      "title": "Evidence quality and assurance readiness",
+      "reference": "Data (Use and Access) Act 2025 governance expectations",
+      "required_signals": ["supporting_evidence_present", "profile_controls_satisfied"]
+    },
+    {
+      "control_id": "UK-ICO-AI-TRANSPARENCY",
+      "title": "AI transparency and explainability trace",
+      "reference": "ICO guidance on AI and data protection",
+      "required_signals": ["traceability_present", "human_oversight_present"]
+    },
+    {
+      "control_id": "UK-DRCF-RISK-CONTROLS",
+      "title": "Cross-regulator risk control coordination readiness",
+      "reference": "DRCF AI and algorithmic processing principles",
+      "required_signals": ["risk_assessment_present", "deterministic_compile", "signature_configured"]
+    }
+  ]
+}

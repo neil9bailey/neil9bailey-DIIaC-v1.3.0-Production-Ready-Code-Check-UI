@@ -1,0 +1,112 @@
+﻿[
+    {
+        "decision_pack_zip":  "decision-pack_4b256648-fe62-5dda-ae05-752b57f2ee26.zip",
+        "decision_pack_bytes":  16174,
+        "decision_pack_modified_utc":  "2026-03-10T01:17:12.3763584Z",
+        "execution_id":  "4b256648-fe62-5dda-ae05-752b57f2ee26",
+        "selected_vendor":  "Cisco",
+        "score":  83.59,
+        "decision_status":  "recommended",
+        "confidence_score":  77.59,
+        "evidence_refs_total":  1,
+        "evidence_strong_refs_count":  0,
+        "evidence_weak_refs_count":  0,
+        "llm_freshness":  "STALE",
+        "accuracy_warnings":  [
+                                  "No strong document/URI evidence references were provided.",
+                                  "LLM audit timestamp (2023-10-01T00:00:00+00:00) is older than minimum accepted freshness (2025-01-01T00:00:00+00:00)."
+                              ],
+        "role_bundle_context":  "ctx-network-transformation-cio",
+        "role_count":  1,
+        "first_role":  "CIO",
+        "first_domain":  "network-transformation",
+        "first_assertion":  "Adopt secure SD-WAN with measurable cost and resilience outcomes.",
+        "governance_modes":  [
+                                 "FIRST-PRINCIPLES MODE",
+                                 "DEVIL\u0027S ADVOCATE MODE",
+                                 "CONSTRAINTS-FIRST MODE",
+                                 "/deepresearch"
+                             ],
+        "merkle_leaf_count":  14,
+        "has_policy_pack_compliance":  false,
+        "has_replay_certificate":  false,
+        "has_deterministic_input_snapshot":  false,
+        "has_signed_export_sig":  true,
+        "has_sigmeta":  true,
+        "llm_provider":  "Copilot"
+    },
+    {
+        "decision_pack_zip":  "decision-pack_d62cc2fe-8e15-5cf0-b884-4ea4f20f62af.zip",
+        "decision_pack_bytes":  16640,
+        "decision_pack_modified_utc":  "2026-03-10T01:20:23.4618870Z",
+        "execution_id":  "d62cc2fe-8e15-5cf0-b884-4ea4f20f62af",
+        "selected_vendor":  "Fortinet",
+        "score":  93.24,
+        "decision_status":  "recommended",
+        "confidence_score":  87.24,
+        "evidence_refs_total":  2,
+        "evidence_strong_refs_count":  0,
+        "evidence_weak_refs_count":  1,
+        "llm_freshness":  "MISSING_OR_INVALID",
+        "accuracy_warnings":  [
+                                  "No strong document/URI evidence references were provided.",
+                                  "Weak evidence references detected (1). Add URI/document/hash-based refs for stronger traceability.",
+                                  "LLM analysis did not provide a valid audit timestamp for evidence freshness validation."
+                              ],
+        "role_bundle_context":  "ctx-network-transformation-acting-cto",
+        "role_count":  2,
+        "first_role":  "ACTING_CTO",
+        "first_domain":  "network-transformation",
+        "first_assertion":  "Approve the option with strongest 3-year TCO and risk-adjusted ROI while preserving resilience targets",
+        "governance_modes":  [
+                                 "FIRST-PRINCIPLES MODE",
+                                 "DEVIL\u0027S ADVOCATE MODE",
+                                 "CONSTRAINTS-FIRST MODE",
+                                 "/deepresearch"
+                             ],
+        "merkle_leaf_count":  14,
+        "has_policy_pack_compliance":  false,
+        "has_replay_certificate":  false,
+        "has_deterministic_input_snapshot":  false,
+        "has_signed_export_sig":  true,
+        "has_sigmeta":  true,
+        "llm_provider":  "Copilot"
+    },
+    {
+        "decision_pack_zip":  "decision-pack_69f3da67-8c39-5b94-bc6a-8096c5c6118f.zip",
+        "decision_pack_bytes":  17155,
+        "decision_pack_modified_utc":  "2026-03-10T01:22:00.8652967Z",
+        "execution_id":  "69f3da67-8c39-5b94-bc6a-8096c5c6118f",
+        "selected_vendor":  "Microsoft",
+        "score":  78.37,
+        "decision_status":  "recommended",
+        "confidence_score":  73.37,
+        "evidence_refs_total":  2,
+        "evidence_strong_refs_count":  0,
+        "evidence_weak_refs_count":  1,
+        "llm_freshness":  "STALE",
+        "accuracy_warnings":  [
+                                  "No strong document/URI evidence references were provided.",
+                                  "Weak evidence references detected (1). Add URI/document/hash-based refs for stronger traceability.",
+                                  "LLM audit timestamp (2023-10-10T12:00:00+00:00) is older than minimum accepted freshness (2025-01-01T00:00:00+00:00)."
+                              ],
+        "role_bundle_context":  "ctx-network-transformation-cso",
+        "role_count":  2,
+        "first_role":  "CSO",
+        "first_domain":  "network-transformation",
+        "first_assertion":  "Proceed only with an architecture that materially reduces attack surface and improves control verifiability",
+        "governance_modes":  [
+                                 "FIRST-PRINCIPLES MODE",
+                                 "DEVIL\u0027S ADVOCATE MODE",
+                                 "CONSTRAINTS-FIRST MODE",
+                                 "/deepresearch"
+                             ],
+        "merkle_leaf_count":  14,
+        "has_policy_pack_compliance":  false,
+        "has_replay_certificate":  false,
+        "has_deterministic_input_snapshot":  false,
+        "has_signed_export_sig":  true,
+        "has_sigmeta":  true,
+        "llm_provider":  "Copilot"
+    }
+]

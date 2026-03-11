@@ -1,0 +1,9 @@
+{
+  "keys": [
+    {
+      "key_id": "diiac-vendorlogic-prod",
+      "algorithm": "Ed25519",
+      "public_key_b64": "IkQDHm2DZNq3+O3yQvM1D6v+mrWPiMnwbGpj2vYUNuE="
+    }
+  ]
+}

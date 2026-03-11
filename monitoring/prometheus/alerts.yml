@@ -1,0 +1,122 @@
+groups:
+  # ── DIIaC Governance Runtime Alerts ───────────────────────────────────────
+  - name: diiac.runtime
+    rules:
+
+      # MTR-001 — No signed executions in recent window
+      - alert: DIIaC_NoSignedExecutions
+        expr: |
+          diiac_signed_recent_executions == 0 and diiac_executions_total > 0
+        for: 5m
+        labels:
+          severity: warning
+          component: governance-runtime
+          alert_code: MTR-001
+        annotations:
+          summary: "DIIaC: No signed executions in the latest window"
+          description: |
+            MTR-001: The governance runtime has processed executions but none
+            of the most recent 5 executions are signed. This indicates that
+            SIGNING_PRIVATE_KEY_PEM may be unset (ephemeral key) or the signing
+            subsystem has failed.
+            Action: Check /admin/health → signing_enabled and key_mode.
+
+      # MTR-002 — Executions exist but ledger is empty
+      - alert: DIIaC_LedgerEmpty
+        expr: |
+          diiac_ledger_record_count == 0 and diiac_executions_total > 0
+        for: 5m
+        labels:
+          severity: critical
+          component: governance-runtime
+          alert_code: MTR-002
+        annotations:
+          summary: "DIIaC: Execution data present but trust ledger is empty"
+          description: |
+            MTR-002: Executions have been recorded but the trust ledger contains
+            no records. This is a critical integrity concern — the audit trail
+            may be broken.
+            Action: Check /admin/logs for ledger write errors. Inspect
+            /workspace/ledger/ledger.jsonl for file corruption.
+
+      # Runtime health degraded
+      - alert: DIIaC_RuntimeDegraded
+        expr: |
+          diiac_runtime_status == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: governance-runtime
+        annotations:
+          summary: "DIIaC: Governance runtime is DEGRADED"
+          description: |
+            The governance runtime health check at /health returned DEGRADED.
+            One or more readiness checks (storage, contracts, database) have
+            failed. Governed compile and verification may be impacted.
+            Action: Check /health → readiness for specific failing checks.
+
+      # High error rate (if log-based metrics are available)
+      - alert: DIIaC_HighErrorRate
+        expr: |
+          rate(diiac_log_error_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: governance-runtime
+        annotations:
+          summary: "DIIaC: High error rate in backend logs"
+          description: |
+            More than 0.5 ERROR-level log events per second in the last 5
+            minutes. Check /admin/logs?level=ERROR for details.
+
+  # ── DIIaC Infrastructure Alerts ───────────────────────────────────────────
+  - name: diiac.infrastructure
+    rules:
+
+      # Runtime pod down
+      - alert: DIIaC_RuntimeDown
+        expr: |
+          up{job="diiac-runtime-health"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: governance-runtime
+        annotations:
+          summary: "DIIaC: Governance runtime is unreachable"
+          description: |
+            The Prometheus health check scrape for the governance runtime is
+            failing. The runtime pod may be down or the /health endpoint is
+            unresponsive.
+            Action: Check pod status with `kubectl get pods -n diiac`.
+
+      # Bridge pod down
+      - alert: DIIaC_BridgeDown
+        expr: |
+          up{job="diiac-bridge-health"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: backend-ui-bridge
+        annotations:
+          summary: "DIIaC: Backend UI bridge is unreachable"
+          description: |
+            The Prometheus health check for the backend-ui-bridge is failing.
+            The bridge pod may be down or restarting.
+            Action: Check pod status with `kubectl get pods -n diiac`.
+
+      # Persistent volume near capacity (if PVC metrics available via kube-state-metrics)
+      - alert: DIIaC_StorageNearFull
+        expr: |
+          (kubelet_volume_stats_used_bytes{persistentvolumeclaim=~"diiac-.*"}
+           / kubelet_volume_stats_capacity_bytes{persistentvolumeclaim=~"diiac-.*"}) > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          component: storage
+        annotations:
+          summary: "DIIaC: Persistent volume {{ $labels.persistentvolumeclaim }} is >85% full"
+          description: |
+            The DIIaC persistent volume {{ $labels.persistentvolumeclaim }} is
+            {{ $value | humanizePercentage }} full. Artifacts, exports, or audit
+            bundles may fail to write soon.
+            Action: Archive or delete old artefacts/exports, or expand the PVC.

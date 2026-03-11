@@ -1,0 +1,79 @@
+import { useState } from "react";
+import { runPolicyImpact, type PolicyImpactResponse } from "./api";
+
+interface Props {
+  role: string;
+}
+
+export default function ImpactViewer({ role }: Props) {
+  const [result, setResult] = useState<PolicyImpactResponse | null>(null);
+  const [status, setStatus] = useState<string>("");
+
+  if (role !== "admin") return null;
+
+  async function analyse() {
+    try {
+      setStatus("Running policy impact analysis...");
+      setResult(null);
+
+      const res = await runPolicyImpact();
+
+      setResult(res);
+      setStatus("Analysis complete.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error(err);
+      if (msg.includes("no_diiac_role") || msg.includes("403")) {
+        setStatus("Access denied: DIIaC role not resolved. Check Entra ID role/group mappings.");
+      } else {
+        setStatus("Policy impact analysis failed.");
+      }
+    }
+  }
+
+  return (
+    <div className="panel">
+      <h2>Policy Impact Analysis</h2>
+      <p className="muted-text" style={{ marginTop: 0 }}>
+        Admin pre-change check. Use this before modifying policy, controls, or enforcement configuration.
+      </p>
+
+      <details>
+        <summary style={{ cursor: "pointer", fontSize: 12, color: "#334155", fontWeight: 600 }}>
+          Advanced: Run Policy Impact
+        </summary>
+
+        <div style={{ marginTop: 10 }}>
+          <div className="button-row">
+            <button className="btn-primary" onClick={analyse}>
+              Run Policy Impact
+            </button>
+          </div>
+
+          {status && <div className="console-box">{status}</div>}
+
+          {result && (
+            <div className="console-box">
+              <div>
+                <strong>Severity:</strong> {result.severity}
+              </div>
+              <div>
+                <strong>Impacted Controls:</strong> {result.impacted_controls}
+              </div>
+              <div>
+                <strong>Findings:</strong> {result.findings}
+              </div>
+              <div>
+                <strong>Evaluated At:</strong> {result.evaluated_at}
+              </div>
+            </div>
+          )}
+
+          <div className="muted-text" style={{ marginTop: 8, fontSize: 12 }}>
+            Not required for normal compile runs. Intended for admin governance change review.
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}

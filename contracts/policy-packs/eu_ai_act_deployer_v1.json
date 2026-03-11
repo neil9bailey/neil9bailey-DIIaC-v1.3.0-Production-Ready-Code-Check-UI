@@ -1,0 +1,51 @@
+{
+  "pack_id": "eu_ai_act_deployer_v1",
+  "version": "1.0.0",
+  "jurisdiction": "EU",
+  "scope": "deployer",
+  "enforce": true,
+  "controls": [
+    {
+      "control_id": "EU-AIA-ART9-RISK-MANAGEMENT",
+      "title": "Risk management process evidence",
+      "reference": "Regulation (EU) 2024/1689 Article 9",
+      "required_signals": ["risk_assessment_present", "governance_modes_present"]
+    },
+    {
+      "control_id": "EU-AIA-ART10-DATA-GOVERNANCE",
+      "title": "Data and evidence governance quality",
+      "reference": "Regulation (EU) 2024/1689 Article 10",
+      "required_signals": ["traceability_present", "supporting_evidence_present"]
+    },
+    {
+      "control_id": "EU-AIA-ART12-RECORD-KEEPING",
+      "title": "Automated logging and record-keeping",
+      "reference": "Regulation (EU) 2024/1689 Article 12",
+      "required_signals": ["logging_enabled", "traceability_present"]
+    },
+    {
+      "control_id": "EU-AIA-ART14-HUMAN-OVERSIGHT",
+      "title": "Human oversight captured in workflow",
+      "reference": "Regulation (EU) 2024/1689 Article 14",
+      "required_signals": ["human_oversight_present"]
+    },
+    {
+      "control_id": "EU-AIA-ART15-ACCURACY-ROBUSTNESS",
+      "title": "Accuracy, robustness, and reproducibility controls",
+      "reference": "Regulation (EU) 2024/1689 Article 15",
+      "required_signals": ["deterministic_compile", "supporting_evidence_present", "llm_freshness_current"]
+    },
+    {
+      "control_id": "EU-AIA-ART26-DEPLOYER-DUTIES",
+      "title": "Deployer obligations and control effectiveness",
+      "reference": "Regulation (EU) 2024/1689 Article 26",
+      "required_signals": ["profile_controls_satisfied", "signature_configured", "governance_modes_present"]
+    },
+    {
+      "control_id": "EU-AIA-ART50-TRANSPARENCY",
+      "title": "Transparency and traceability disclosures",
+      "reference": "Regulation (EU) 2024/1689 Article 50",
+      "required_signals": ["traceability_present", "human_oversight_present"]
+    }
+  ]
+}

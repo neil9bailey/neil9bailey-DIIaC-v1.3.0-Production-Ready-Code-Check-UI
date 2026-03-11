@@ -1,0 +1,9 @@
+﻿3934de1b7908b3d778d792bef8cec67f4223310da850e9626e362c50a0b4b691  docs/release/evidence/2026-03-10-post-reset-copilot-governance/bridge_auth_status.json
+6a499dd2fa644c36dc70a9764c9d5265e5fbf2c17eecf7a8520cd722dbbf5e0d  docs/release/evidence/2026-03-10-post-reset-copilot-governance/docker_compose_ps.txt
+db24a86698831d917eca95252c5beb4b71af9b829c1f858ce475710102a95371  docs/release/evidence/2026-03-10-post-reset-copilot-governance/evidence_pack_sha256.txt
+1cdf8ab663e2e6e4beda0fc9db9376f7c873850891afb3d3386aed5c41bb5aa8  docs/release/evidence/2026-03-10-post-reset-copilot-governance/git_log_latest.txt
+7a886ed82a5a47c38344ae41e853b9392b09bd19f76542173c42bc1d8aa65c0d  docs/release/evidence/2026-03-10-post-reset-copilot-governance/git_status.txt
+f8384de14bf21d9debe401e8c4c7aa23244790b429b21c4c6b2d81646af403d8  docs/release/evidence/2026-03-10-post-reset-copilot-governance/runtime_admin_config.json
+77de37582262ed1dce6b159ef93f5a35f5c6d7b38d2db423217fb86c219ac505  docs/release/evidence/2026-03-10-post-reset-copilot-governance/runtime_admin_health.json
+d1ae6cf7f9edc57552eec92e1b431d16baa9cf0f2cc651d1f178f702ac6a6ac0  docs/release/evidence/2026-03-10-post-reset-copilot-governance/runtime_admin_metrics.json
+e4323a4ea5682b9ac96d8d771d71af056a07c85a16a20eefcff205fbf3ed2004  docs/release/evidence/2026-03-10-post-reset-copilot-governance/validation_runs.json

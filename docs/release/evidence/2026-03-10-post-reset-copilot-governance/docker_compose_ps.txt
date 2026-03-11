@@ -1,0 +1,4 @@
+﻿NAME                                    IMAGE                                COMMAND                  SERVICE              CREATED         STATUS                   PORTS
+diiac_v121_codex-backend-ui-bridge-1    diiac_v121_codex-backend-ui-bridge   "docker-entrypoint.s…"   backend-ui-bridge    4 minutes ago   Up 3 minutes (healthy)   0.0.0.0:3101->3001/tcp, [::]:3101->3001/tcp
+diiac_v121_codex-frontend-1             diiac_v121_codex-frontend            "docker-entrypoint.s…"   frontend             4 minutes ago   Up 3 minutes             0.0.0.0:5174->5173/tcp, [::]:5174->5173/tcp
+diiac_v121_codex-governance-runtime-1   python:3.11-slim                     "sh -c 'pip install …"   governance-runtime   4 minutes ago   Up 4 minutes (healthy)   0.0.0.0:8100->8000/tcp, [::]:8100->8000/tcp

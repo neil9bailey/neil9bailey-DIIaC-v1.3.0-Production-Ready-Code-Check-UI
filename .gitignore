@@ -1,0 +1,39 @@
+# Python runtime/cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+
+# Virtual environments
+.venv/
+venv/
+
+# Runtime-generated governance outputs (keep .gitkeep for Docker mount targets)
+artifacts/*
+!artifacts/.gitkeep
+exports/*
+!exports/.gitkeep
+audit_exports/*
+!audit_exports/.gitkeep
+human_input/*
+!human_input/.gitkeep
+state/*
+!state/.gitkeep
+
+# Environment secrets (never commit real .env files)
+.env
+!.env.example
+
+# Local signing key and secrets pulled from Key Vault (never commit)
+.secrets/
+
+# Staging compose env file
+.env.staging
+
+# Node dependencies
+node_modules/
+
+# OS/editor noise
+.DS_Store
+.vscode/
+.idea/

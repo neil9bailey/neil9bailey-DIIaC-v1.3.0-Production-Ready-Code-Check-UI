@@ -1,0 +1,10 @@
+﻿2b3934f Add staging evidence report, legal context, and customer value overview
+4c737ae Add policy-pack gates, deterministic input freeze, and role idempotency
+051b03f Improve vendor specificity filtering in governed compile
+c01a408 Lock staging runtime to Copilot-only LLM provider
+d99ef17 Harden Entra token typing and fix governed report retrieval
+f01a23c guardrails: enforce governance modes, safer profile defaults, and objective-vendor conflict checks
+d76a605 trust: serve dashboard data from runtime trust status endpoint
+7300a2f keys: register vendorlogic production signing public key
+72d0240 compose: load bridge signing key from mounted secret in staging and production
+87bfb44 Auto-set signing key id from customer instance in Key Vault pull scripts

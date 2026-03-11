@@ -1,0 +1,99 @@
+﻿[
+    {
+        "execution_id":  "0dad1182-bba2-5498-bf7e-0ec233b20135",
+        "role":  "CIO",
+        "test_type":  "positive",
+        "decision_status":  "recommended",
+        "selected_vendor":  "Cisco",
+        "quality_gate_failures":  [
+
+                                  ],
+        "accuracy_warnings":  [
+
+                              ],
+        "zip_sha256":  "243edba79c4422eda9bca1937170870c451c74663957316c5356a75396ba3c1f",
+        "required_artifacts_present":  true,
+        "missing_required_artifacts":  [
+
+                                       ],
+        "llm_freshness":  "CURRENT",
+        "strong_refs":  [
+                            "https://example.com/network/benchmark-2026.pdf",
+                            "https://example.com/security/sdwan-controls-iso27001.html"
+                        ]
+    },
+    {
+        "execution_id":  "ad9b6d0f-86a8-51f5-abb1-76925b6f7f04",
+        "role":  "CSO",
+        "test_type":  "positive",
+        "decision_status":  "recommended",
+        "selected_vendor":  "Cisco",
+        "quality_gate_failures":  [
+
+                                  ],
+        "accuracy_warnings":  [
+
+                              ],
+        "zip_sha256":  "469f2ef82596d98d2c52099bf876df740c1820a6b282cbad17c92efb9d7104d3",
+        "required_artifacts_present":  true,
+        "missing_required_artifacts":  [
+
+                                       ],
+        "llm_freshness":  "CURRENT",
+        "strong_refs":  [
+                            "https://example.com/compliance/enisa-network-guidance-2026.html",
+                            "https://example.com/security/zero-trust-reference-architecture.pdf"
+                        ]
+    },
+    {
+        "execution_id":  "8d3d7644-366d-53ea-9240-f2f43087f4a9",
+        "role":  "ACTING_CTO",
+        "test_type":  "positive",
+        "decision_status":  "recommended",
+        "selected_vendor":  "Fortinet",
+        "quality_gate_failures":  [
+
+                                  ],
+        "accuracy_warnings":  [
+
+                              ],
+        "zip_sha256":  "a9c947540df15af928f94c30aa5475f2ee42302d470f0c0c87e0a00a69342a4c",
+        "required_artifacts_present":  true,
+        "missing_required_artifacts":  [
+
+                                       ],
+        "llm_freshness":  "CURRENT",
+        "strong_refs":  [
+                            "https://example.com/finance/sdwan-tco-model-2026.xlsx",
+                            "https://example.com/operations/network-resilience-kpis-2026.pdf"
+                        ]
+    },
+    {
+        "execution_id":  "6ab1858e-bd1b-5c83-805a-6d69c57684a0",
+        "role":  "CIO",
+        "test_type":  "negative_gate",
+        "decision_status":  "not_recommended",
+        "selected_vendor":  null,
+        "quality_gate_failures":  [
+                                      "strong evidence refs 0 below minimum 2",
+                                      "llm evidence freshness requirement failed (status=STALE)"
+                                  ],
+        "accuracy_warnings":  [
+                                  "No strong document/URI evidence references were provided.",
+                                  "LLM options did not pass vendor specificity checks; deterministic fallback options were used.",
+                                  "LLM audit timestamp (2023-10-01T00:00:00+00:00) is older than minimum accepted freshness (2025-01-01T00:00:00+00:00).",
+                                  "Quality gate: strong evidence refs 0 below minimum 2",
+                                  "Quality gate: llm evidence freshness requirement failed (status=STALE)",
+                                  "Policy pack controls failed: EU-AIA-ART15-ACCURACY-ROBUSTNESS"
+                              ],
+        "zip_sha256":  "6a6c6cddc14e80502c8472032992a595a36c40ec359b72a6770951fb4556fcb1",
+        "required_artifacts_present":  true,
+        "missing_required_artifacts":  [
+
+                                       ],
+        "llm_freshness":  "STALE",
+        "strong_refs":  [
+
+                        ]
+    }
+]
