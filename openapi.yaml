@@ -1,0 +1,1137 @@
+openapi: 3.1.0
+info:
+  title: DIIaC Governance Runtime API
+  description: |
+    **DIIaC — Deterministic Infrastructure Intelligence as Code**
+
+    Version 1.2.0 production governance runtime API. Provides deterministic
+    governed compile, Merkle proofing, Ed25519 signed exports, trust ledger,
+    replay verification, and audit export workflows.
+
+    ## Authentication
+
+    Admin endpoints (`/admin/*`) require a bearer token in production:
+    ```
+    Authorization: Bearer <ADMIN_API_TOKEN>
+    ```
+
+    Development environments (`APP_ENV=development`) bypass admin auth.
+
+    ## Deterministic execution
+
+    Same role inputs + same schema + same profile + same reasoning/policy level
+    always produce the same execution ID, pack hash, and scores in strict mode.
+  version: 1.2.0
+  license:
+    name: Proprietary
+    url: https://github.com/neil9bailey/DIIaC-v1.2.0-Production-Ready-Code-Check/blob/main/LICENSE
+  contact:
+    name: DIIaC Support
+    url: https://github.com/neil9bailey/DIIaC-v1.2.0-Production-Ready-Code-Check/issues
+
+servers:
+  - url: http://localhost:8000
+    description: Local development runtime
+  - url: http://governance-runtime:8000
+    description: Docker Compose internal network
+
+tags:
+  - name: health
+    description: Runtime health and readiness checks
+  - name: governance
+    description: Role input ingestion and governed compile
+  - name: profiles
+    description: Sector business profile registry
+  - name: executions
+    description: Execution artefact retrieval
+  - name: verify
+    description: Cryptographic verification and replay attestation
+  - name: trust
+    description: Trust ledger status
+  - name: exports
+    description: Signed decision pack exports
+  - name: admin
+    description: Administrative operations (requires bearer token in production)
+  - name: audit
+    description: Audit export and download
+
+components:
+  securitySchemes:
+    AdminBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque
+      description: Required for all `/admin/*` endpoints in production (`APP_ENV != development`).
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: execution_not_found
+        message:
+          type: string
+          example: The requested execution ID was not found.
+
+    RuntimeDependencyFailure:
+      type: object
+      properties:
+        error:
+          type: string
+          enum: [runtime_dependency_failure]
+        error_code:
+          type: string
+          enum:
+            - ARTIFACT_STORAGE_UNAVAILABLE
+            - RUNTIME_DEPENDENCY_TIMEOUT
+            - EXPORT_STORAGE_UNAVAILABLE
+            - AUDIT_STORAGE_UNAVAILABLE
+            - SIGNATURE_METADATA_UNAVAILABLE
+        message:
+          type: string
+        dependency:
+          type: string
+          enum: [artifact_storage, export_storage, audit_storage, runtime_dependency]
+
+    ReadinessChecks:
+      type: object
+      properties:
+        overall_ready:
+          type: boolean
+        storage:
+          type: boolean
+        contracts:
+          type: boolean
+        database:
+          type: boolean
+
+    RoleInputRequest:
+      type: object
+      required:
+        - execution_context_id
+        - role
+        - domain
+        - assertions
+        - non_negotiables
+        - risk_flags
+        - evidence_refs
+      properties:
+        execution_context_id:
+          type: string
+          maxLength: 256
+          example: ctx-2026-001
+        role:
+          type: string
+          maxLength: 512
+          example: CTO
+        domain:
+          type: string
+          maxLength: 512
+          example: Cloud Infrastructure Procurement
+        assertions:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+          example:
+            - "Multi-cloud strategy required"
+            - "Zero-trust security posture"
+        non_negotiables:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+          example:
+            - "UK data residency"
+        risk_flags:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+          example:
+            - "Single-vendor lock-in"
+        evidence_refs:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+          example:
+            - "REF-001: Board mandate Q1 2026"
+
+    CompileRequest:
+      type: object
+      required:
+        - execution_context_id
+        - schema_id
+        - profile_id
+        - reasoning_level
+        - policy_level
+      properties:
+        execution_context_id:
+          type: string
+          maxLength: 256
+          example: ctx-2026-001
+        schema_id:
+          type: string
+          maxLength: 256
+          example: infrastructure_procurement_v1
+        profile_id:
+          type: string
+          maxLength: 256
+          example: it_enterprise
+        reasoning_level:
+          type: string
+          maxLength: 256
+          example: strategic
+        policy_level:
+          type: string
+          maxLength: 256
+          example: board
+        schema_version:
+          type: string
+          maxLength: 64
+          example: "1.0.0"
+        governance_modes:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 128
+          example: ["strict", "hitl"]
+        preferred_vendors:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 256
+
+    ExecutionSummary:
+      type: object
+      properties:
+        execution_id:
+          type: string
+          format: uuid
+        execution_context_id:
+          type: string
+        pack_hash:
+          type: string
+          description: SHA-256 hash of the canonical decision pack JSON.
+        manifest_hash:
+          type: string
+        merkle_root:
+          type: string
+          description: SHA-256 Merkle root of all artefact leaf hashes.
+        signature:
+          type: string
+          description: Base64-encoded Ed25519 signature of the pack.
+        timestamp:
+          type: string
+          format: date-time
+
+    VerifyPackRequest:
+      type: object
+      required:
+        - execution_id
+        - pack_hash
+      properties:
+        execution_id:
+          type: string
+          maxLength: 256
+        pack_hash:
+          type: string
+          maxLength: 128
+        manifest_hash:
+          type: string
+          maxLength: 128
+
+    ReplayRequest:
+      type: object
+      required:
+        - execution_context_id
+        - schema_id
+        - profile_id
+        - reasoning_level
+        - policy_level
+      properties:
+        execution_context_id:
+          type: string
+          maxLength: 256
+        schema_id:
+          type: string
+          maxLength: 256
+        profile_id:
+          type: string
+          maxLength: 256
+        reasoning_level:
+          type: string
+          maxLength: 256
+        policy_level:
+          type: string
+          maxLength: 256
+        schema_version:
+          type: string
+          maxLength: 64
+        governance_modes:
+          type: array
+          maxItems: 20
+          items:
+            type: string
+            maxLength: 128
+
+    MerkleProofRequest:
+      type: object
+      required:
+        - leaf_hash
+        - merkle_root
+        - siblings
+        - index
+      properties:
+        leaf_hash:
+          type: string
+          maxLength: 128
+        merkle_root:
+          type: string
+          maxLength: 128
+        siblings:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 128
+        index:
+          type: integer
+          minimum: 0
+
+    AuditExportRequest:
+      type: object
+      properties:
+        execution_ids:
+          type: array
+          maxItems: 200
+          items:
+            type: string
+            maxLength: 256
+          description: If omitted, all executions are included.
+
+paths:
+  # ── Health ────────────────────────────────────────────────────────────────
+  /health:
+    get:
+      tags: [health]
+      summary: Runtime liveness and readiness
+      operationId: getHealth
+      responses:
+        "200":
+          description: Runtime is healthy or degraded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [OK, DEGRADED]
+                  readiness:
+                    $ref: "#/components/schemas/ReadinessChecks"
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  /admin/health:
+    get:
+      tags: [health, admin]
+      summary: Detailed admin health with runtime configuration
+      operationId: getAdminHealth
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Admin health details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [OK, DEGRADED]
+                  strict_deterministic_mode:
+                    type: boolean
+                  signing_enabled:
+                    type: boolean
+                  signing_key_id:
+                    type: string
+                  key_mode:
+                    type: string
+                    enum: [configured, ephemeral]
+                  ledger_record_count:
+                    type: integer
+                  readiness:
+                    $ref: "#/components/schemas/ReadinessChecks"
+                  timestamp:
+                    type: string
+                    format: date-time
+        "401":
+          description: Admin authentication required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /admin/config:
+    get:
+      tags: [admin]
+      summary: Runtime configuration summary
+      operationId: getAdminConfig
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Configuration details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  version:
+                    type: string
+                    example: v1.2.0
+                  profiles_count:
+                    type: integer
+                  admin_auth_enabled:
+                    type: boolean
+                  runtime_env:
+                    type: string
+
+  # ── Governance ────────────────────────────────────────────────────────────
+  /api/human-input/role:
+    post:
+      tags: [governance]
+      summary: Ingest a role stakeholder input for a governance context
+      operationId: postRoleInput
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInputRequest"
+      responses:
+        "201":
+          description: Role input stored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stored:
+                    type: boolean
+                  execution_context_id:
+                    type: string
+                  role_count:
+                    type: integer
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/human-input:
+    post:
+      tags: [governance]
+      summary: Ingest free-text human input
+      operationId: postHumanInput
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text:
+                  type: string
+                  maxLength: 8192
+      responses:
+        "201":
+          description: Input accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: boolean
+                  length:
+                    type: integer
+        "400":
+          description: Validation error
+
+  /api/governed-compile:
+    post:
+      tags: [governance]
+      summary: Execute a deterministic governed compile
+      operationId: postGovernedCompile
+      description: |
+        Produces a deterministic decision pack with Merkle proofing and
+        Ed25519 signature. Same inputs always produce the same execution ID
+        and pack hash in strict deterministic mode.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompileRequest"
+      responses:
+        "200":
+          description: Governed compile result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionSummary"
+        "400":
+          description: Validation error
+        "503":
+          description: Runtime dependency failure
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeDependencyFailure"
+
+  /api/compile:
+    post:
+      tags: [governance]
+      summary: Alias for /api/governed-compile
+      operationId: postCompile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompileRequest"
+      responses:
+        "200":
+          description: Governed compile result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExecutionSummary"
+
+  # ── Business Profiles ─────────────────────────────────────────────────────
+  /api/business-profiles:
+    get:
+      tags: [profiles]
+      summary: List all loaded sector business profiles
+      operationId: getBusinessProfiles
+      responses:
+        "200":
+          description: Profile list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  profiles:
+                    type: array
+                    items:
+                      type: object
+                  profiles_count:
+                    type: integer
+
+  # ── Executions ────────────────────────────────────────────────────────────
+  /executions/{execution_id}/trace-map:
+    get:
+      tags: [executions]
+      summary: Evidence trace map for an execution
+      operationId: getTraceMap
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Evidence trace map
+        "404":
+          description: Execution not found
+
+  /executions/{execution_id}/scoring:
+    get:
+      tags: [executions]
+      summary: Vendor scoring matrix and recommendation
+      operationId: getScoring
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scoring matrix
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scoring:
+                    type: array
+                  recommendation:
+                    type: object
+        "404":
+          description: Execution not found
+
+  /executions/{execution_id}/merkle:
+    get:
+      tags: [executions]
+      summary: Merkle tree for an execution
+      operationId: getMerkle
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Merkle tree with root and levels
+        "404":
+          description: Execution not found
+
+  /executions/{execution_id}/merkle/proof/{artefact_name}:
+    get:
+      tags: [executions]
+      summary: Merkle inclusion proof for a specific artefact
+      operationId: getMerkleProof
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: artefact_name
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Merkle proof with siblings and root
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  artefact_name:
+                    type: string
+                  leaf_hash:
+                    type: string
+                  index:
+                    type: integer
+                  siblings:
+                    type: array
+                    items:
+                      type: string
+                  merkle_root:
+                    type: string
+        "404":
+          description: Execution or artefact not found
+
+  /executions/{execution_id}/reports:
+    get:
+      tags: [executions]
+      summary: List artefacts / reports for an execution
+      operationId: getExecutionReports
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Report artefact list
+        "404":
+          description: Execution not found
+
+  # ── Verification ──────────────────────────────────────────────────────────
+  /verify/public-keys:
+    get:
+      tags: [verify]
+      summary: Public key registry
+      operationId: getPublicKeys
+      description: Returns the Ed25519 public key registry used for signature verification.
+      responses:
+        "200":
+          description: Public keys
+
+  /verify/execution/{execution_id}:
+    get:
+      tags: [verify]
+      summary: Verify an execution against the trust ledger
+      operationId: verifyExecution
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  execution_id:
+                    type: string
+                  pack_hash:
+                    type: string
+                  manifest_hash:
+                    type: string
+                  merkle_root:
+                    type: string
+                  signature_present:
+                    type: boolean
+                  status:
+                    type: string
+                    enum: [VERIFIABLE, NOT_VERIFIABLE]
+                  ledger_match:
+                    type: boolean
+        "404":
+          description: Execution not found
+
+  /verify/pack:
+    post:
+      tags: [verify]
+      summary: Verify pack hash and Ed25519 signature
+      operationId: verifyPack
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyPackRequest"
+      responses:
+        "200":
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  signature_valid:
+                    type: boolean
+                  hash_valid:
+                    type: boolean
+                  manifest_consistent:
+                    type: boolean
+                  overall_valid:
+                    type: boolean
+        "400":
+          description: Validation error
+        "404":
+          description: Execution not found
+        "503":
+          description: Signature metadata unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RuntimeDependencyFailure"
+
+  /verify/merkle-proof:
+    post:
+      tags: [verify]
+      summary: Verify a Merkle inclusion proof
+      operationId: verifyMerkleProof
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MerkleProofRequest"
+      responses:
+        "200":
+          description: Proof verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  proof_valid:
+                    type: boolean
+        "400":
+          description: Validation error
+
+  /verify/replay:
+    post:
+      tags: [verify]
+      summary: Replay verification with deterministic certificate
+      operationId: verifyReplay
+      description: |
+        Derives the deterministic execution ID from the input payload and
+        checks whether it matches a recorded execution. Issues a signed
+        `replay_certificate.json` for attestation workflows.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplayRequest"
+      responses:
+        "200":
+          description: Replay certificate
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  execution_context_id:
+                    type: string
+                  expected_execution_id:
+                    type: string
+                    format: uuid
+                  context_hash:
+                    type: string
+                  replay_valid:
+                    type: boolean
+                  strict_deterministic_mode:
+                    type: boolean
+                  verified_at:
+                    type: string
+                    format: date-time
+                  pack_hash:
+                    type: string
+                    nullable: true
+                  certificate_path:
+                    type: string
+        "400":
+          description: Validation error
+        "404":
+          description: Profile not found
+        "503":
+          description: Artifact storage unavailable
+
+  # ── Trust ─────────────────────────────────────────────────────────────────
+  /trust/status:
+    get:
+      tags: [trust]
+      summary: Trust ledger status
+      operationId: getTrustStatus
+      responses:
+        "200":
+          description: Ledger record count and latest hashes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ledger_records:
+                    type: integer
+                  latest_record_hash:
+                    type: string
+                    nullable: true
+                  latest_merkle_root:
+                    type: string
+                    nullable: true
+
+  /trust:
+    get:
+      tags: [trust]
+      summary: Alias for /trust/status
+      operationId: getTrust
+      responses:
+        "200":
+          description: Ledger record count and latest hashes
+
+  # ── Decision Pack Exports ─────────────────────────────────────────────────
+  /decision-pack/{execution_id}/export:
+    get:
+      tags: [exports]
+      summary: Download decision pack as ZIP
+      operationId: exportDecisionPack
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ZIP file download
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Execution not found
+        "503":
+          description: Export storage unavailable
+
+  /decision-pack/{execution_id}/export-signed:
+    get:
+      tags: [exports]
+      summary: Get signed export metadata (ZIP path + Ed25519 signature)
+      operationId: exportSigned
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Signed export metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  zip_path:
+                    type: string
+                  sig_path:
+                    type: string
+                  sigmeta_path:
+                    type: string
+                  sigmeta:
+                    type: object
+                    properties:
+                      signature_alg:
+                        type: string
+                        example: Ed25519
+                      signing_key_id:
+                        type: string
+                      signed_at:
+                        type: string
+                        format: date-time
+                      zip_sha256:
+                        type: string
+                      execution_id:
+                        type: string
+                      pack_hash:
+                        type: string
+                      merkle_root:
+                        type: string
+                      manifest_hash:
+                        type: string
+        "404":
+          description: Execution not found
+        "503":
+          description: Export storage unavailable
+
+  # ── Admin ─────────────────────────────────────────────────────────────────
+  /admin/executions:
+    get:
+      tags: [admin]
+      summary: List all executions
+      operationId: getAdminExecutions
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: All executions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  executions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ExecutionSummary"
+
+  /admin/executions/{execution_id}/logs:
+    get:
+      tags: [admin]
+      summary: Logs for a specific execution
+      operationId: getExecutionLogs
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: execution_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Execution log entries
+        "404":
+          description: Execution not found
+
+  /admin/logs:
+    get:
+      tags: [admin]
+      summary: Backend or ledger logs
+      operationId: getAdminLogs
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: source
+          in: query
+          schema:
+            type: string
+            enum: [backend, ledger]
+            default: backend
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum: [INFO, WARN, ERROR]
+      responses:
+        "200":
+          description: Log entries
+
+  /admin/logs/backend:
+    get:
+      tags: [admin]
+      summary: Backend structured logs
+      operationId: getBackendLogs
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Backend log entries
+
+  /admin/logs/ledger:
+    get:
+      tags: [admin]
+      summary: Trust ledger logs
+      operationId: getLedgerLogs
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Ledger log entries
+
+  /admin/metrics:
+    get:
+      tags: [admin]
+      summary: Operational metrics with alerting guidance
+      operationId: getAdminMetrics
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Metrics with alert codes and thresholds
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  health_status:
+                    type: string
+                    enum: [OK, WARN]
+                  executions_total:
+                    type: integer
+                  signed_recent_executions:
+                    type: integer
+                  ledger_record_count:
+                    type: integer
+                  alerts:
+                    type: array
+                    items:
+                      type: string
+                    example: ["MTR-001: No signed executions in the latest window."]
+                  threshold_recommendations:
+                    type: object
+                  last_updated:
+                    type: string
+                    format: date-time
+
+  # ── Audit ─────────────────────────────────────────────────────────────────
+  /admin/audit-export:
+    post:
+      tags: [audit, admin]
+      summary: Generate an audit export bundle
+      operationId: createAuditExport
+      security:
+        - AdminBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditExportRequest"
+      responses:
+        "201":
+          description: Audit export created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  audit_export_id:
+                    type: string
+                  download_url:
+                    type: string
+                  storage_path:
+                    type: string
+        "400":
+          description: Validation error
+        "503":
+          description: Audit storage unavailable
+
+  /admin/audit/exports:
+    get:
+      tags: [audit, admin]
+      summary: List all audit exports
+      operationId: listAuditExports
+      security:
+        - AdminBearer: []
+      responses:
+        "200":
+          description: Audit export list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exports:
+                    type: array
+                  count:
+                    type: integer
+    post:
+      tags: [audit, admin]
+      summary: Alias for POST /admin/audit-export
+      operationId: createAuditExportAlias
+      security:
+        - AdminBearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuditExportRequest"
+      responses:
+        "201":
+          description: Audit export created
+
+  /admin/audit/exports/{export_id}/download:
+    get:
+      tags: [audit, admin]
+      summary: Download an audit export bundle
+      operationId: downloadAuditExport
+      security:
+        - AdminBearer: []
+      parameters:
+        - name: export_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Audit bundle JSON file
+          content:
+            application/json:
+              schema:
+                type: object
+        "404":
+          description: Audit export not found

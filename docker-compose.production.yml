@@ -1,0 +1,60 @@
+# DIIaC v1.2.0 — Production override for Docker Desktop
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.production.yml up --build
+#
+# Prerequisites:
+#   1. Run scripts/pull-keyvault-secrets.ps1 (Windows) or .sh (Mac/Linux/WSL)
+#   2. Verify .env and .secrets/signing_key.pem exist
+#
+# Identical to docker-compose.staging.yml except APP_ENV=production.
+# Use this when running the production-equivalent stack on Docker Desktop.
+
+name: diiac_v120
+
+services:
+
+  governance-runtime:
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             export SIGNING_PRIVATE_KEY_PEM=$$(cat /run/secrets/signing_key) &&
+             python app.py"
+    environment:
+      APP_ENV: production
+      ADMIN_AUTH_ENABLED: "true"
+      STRICT_DETERMINISTIC_MODE: "true"
+      SIGNING_ENABLED: "true"
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN}
+    volumes:
+      - .secrets/signing_key.pem:/run/secrets/signing_key:ro
+
+  backend-ui-bridge:
+    environment:
+      APP_ENV: production
+      # Real LLM — no stub
+      LLM_INGESTION_ENABLED: "true"
+      LLM_STUB_ENABLED: "false"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+      COPILOT_MODEL: ${COPILOT_MODEL:-gpt-4o}
+      # Entra ID RS256 authentication
+      AUTH_MODE: ${AUTH_MODE:-entra_jwt_rs256}
+      ENTRA_ROLE_CLAIM: ${ENTRA_ROLE_CLAIM:-groups}
+      ENTRA_EXPECTED_TENANT_ID: ${ENTRA_EXPECTED_TENANT_ID}
+      ENTRA_EXPECTED_AUDIENCE: ${ENTRA_EXPECTED_AUDIENCE}
+      ENTRA_EXPECTED_ISSUERS: ${ENTRA_EXPECTED_ISSUERS}
+      ENTRA_GROUP_TO_ROLE_JSON: ${ENTRA_GROUP_TO_ROLE_JSON}
+      ENTRA_PRINCIPAL_TO_ROLE_JSON: ${ENTRA_PRINCIPAL_TO_ROLE_JSON:-}
+      ENTRA_OIDC_DISCOVERY_URL: ${ENTRA_OIDC_DISCOVERY_URL}
+      ENTRA_JWKS_URI: ${ENTRA_JWKS_URI}
+      # Admin API token for proxying admin requests to Python backend
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN}
+
+  frontend:
+    environment:
+      VITE_API_BASE: http://localhost:${BRIDGE_HOST_PORT:-3001}
+      VITE_ENTRA_CLIENT_ID: ${VITE_ENTRA_CLIENT_ID}
+      VITE_ENTRA_TENANT_ID: ${VITE_ENTRA_TENANT_ID}
+      VITE_ENTRA_REDIRECT_URI: ${VITE_ENTRA_REDIRECT_URI:-http://localhost:5173/auth/callback}
+      VITE_ENTRA_GROUP_MAP: ${VITE_ENTRA_GROUP_MAP}
