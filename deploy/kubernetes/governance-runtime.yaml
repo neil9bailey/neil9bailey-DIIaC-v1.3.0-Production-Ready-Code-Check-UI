@@ -1,0 +1,143 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: governance-runtime
+  namespace: diiac
+  labels:
+    app.kubernetes.io/name: diiac
+    app.kubernetes.io/component: governance-runtime
+    app.kubernetes.io/version: "1.2.0"
+spec:
+  replicas: 1
+  # NOTE: replicas > 1 requires shared PVC (ReadWriteMany) or external storage.
+  # Default SQLite storage is single-replica only. Scale horizontally only after
+  # migrating to a shared volume or PostgreSQL backend.
+  selector:
+    matchLabels:
+      app: governance-runtime
+  strategy:
+    type: Recreate
+    # Recreate is used because SQLite does not support concurrent writers.
+    # Change to RollingUpdate only when using shared/external storage.
+  template:
+    metadata:
+      labels:
+        app: governance-runtime
+        app.kubernetes.io/name: diiac
+        app.kubernetes.io/component: governance-runtime
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: "/admin/metrics"
+        prometheus.io/port: "8000"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+
+      containers:
+        - name: governance-runtime
+          image: ghcr.io/neil9bailey/diiac-runtime:v1.2.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+
+          env:
+            - name: APP_ENV
+              value: production
+            - name: ADMIN_AUTH_ENABLED
+              value: "true"
+            - name: STRICT_DETERMINISTIC_MODE
+              value: "true"
+            - name: ADMIN_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: diiac-secrets
+                  key: ADMIN_API_TOKEN
+            - name: SIGNING_PRIVATE_KEY_PEM
+              valueFrom:
+                secretKeyRef:
+                  name: diiac-secrets
+                  key: SIGNING_PRIVATE_KEY_PEM
+
+          volumeMounts:
+            - name: artifacts
+              mountPath: /workspace/artefacts
+            - name: exports
+              mountPath: /workspace/exports
+            - name: audit-exports
+              mountPath: /workspace/audit_exports
+            - name: human-input
+              mountPath: /workspace/human_input
+
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 2
+
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+
+      volumes:
+        - name: artifacts
+          persistentVolumeClaim:
+            claimName: diiac-artifacts
+        - name: exports
+          persistentVolumeClaim:
+            claimName: diiac-exports
+        - name: audit-exports
+          persistentVolumeClaim:
+            claimName: diiac-audit-exports
+        - name: human-input
+          persistentVolumeClaim:
+            claimName: diiac-human-input
+
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: governance-runtime
+  namespace: diiac
+  labels:
+    app.kubernetes.io/name: diiac
+    app.kubernetes.io/component: governance-runtime
+spec:
+  selector:
+    app: governance-runtime
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+  type: ClusterIP
