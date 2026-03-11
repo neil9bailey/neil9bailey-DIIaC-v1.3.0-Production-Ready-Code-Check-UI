@@ -1,0 +1,25 @@
+# Python runtime/cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Runtime-generated governance outputs
+artifacts/
+exports/
+audit_exports/
+
+# Environment secrets (never commit real .env files)
+.env
+!.env.example
+
+# Node dependencies
+node_modules/
+
+# OS/editor noise
+.DS_Store
+.vscode/
+.idea/
