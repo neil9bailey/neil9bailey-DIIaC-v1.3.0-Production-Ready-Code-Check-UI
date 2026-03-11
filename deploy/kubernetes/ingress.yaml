@@ -1,0 +1,65 @@
+# DIIaC Kubernetes Ingress
+# Requires: nginx-ingress-controller or similar.
+# For TLS: install cert-manager and update the tls block with your cert issuer.
+#
+# Quick deploy with cert-manager Let's Encrypt:
+#   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+#   Then set annotations: cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: diiac-ingress
+  namespace: diiac
+  labels:
+    app.kubernetes.io/name: diiac
+    app.kubernetes.io/component: ingress
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "16m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "120"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "120"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    # Rate limiting (requests per minute per IP):
+    nginx.ingress.kubernetes.io/limit-rpm: "120"
+    # Uncomment to enable TLS via cert-manager:
+    # cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+
+  # Uncomment and configure for TLS:
+  # tls:
+  #   - hosts:
+  #       - diiac.your-domain.com
+  #     secretName: diiac-tls
+
+  rules:
+    - host: diiac.your-domain.com
+      http:
+        paths:
+          # Frontend (catch-all)
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 5173
+
+          # Bridge API (routes /api/* to bridge)
+          - path: /api/
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-ui-bridge
+                port:
+                  number: 3001
+
+          # Admin endpoints routed to bridge (which proxies to runtime)
+          - path: /admin/
+            pathType: Prefix
+            backend:
+              service:
+                name: backend-ui-bridge
+                port:
+                  number: 3001

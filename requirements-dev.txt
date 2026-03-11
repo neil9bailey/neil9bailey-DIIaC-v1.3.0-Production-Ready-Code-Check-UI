@@ -1,0 +1,22 @@
+# DIIaC v1.2.0 — Development / Test Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+-r requirements.txt
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest==8.3.5
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+httpx==0.28.1
+
+# ── Linting / formatting ──────────────────────────────────────────────────────
+ruff==0.9.7
+
+# ── Type checking ─────────────────────────────────────────────────────────────
+mypy==1.14.1
+
+# ── Security auditing ─────────────────────────────────────────────────────────
+pip-audit==2.8.0
+
+# ── Test utilities ────────────────────────────────────────────────────────────
+requests==2.32.3

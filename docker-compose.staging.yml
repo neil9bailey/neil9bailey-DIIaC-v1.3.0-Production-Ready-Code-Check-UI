@@ -1,0 +1,65 @@
+# DIIaC v1.2.0 — Staging override for Docker Compose
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.staging.yml up --build
+#
+# Prerequisites:
+#   1. Run scripts/pull-keyvault-secrets.sh (Mac/Linux/WSL)
+#      OR scripts/pull-keyvault-secrets.ps1 (Windows PowerShell)
+#   2. Verify .env and .secrets/signing_key.pem exist
+#
+# This file OVERRIDES defaults from docker-compose.yml for staging:
+#   - Admin auth enforced (ADMIN_AUTH_ENABLED=true)
+#   - Signing key loaded from .secrets/signing_key.pem
+#   - Real LLM (not stub)
+#   - Entra ID RS256 auth on the bridge
+#   - Vite frontend with MSAL Entra login
+
+name: diiac_v120
+
+services:
+
+  governance-runtime:
+    # SIGNING_KEY_FILE tells app.py to read the PEM directly from the bind-mounted
+    # file. This avoids $(cat ...) shell substitution which strips the trailing
+    # newline from the PEM, causing OpenSSL 3.x to reject it with "unsupported".
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             python app.py"
+    environment:
+      APP_ENV: staging
+      ADMIN_AUTH_ENABLED: "true"
+      STRICT_DETERMINISTIC_MODE: "true"
+      SIGNING_ENABLED: "true"
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN}
+      SIGNING_KEY_FILE: /run/secrets/signing_key
+    volumes:
+      # Signing key injected as a read-only bind-mount secret
+      - .secrets/signing_key.pem:/run/secrets/signing_key:ro
+
+  backend-ui-bridge:
+    environment:
+      APP_ENV: staging
+      # Real LLM — no stub
+      LLM_INGESTION_ENABLED: "true"
+      LLM_STUB_ENABLED: "false"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+      # Entra ID RS256 authentication
+      AUTH_MODE: ${AUTH_MODE:-entra_jwt_rs256}
+      ENTRA_ROLE_CLAIM: ${ENTRA_ROLE_CLAIM:-groups}
+      ENTRA_EXPECTED_TENANT_ID: ${ENTRA_EXPECTED_TENANT_ID}
+      ENTRA_EXPECTED_AUDIENCE: ${ENTRA_EXPECTED_AUDIENCE}
+      ENTRA_EXPECTED_ISSUERS: ${ENTRA_EXPECTED_ISSUERS}
+      ENTRA_GROUP_TO_ROLE_JSON: ${ENTRA_GROUP_TO_ROLE_JSON}
+      ENTRA_PRINCIPAL_TO_ROLE_JSON: ${ENTRA_PRINCIPAL_TO_ROLE_JSON:-}
+      ENTRA_OIDC_DISCOVERY_URL: ${ENTRA_OIDC_DISCOVERY_URL}
+      ENTRA_JWKS_URI: ${ENTRA_JWKS_URI}
+
+  frontend:
+    environment:
+      VITE_API_BASE: http://localhost:${BRIDGE_HOST_PORT:-3001}
+      VITE_ENTRA_CLIENT_ID: ${VITE_ENTRA_CLIENT_ID}
+      VITE_ENTRA_TENANT_ID: ${VITE_ENTRA_TENANT_ID}
+      VITE_ENTRA_REDIRECT_URI: ${VITE_ENTRA_REDIRECT_URI:-http://localhost:5173/auth/callback}
+      VITE_ENTRA_GROUP_MAP: ${VITE_ENTRA_GROUP_MAP}

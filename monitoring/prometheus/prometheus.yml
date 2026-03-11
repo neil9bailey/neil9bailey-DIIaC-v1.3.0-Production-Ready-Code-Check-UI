@@ -1,0 +1,84 @@
+# DIIaC v1.2.0 — Prometheus Scrape Configuration
+#
+# Usage (standalone):
+#   docker run -p 9090:9090 \
+#     -v $(pwd)/monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml \
+#     -v $(pwd)/monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml \
+#     prom/prometheus:latest
+#
+# Usage (with docker-compose):
+#   Add the prometheus service below to your docker-compose.yml.
+#
+# Kubernetes:
+#   Deploy Prometheus via kube-prometheus-stack Helm chart and configure
+#   a ServiceMonitor targeting the governance-runtime service on port 8000.
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  scrape_timeout: 10s
+  external_labels:
+    cluster: diiac-prod
+    environment: production
+
+# Load alert rules
+rule_files:
+  - "alerts.yml"
+
+# Alertmanager (configure your Alertmanager endpoint here)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#             - alertmanager:9093
+
+scrape_configs:
+  # ── DIIaC Governance Runtime ───────────────────────────────────────────────
+  # The runtime exposes JSON metrics at /admin/metrics (not Prometheus format).
+  # Use json_exporter or a custom scraper to convert, OR use the annotations
+  # approach in Kubernetes with a sidecar exporter.
+  #
+  # For a quick Prometheus-native integration, deploy json_exporter:
+  #   https://github.com/prometheus-community/json_exporter
+  #
+  # Direct admin metrics scrape (requires ADMIN_API_TOKEN):
+  - job_name: diiac-runtime-admin
+    metrics_path: /admin/metrics
+    scheme: http
+    params:
+      format: [json]
+    # If admin auth is enabled, inject the token via basic_auth workaround
+    # or a reverse proxy that adds the Authorization header.
+    static_configs:
+      - targets:
+          - governance-runtime:8000   # Docker Compose
+          # - localhost:8000            # Local development
+
+  # ── DIIaC Runtime Health ──────────────────────────────────────────────────
+  - job_name: diiac-runtime-health
+    metrics_path: /health
+    scheme: http
+    static_configs:
+      - targets:
+          - governance-runtime:8000
+
+  # ── Backend UI Bridge ──────────────────────────────────────────────────────
+  - job_name: diiac-bridge-health
+    metrics_path: /health
+    scheme: http
+    static_configs:
+      - targets:
+          - backend-ui-bridge:3001
+
+  # ── Node.js process metrics (if prom-client is added to bridge) ───────────
+  # - job_name: diiac-bridge-metrics
+  #   metrics_path: /metrics
+  #   static_configs:
+  #     - targets:
+  #         - backend-ui-bridge:3001
+
+  # ── Prometheus self-monitoring ────────────────────────────────────────────
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090

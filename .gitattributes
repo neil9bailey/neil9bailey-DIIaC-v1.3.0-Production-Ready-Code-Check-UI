@@ -1,0 +1,45 @@
+# DIIaC — Git line ending policy
+# Ensures shell scripts and Python files always use LF (not CRLF) on all platforms.
+# Without this, Git for Windows converts LF → CRLF on checkout, breaking bash scripts.
+
+# Default: normalise to LF in repo, let OS choose on checkout
+* text=auto
+
+# Shell scripts — always LF everywhere (CRLF breaks bash on Windows Git Bash / WSL)
+*.sh        text eol=lf
+*.bash      text eol=lf
+
+# Python — always LF
+*.py        text eol=lf
+
+# PowerShell — CRLF on Windows is fine
+*.ps1       text eol=crlf
+*.psm1      text eol=crlf
+
+# Web / config — LF
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.js        text eol=lf
+*.jsx       text eol=lf
+*.json      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.env       text eol=lf
+*.env.*     text eol=lf
+*.md        text eol=lf
+*.txt       text eol=lf
+*.toml      text eol=lf
+*.cfg       text eol=lf
+*.ini       text eol=lf
+Dockerfile* text eol=lf
+
+# Binaries — no line ending conversion
+*.png       binary
+*.jpg       binary
+*.jpeg      binary
+*.gif       binary
+*.ico       binary
+*.pdf       binary
+*.zip       binary
+*.tar.gz    binary
+*.pem       binary

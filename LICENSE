@@ -1,0 +1,244 @@
+PROPRIETARY SOFTWARE LICENSE
+
+DIIaC — Deterministic Infrastructure Intelligence as Code
+Version 1.2.0
+
+Copyright (c) 2024-2026 [VENDORLOGIC LEGAL NAME] ("Vendorlogic"). All rights reserved.
+
+NOTICE TO CUSTOMER / END USER
+
+This software and associated documentation files (the "Software") are proprietary
+and confidential. The Software is licensed, not sold. All rights not expressly
+granted herein are reserved by Vendorlogic.
+
+────────────────────────────────────────────────────────────────────────────────
+1. DEFINITIONS
+────────────────────────────────────────────────────────────────────────────────
+
+"Platform Code" means the core governance runtime and associated files that are
+inherited unmodified in every customer deployment, including but not limited to:
+  - app.py (governance runtime)
+  - backend-ui-bridge/ (UI bridge service)
+  - Frontend/ (React UI)
+  - docker-compose.yml (base compose configuration)
+  - requirements.txt and pyproject.toml
+  - openapi.yaml
+  - contracts/business-profiles/ (existing sector profile schemas)
+  - contracts/keys/ (existing signing key configuration)
+  - deploy/kubernetes/ (base Kubernetes manifests)
+
+"Customer Instance" means a fork of the Platform Code repository, provisioned
+by Vendorlogic for a named Customer, containing Customer-specific configuration
+layered on top of the unmodified Platform Code.
+
+"Customer Configuration" means files added exclusively within a Customer Instance
+that do not modify Platform Code, including:
+  - customer-config/<customer-name>/ (environment variables, secret manifests)
+  - docker-compose.staging.yml (environment-specific compose overrides)
+  - scripts/pull-keyvault-secrets.sh and .ps1 (Key Vault integration scripts)
+  - New sector profile JSON files added under contracts/business-profiles/
+  - New signing public keys added under contracts/keys/
+
+"Subscription Agreement" means the executed commercial agreement between
+Vendorlogic and the Customer governing the licensing, support, and use of
+the Software.
+
+────────────────────────────────────────────────────────────────────────────────
+2. GRANT OF LICENSE
+────────────────────────────────────────────────────────────────────────────────
+
+Subject to the terms and conditions of this License and a valid, executed
+Subscription Agreement, Vendorlogic hereby grants Customer a non-exclusive,
+non-transferable, non-sublicensable, limited right to:
+
+  (a) Deploy and operate the Software within Customer's own internal
+      infrastructure or approved cloud tenancy solely for Customer's internal
+      governance and assurance workflows.
+
+  (b) Add Customer Configuration to Customer's designated Customer Instance
+      repository, as documented in the accompanying deployment and configuration
+      guides.
+
+  (c) Add new sector profile JSON files to contracts/business-profiles/ within
+      the Customer Instance, solely for Customer's internal operational
+      purposes and consistent with the profile schema specification.
+
+  (d) Create backup copies of the Software solely for archival and
+      disaster-recovery purposes.
+
+This License applies to the specific version stated above. Rights to future
+versions are governed by the Subscription Agreement and the LICENSE file
+accompanying each respective release.
+
+────────────────────────────────────────────────────────────────────────────────
+3. RESTRICTIONS
+────────────────────────────────────────────────────────────────────────────────
+
+Customer shall not, and shall not permit any third party to:
+
+  (a) Copy, distribute, sublicense, sell, resell, transfer, assign, or
+      otherwise commercially exploit the Software or any portion thereof.
+
+  (b) White-label, rebrand, or present the Software under any name, mark, or
+      product identity other than DIIaC as supplied by Vendorlogic.
+
+  (c) Modify, adapt, translate, or create derivative works of the Platform
+      Code. Customer Configuration additions permitted under Section 2 are
+      not modifications of Platform Code.
+
+  (d) Merge, incorporate, or synchronise Platform Code updates into a Customer
+      Instance except by the controlled upgrade process documented in the
+      CUSTOMER_FORK_MODEL.md guide and approved by Vendorlogic.
+
+  (e) Reverse engineer, decompile, disassemble, or otherwise attempt to derive
+      trade secrets or undocumented logic from the Software (except to the
+      extent expressly permitted by applicable law that cannot be excluded by
+      agreement).
+
+  (f) Remove, alter, or obscure any proprietary notices, copyright statements,
+      labels, or marks on or within the Software.
+
+  (g) Use the Software to build, offer, or market a product or service that
+      competes with DIIaC or any Vendorlogic product.
+
+  (h) Share, disclose, or make available the Software source code, repository
+      access, or Customer Instance to any third party without Vendorlogic's
+      prior written consent, except to Customer's own employees and contractors
+      who are bound by confidentiality obligations no less protective than
+      those in this License and who require access solely for Customer's
+      permitted internal use.
+
+  (i) Use the Software in violation of any applicable law or regulation.
+
+────────────────────────────────────────────────────────────────────────────────
+4. INTELLECTUAL PROPERTY
+────────────────────────────────────────────────────────────────────────────────
+
+The Software — including the cryptographic governance engine, deterministic
+compile algorithms, Merkle verification logic, hash-chained trust ledger
+structures, sector profile schemas, cryptographic signing and verification
+mechanisms, Copilot governance intercept framework, and all associated
+documentation — is and shall remain the exclusive intellectual property of
+Vendorlogic. This License does not convey any title, ownership, or intellectual
+property rights in or to the Software.
+
+Customer retains ownership of Customer Configuration data created by Customer,
+subject to the restrictions in this License.
+
+────────────────────────────────────────────────────────────────────────────────
+5. CONFIDENTIALITY
+────────────────────────────────────────────────────────────────────────────────
+
+The Software contains trade secrets and proprietary information of Vendorlogic.
+Customer agrees to maintain the Software in strict confidence, to use at least
+the same degree of care to protect it as Customer uses to protect its own most
+sensitive confidential information (and in no event less than reasonable care),
+and to take all reasonable precautions to prevent unauthorised disclosure or
+access.
+
+────────────────────────────────────────────────────────────────────────────────
+6. AUDIT RIGHTS
+────────────────────────────────────────────────────────────────────────────────
+
+Vendorlogic reserves the right, upon no less than five (5) business days'
+written notice (except where there is reasonable cause to suspect material
+breach, in which case no notice is required), to audit Customer's use of the
+Software to verify compliance with this License. Customer shall cooperate
+reasonably with such audit and shall not obstruct or delay it.
+
+────────────────────────────────────────────────────────────────────────────────
+7. DISCLAIMER OF WARRANTIES
+────────────────────────────────────────────────────────────────────────────────
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, NON-INFRINGEMENT, AND ACCURACY OF OUTPUTS.
+VENDORLOGIC DOES NOT WARRANT THAT THE SOFTWARE WILL BE ERROR-FREE, SECURE,
+OR UNINTERRUPTED. ANY SECTOR PROFILE OUTPUTS, GOVERNANCE DECISIONS, AND
+CRYPTOGRAPHIC VERIFICATION RESULTS ARE PROVIDED FOR INFORMATIONAL AND
+ASSURANCE WORKFLOW PURPOSES ONLY AND DO NOT CONSTITUTE LEGAL, REGULATORY,
+OR COMPLIANCE ADVICE.
+
+────────────────────────────────────────────────────────────────────────────────
+8. LIMITATION OF LIABILITY
+────────────────────────────────────────────────────────────────────────────────
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
+VENDORLOGIC BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+PUNITIVE, OR CONSEQUENTIAL DAMAGES (INCLUDING, WITHOUT LIMITATION, LOSS OF
+PROFITS, REVENUE, DATA, BUSINESS, GOODWILL, OR ANTICIPATED SAVINGS) ARISING
+OUT OF OR IN CONNECTION WITH THIS LICENSE OR THE USE OF OR INABILITY TO USE
+THE SOFTWARE, EVEN IF VENDORLOGIC HAS BEEN ADVISED OF THE POSSIBILITY OF
+SUCH DAMAGES.
+
+VENDORLOGIC'S TOTAL CUMULATIVE LIABILITY TO CUSTOMER UNDER OR IN CONNECTION
+WITH THIS LICENSE SHALL NOT EXCEED THE FEES ACTUALLY PAID BY CUSTOMER TO
+VENDORLOGIC IN THE TWELVE (12) MONTHS IMMEDIATELY PRECEDING THE EVENT GIVING
+RISE TO THE CLAIM.
+
+NOTHING IN THIS LICENSE SHALL LIMIT OR EXCLUDE LIABILITY FOR DEATH OR PERSONAL
+INJURY CAUSED BY NEGLIGENCE, FRAUD OR FRAUDULENT MISREPRESENTATION, OR ANY
+OTHER LIABILITY THAT CANNOT BE LIMITED OR EXCLUDED BY APPLICABLE LAW.
+
+────────────────────────────────────────────────────────────────────────────────
+9. TERM AND TERMINATION
+────────────────────────────────────────────────────────────────────────────────
+
+This License is effective from the date Customer first accesses the Software
+and continues until terminated. This License will terminate automatically and
+immediately upon:
+
+  (a) Expiry or termination of the Subscription Agreement; or
+  (b) Written notice from Vendorlogic if Customer is in material breach of any
+      term of this License and (where the breach is capable of remedy) fails
+      to remedy it within fourteen (14) days of written notice.
+
+Upon termination, Customer must immediately:
+  (i)  cease all use of the Software;
+  (ii) destroy or return all copies of the Software and Customer Instance
+       repositories in Customer's possession or control; and
+  (iii) certify such destruction or return in writing to Vendorlogic upon
+        request.
+
+Sections 4, 5, 7, 8, 9, and 10 survive termination.
+
+────────────────────────────────────────────────────────────────────────────────
+10. GOVERNING LAW AND DISPUTES
+────────────────────────────────────────────────────────────────────────────────
+
+This License shall be governed by and construed in accordance with the laws of
+England and Wales, without regard to its conflict of law provisions.
+
+Any dispute arising out of or in connection with this License, including any
+question regarding its existence, validity, or termination, shall be subject
+to the exclusive jurisdiction of the courts of England and Wales, to which
+both parties irrevocably submit.
+
+────────────────────────────────────────────────────────────────────────────────
+11. GENERAL
+────────────────────────────────────────────────────────────────────────────────
+
+This License, together with the applicable Subscription Agreement, constitutes
+the entire agreement between the parties with respect to the Software and
+supersedes all prior and contemporaneous agreements, representations, and
+understandings relating to its subject matter.
+
+If any provision of this License is held invalid or unenforceable, the remaining
+provisions shall continue in full force. No waiver of any term shall constitute
+a continuing waiver or a waiver of any other term.
+
+Vendorlogic may update the terms of this License for future versions of the
+Software. The LICENSE file included with each released version governs that
+version.
+
+────────────────────────────────────────────────────────────────────────────────
+LICENSING ENQUIRIES
+────────────────────────────────────────────────────────────────────────────────
+
+For licensing, commercial, or compliance enquiries, contact:
+
+  [VENDORLOGIC LEGAL NAME]
+  [REGISTERED ADDRESS]
+  [CONTACT EMAIL / ACCOUNT REPRESENTATIVE]
+
+  Repository: https://github.com/neil9bailey/DIIaC-v1.2.0-Production-Ready-Code-Check
