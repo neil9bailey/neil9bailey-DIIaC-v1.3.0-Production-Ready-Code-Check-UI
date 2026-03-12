@@ -1,0 +1,218 @@
+﻿[
+  {
+    "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/containerApps/rt-vendorlogic-ui-prod-v130/revisions/rt-vendorlogic-ui-prod-v130--fcy73or",
+    "name": "rt-vendorlogic-ui-prod-v130--fcy73or",
+    "properties": {
+      "active": true,
+      "createdTime": "2026-03-11T22:20:57+00:00",
+      "fqdn": "rt-vendorlogic-ui-prod-v130--fcy73or.internal.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+      "healthState": "Healthy",
+      "provisioningState": "Provisioned",
+      "replicas": 1,
+      "runningState": "RunningAtMaxScale",
+      "template": {
+        "containers": [
+          {
+            "env": [
+              {
+                "name": "APP_ENV",
+                "value": "production"
+              },
+              {
+                "name": "ADMIN_AUTH_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "STRICT_DETERMINISTIC_MODE",
+                "value": "true"
+              },
+              {
+                "name": "SIGNING_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "SIGNING_KEY_ID",
+                "value": "diiac-vendorlogic-prod"
+              },
+              {
+                "name": "LLM_PROVIDER_MODE",
+                "value": "copilot_only"
+              },
+              {
+                "name": "ADMIN_API_TOKEN",
+                "secretRef": "admin-api-token"
+              },
+              {
+                "name": "SIGNING_PRIVATE_KEY_PEM",
+                "secretRef": "signing-private-key-pem"
+              }
+            ],
+            "image": "acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-adminheaderfix",
+            "name": "governance-runtime",
+            "probes": [],
+            "resources": {
+              "cpu": 0.25,
+              "memory": "0.5Gi"
+            }
+          }
+        ],
+        "initContainers": null,
+        "revisionSuffix": null,
+        "scale": {
+          "cooldownPeriod": null,
+          "maxReplicas": 1,
+          "minReplicas": 0,
+          "pollingInterval": null,
+          "rules": null
+        },
+        "serviceBinds": null,
+        "terminationGracePeriodSeconds": null,
+        "volumes": null
+      },
+      "trafficWeight": 0
+    },
+    "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+    "type": "Microsoft.App/containerapps/revisions"
+  },
+  {
+    "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/containerApps/rt-vendorlogic-ui-prod-v130/revisions/rt-vendorlogic-ui-prod-v130--0000004",
+    "name": "rt-vendorlogic-ui-prod-v130--0000004",
+    "properties": {
+      "active": true,
+      "createdTime": "2026-03-12T03:00:13+00:00",
+      "fqdn": "rt-vendorlogic-ui-prod-v130--0000004.internal.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+      "healthState": "None",
+      "provisioningState": "Provisioned",
+      "replicas": 1,
+      "runningState": "Activating",
+      "template": {
+        "containers": [
+          {
+            "env": [
+              {
+                "name": "APP_ENV",
+                "value": "production"
+              },
+              {
+                "name": "ADMIN_AUTH_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "STRICT_DETERMINISTIC_MODE",
+                "value": "true"
+              },
+              {
+                "name": "SIGNING_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "SIGNING_KEY_ID",
+                "value": "diiac-vendorlogic-prod"
+              },
+              {
+                "name": "APP_VERSION",
+                "value": "v1.3.0-ui"
+              },
+              {
+                "name": "LLM_PROVIDER_MODE",
+                "value": "copilot_only"
+              },
+              {
+                "name": "ADMIN_API_TOKEN",
+                "secretRef": "admin-api-token"
+              },
+              {
+                "name": "SIGNING_PRIVATE_KEY_PEM",
+                "secretRef": "signing-private-key-pem"
+              }
+            ],
+            "image": "acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2",
+            "name": "governance-runtime",
+            "probes": [
+              {
+                "failureThreshold": 3,
+                "httpGet": {
+                  "path": "/health",
+                  "port": 8000
+                },
+                "initialDelaySeconds": 20,
+                "periodSeconds": 20,
+                "timeoutSeconds": 5,
+                "type": "Liveness"
+              },
+              {
+                "failureThreshold": 3,
+                "httpGet": {
+                  "path": "/health",
+                  "port": 8000
+                },
+                "initialDelaySeconds": 10,
+                "periodSeconds": 10,
+                "timeoutSeconds": 5,
+                "type": "Readiness"
+              }
+            ],
+            "resources": {
+              "cpu": 0.25,
+              "memory": "0.5Gi"
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/app/artifacts",
+                "volumeName": "runtime-artifacts-volume"
+              },
+              {
+                "mountPath": "/app/exports",
+                "volumeName": "runtime-exports-volume"
+              },
+              {
+                "mountPath": "/app/audit_exports",
+                "volumeName": "runtime-audit-volume"
+              },
+              {
+                "mountPath": "/app/state",
+                "volumeName": "runtime-state-volume"
+              }
+            ]
+          }
+        ],
+        "initContainers": null,
+        "revisionSuffix": null,
+        "scale": {
+          "cooldownPeriod": null,
+          "maxReplicas": 1,
+          "minReplicas": 0,
+          "pollingInterval": null,
+          "rules": null
+        },
+        "serviceBinds": null,
+        "terminationGracePeriodSeconds": null,
+        "volumes": [
+          {
+            "name": "runtime-artifacts-volume",
+            "storageName": "runtime-artifacts-storage",
+            "storageType": "AzureFile"
+          },
+          {
+            "name": "runtime-exports-volume",
+            "storageName": "runtime-exports-storage",
+            "storageType": "AzureFile"
+          },
+          {
+            "name": "runtime-audit-volume",
+            "storageName": "runtime-audit-storage",
+            "storageType": "AzureFile"
+          },
+          {
+            "name": "runtime-state-volume",
+            "storageName": "runtime-state-storage",
+            "storageType": "AzureFile"
+          }
+        ]
+      },
+      "trafficWeight": 100
+    },
+    "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+    "type": "Microsoft.App/containerapps/revisions"
+  }
+]

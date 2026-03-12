@@ -1,0 +1,44 @@
+﻿[
+    {
+        "attempt":  1,
+        "ok":  false,
+        "status":  0,
+        "error":  "Object reference not set to an instance of an object.",
+        "timestamp":  "2026-03-12T01:23:39.7745044Z"
+    },
+    {
+        "attempt":  2,
+        "ok":  false,
+        "status":  0,
+        "error":  "Object reference not set to an instance of an object.",
+        "timestamp":  "2026-03-12T01:23:42.8494319Z"
+    },
+    {
+        "attempt":  3,
+        "ok":  false,
+        "status":  0,
+        "error":  "Object reference not set to an instance of an object.",
+        "timestamp":  "2026-03-12T01:23:45.8891634Z"
+    },
+    {
+        "attempt":  4,
+        "ok":  false,
+        "status":  0,
+        "error":  "Object reference not set to an instance of an object.",
+        "timestamp":  "2026-03-12T01:23:48.9304089Z"
+    },
+    {
+        "attempt":  5,
+        "ok":  false,
+        "status":  0,
+        "error":  "Object reference not set to an instance of an object.",
+        "timestamp":  "2026-03-12T01:23:51.9762642Z"
+    },
+    {
+        "attempt":  6,
+        "ok":  false,
+        "status":  0,
+        "error":  "Object reference not set to an instance of an object.",
+        "timestamp":  "2026-03-12T01:23:55.0123224Z"
+    }
+]

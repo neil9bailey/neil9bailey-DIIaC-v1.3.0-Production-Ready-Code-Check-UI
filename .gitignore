@@ -37,3 +37,7 @@ node_modules/
 .DS_Store
 .vscode/
 .idea/
+
+# Local release/tmp artifacts
+dist-release/
+tmp/

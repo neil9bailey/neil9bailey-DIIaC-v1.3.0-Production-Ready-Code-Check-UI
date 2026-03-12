@@ -1,0 +1,125 @@
+Note: The result may contain false positive predictions (noise).
+You can help us improve the accuracy of the result by opening an issue here: https://aka.ms/WhatIfIssues
+
+Resource and property changes are indicated with these symbols:
+  - Delete
+  ~ Modify
+  = Nochange
+  x Unsupported
+  * Ignore
+  x Noeffect
+
+The deployment will update the following scopes:
+
+Scope: /
+
+
+
+Scope: /subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7
+
+  = resourceGroups/RG_UI_VENDORLOGIC_PROD_V130 [2024-03-01]
+
+Scope: /subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130
+
+  ~ Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130 [2023-05-01]
+    - properties.peerAuthentication:
+
+        mtls.enabled: false
+
+    ~ properties.appLogsConfiguration.logAnalyticsConfiguration.customerId: "15472866-396c-46e5-8a23-7b1d9f888a42" => "[reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.OperationalInsights/workspaces/law-vendorlogic-ui-prod-v130', '2023-09-01').customerId]"
+
+  ~ Microsoft.ContainerRegistry/registries/acrdiiacv130vlui [2023-11-01-preview]
+    - properties.dataEndpointEnabled: false
+    - properties.encryption:
+
+        status: "disabled"
+
+
+  ~ Microsoft.ContainerRegistry/registries/acrdiiacv130vlui/providers/Microsoft.Authorization/roleAssignments/1e7e60f1-0695-544c-a71b-5d5447cc0c87 [2022-04-01]
+    ~ properties.principalId:   "fbc0c195-d41a-40f8-aea7-c91fad576d7b" => "[reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130', '2023-01-31').principalId]"
+    x properties.principalType: "ServicePrincipal"
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default [2023-05-01]
+    - properties:
+
+        shareDeleteRetentionPolicy.days:    7
+        shareDeleteRetentionPolicy.enabled: true
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-decision-packs [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-human-input [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-ledger [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-state [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-artifacts [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-audit [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-exports [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-state [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-decision-packs-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-human-input-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-ledger-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-state-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-artifacts-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-audit-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-exports-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-state-storage [2023-05-01]
+  = Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130 [2023-01-31]
+  = Microsoft.OperationalInsights/workspaces/law-vendorlogic-ui-prod-v130 [2023-09-01]
+  = Microsoft.Storage/storageAccounts/stdiiacv130vlui01 [2023-05-01]
+  * Microsoft.App/containerApps/br-vendorlogic-ui-prod-v130
+  * Microsoft.App/containerApps/rt-vendorlogic-ui-prod-v130
+  * Microsoft.App/containerApps/ui-vendorlogic-ui-prod-v130
+  * Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/managedCertificates/mc-acae-vendorlog-diiacui-vendorlo-1321
+
+Resource changes: 12 to modify, 12 no change, 1 unsupported, 4 to ignore.
+
+Diagnostics (1): 
+[extensionResourceId('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', 'Microsoft.Authorization/roleAssignments', guid('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130', '2023-01-31').principalId, 'kvsecrets-user'))] (Unsupported) Changes to the resource declared at 'properties.template.resources[2].properties.template.resources[0]' on line 1 and column 37786 cannot be analyzed because its resource ID or API version cannot be calculated until the deployment is under way. Please see https://aka.ms/WhatIfUnidentifiableResource for more guidance.
+

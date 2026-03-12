@@ -196,6 +196,7 @@ def create_app() -> Flask:
 
     admin_auth_enabled = os.getenv("ADMIN_AUTH_ENABLED", "true").lower() != "false"
     runtime_env = os.getenv("APP_ENV", "production").lower()
+    app_version = os.getenv("APP_VERSION", "v1.3.0-ui")
     admin_api_token = os.getenv("ADMIN_API_TOKEN", "")
     profile_lock_id = (os.getenv("DIIAC_PROFILE_LOCK_ID", "") or "").strip()
     required_governance_modes = [
@@ -244,30 +245,60 @@ def create_app() -> Flask:
     keys = key_registry.get("keys")
     if not isinstance(keys, list):
         keys = []
-    active_key_in_registry_file = any(
-        isinstance(entry, dict) and entry.get("key_id") == signing_key_id
-        for entry in keys
-    )
-    active_key_registered = active_key_in_registry_file
-    if not active_key_registered:
-        keys.append(
+    registry_updated = False
+    normalized_keys: list[dict[str, Any]] = []
+    active_key_index: int | None = None
+    for entry in keys:
+        if not isinstance(entry, dict):
+            registry_updated = True
+            continue
+        key_id = entry.get("key_id")
+        if not key_id:
+            registry_updated = True
+            continue
+        if key_id == signing_key_id:
+            if active_key_index is None:
+                normalized_keys.append(dict(entry))
+                active_key_index = len(normalized_keys) - 1
+            else:
+                # Remove duplicate entries for the active signing key id.
+                registry_updated = True
+            continue
+        normalized_keys.append(dict(entry))
+
+    active_key_in_registry_file = active_key_index is not None
+    if active_key_index is None:
+        normalized_keys.append(
             {
                 "key_id": signing_key_id,
                 "algorithm": "Ed25519",
                 "public_key_b64": public_key_b64,
             }
         )
-        active_key_registered = True
-    key_registry["keys"] = keys
-    if not key_registry_file_exists:
+        active_key_index = len(normalized_keys) - 1
+        registry_updated = True
+
+    active_entry = normalized_keys[active_key_index]
+    if active_entry.get("algorithm") != "Ed25519":
+        active_entry["algorithm"] = "Ed25519"
+        registry_updated = True
+    if active_entry.get("public_key_b64") != public_key_b64:
+        active_entry["public_key_b64"] = public_key_b64
+        registry_updated = True
+
+    active_key_registered = True
+    active_key_matches_public = active_entry.get("public_key_b64") == public_key_b64
+    key_registry["keys"] = normalized_keys
+    if (not key_registry_file_exists) or registry_updated:
         public_keys_file.write_text(json.dumps(key_registry, indent=2), encoding="utf-8")
     registered_key_count = len(
-        [entry for entry in keys if isinstance(entry, dict) and entry.get("key_id")]
+        [entry for entry in normalized_keys if isinstance(entry, dict) and entry.get("key_id")]
     )
     local_or_ephemeral_signing = (key_mode != "configured") or (signing_key_id in local_dev_key_ids)
     production_trust_ready = bool(
         signing_enabled
-        and active_key_in_registry_file
+        and active_key_registered
+        and active_key_matches_public
         and registered_key_count > 0
         and not local_or_ephemeral_signing
     )
@@ -281,6 +312,10 @@ def create_app() -> Flask:
     elif signing_enabled and not active_key_in_registry_file:
         signing_trust_warnings.append(
             "Active signing key is available at runtime but not persisted in contracts/keys/public_keys.json."
+        )
+    if signing_enabled and not active_key_matches_public:
+        signing_trust_warnings.append(
+            "Active signing key entry did not match runtime key material and could not be reconciled."
         )
 
     profiles = _load_profiles(profiles_dir)
@@ -2067,7 +2102,7 @@ def create_app() -> Flask:
     def admin_config() -> Any:
         return jsonify(
             {
-                "version": "v1.2.1",
+                "version": app_version,
                 "runtime_model": ["react-vite-frontend", "express-backend"],
                 "approved_schemas": sorted(approved_schemas),
                 "profiles_count": len(profiles),

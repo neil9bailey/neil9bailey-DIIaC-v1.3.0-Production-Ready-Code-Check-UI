@@ -1,0 +1,9 @@
+{
+    "checkpoint":  "CP12",
+    "appId":  "b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+    "displayName":  "diiac-bridge-gateway",
+    "redirectUriAddedRoot":  true,
+    "redirectUriAddedCallback":  true,
+    "spaRedirectCount":  6,
+    "decision":  "ASK_USER_TO_RETRY_LOGIN"
+}

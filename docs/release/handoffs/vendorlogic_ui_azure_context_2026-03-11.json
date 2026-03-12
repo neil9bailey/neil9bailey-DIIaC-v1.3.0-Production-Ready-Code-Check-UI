@@ -1,0 +1,78 @@
+{
+  "metadata": {
+    "generated_utc": "2026-03-11T23:59:00Z",
+    "workspace_root": "F:\\code\\diiac\\diiac_v1.3.0_ui",
+    "notes": [
+      "Context derived from UI repo config and deployment files.",
+      "Contains non-secret identifiers only."
+    ]
+  },
+  "workspace": {
+    "repo_root": "F:\\code\\diiac\\diiac_v1.3.0_ui",
+    "git_repo_detected": false
+  },
+  "validation": {
+    "python_compile": "pass",
+    "bridge_node_check": "pass",
+    "pytest": {
+      "status": "pass",
+      "collected": 22,
+      "passed": 22
+    },
+    "frontend_build": {
+      "status": "pass",
+      "notes": "chunk-size warning only"
+    }
+  },
+  "azure_ui_config": {
+    "tenant_id": "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+    "resource_group_default": "rg-diiac-prod",
+    "location_default": "uksouth",
+    "key_vault_name": "kv-diiac-vendorlogic",
+    "dns_label": "diiac-vendorlogic"
+  },
+  "identity": {
+    "entra_api_app_id": "b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+    "entra_ui_app_id": "b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+    "entra_admin_group_id_from_ui_config": "81786818-de16-4115-b061-92fce74b00bd",
+    "entra_standard_group_id": "9c7dd0d4-5b44-4811-b167-e52df21092d8",
+    "observed_alt_admin_group_id": "4ef7c128-a3f2-4c7d-a51d-c893e5944c88"
+  },
+  "llm": {
+    "provider_mode": "copilot_only",
+    "copilot_model": "gpt-4o",
+    "requires_secret": "diiac-github-token"
+  },
+  "required_key_vault_secret_names": [
+    "diiac-admin-api-token",
+    "diiac-signing-private-key-pem",
+    "diiac-openai-api-key",
+    "diiac-github-token",
+    "diiac-entra-client-secret"
+  ],
+  "headless_coexistence_reference": {
+    "subscription_id": "3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7",
+    "resource_group": "RG_ROOT",
+    "tenant_id": "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+    "constraint": "do_not_impact_existing_headless_resources"
+  },
+  "known_risks": [
+    {
+      "id": "kv_name_collision",
+      "detail": "UI bicep creates kv-diiac-vendorlogic; may collide with existing headless vault."
+    },
+    {
+      "id": "aci_secret_injection_gap",
+      "detail": "deploy-azure.sh warns secret injection requires redeploy/override path."
+    },
+    {
+      "id": "frontend_api_base_routing",
+      "detail": "VITE_API_BASE in bicep points at frontend FQDN; backend routing must be confirmed for production."
+    },
+    {
+      "id": "admin_group_id_mismatch",
+      "detail": "UI config admin group differs from alternate known DIIAC-Admins group id."
+    }
+  ]
+}
+

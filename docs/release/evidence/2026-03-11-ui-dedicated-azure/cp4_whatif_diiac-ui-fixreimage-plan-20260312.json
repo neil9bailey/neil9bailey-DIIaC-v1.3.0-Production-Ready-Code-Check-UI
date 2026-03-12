@@ -1,0 +1,231 @@
+Note: The result may contain false positive predictions (noise).
+You can help us improve the accuracy of the result by opening an issue here: https://aka.ms/WhatIfIssues
+
+Resource and property changes are indicated with these symbols:
+  - Delete
+  ~ Modify
+  = Nochange
+  x Unsupported
+  * Ignore
+  x Noeffect
+
+The deployment will update the following scopes:
+
+Scope: /
+
+
+
+Scope: /subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7
+
+  = resourceGroups/RG_UI_VENDORLOGIC_PROD_V130 [2024-03-01]
+
+Scope: /subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130
+
+  ~ Microsoft.App/containerApps/br-vendorlogic-ui-prod-v130 [2023-05-01]
+    - properties.configuration.ingress.exposedPort: 0
+    - properties.configuration.ingress.traffic: [
+        0:
+
+          latestRevision: true
+          weight:         100
+
+      ]
+    - properties.runningStatus:                     "Running"
+    ~ properties.configuration.registries: [
+      ~ 0:
+
+        ~ server: "acrdiiacv130vlui.azurecr.io" => "[reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui', '2023-11-01-preview').loginServer]"
+
+      ]
+    ~ properties.configuration.secrets: [
+      ~ 0:
+
+        ~ keyVaultUrl: "https://kv-diiac-vendorlogic.vault.azure.net/secrets/diiac-admin-api-token" => "[format('{0}/diiac-admin-api-token', format('{0}secrets', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', '2023-07-01').vaultUri))]"
+
+      ~ 1:
+
+        ~ keyVaultUrl: "https://kv-diiac-vendorlogic.vault.azure.net/secrets/diiac-signing-private-key-pem" => "[format('{0}/diiac-signing-private-key-pem', format('{0}secrets', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', '2023-07-01').vaultUri))]"
+
+      ~ 2:
+
+        ~ keyVaultUrl: "https://kv-diiac-vendorlogic.vault.azure.net/secrets/diiac-github-token" => "[format('{0}/diiac-github-token', format('{0}secrets', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', '2023-07-01').vaultUri))]"
+
+      ]
+    ~ properties.template.containers: [
+      ~ 0:
+
+        ~ env: [
+          ~ 1:
+
+            ~ value: "https://rt-vendorlogic-ui-prod-v130.internal.blackpond-85ed120f.uksouth.azurecontainerapps.io" => "[format('https://{0}.internal.{1}', 'rt-vendorlogic-ui-prod-v130', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130', '2023-05-01').defaultDomain)]"
+
+          ~ 10:
+
+            ~ value: "https://diiacui.vendorlogic.io,https://ui-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io" => "[format('https://{0},{1}', 'diiacui.vendorlogic.io', format('https://{0}.{1}', 'ui-vendorlogic-ui-prod-v130', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130', '2023-05-01').defaultDomain))]"
+
+          ]
+        ~ image: "acrdiiacv130vlui.azurecr.io/diiac/backend-ui-bridge:1.3.0-ingressfix" => "[format('{0}/{1}/backend-ui-bridge:{2}', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui', '2023-11-01-preview').loginServer, 'diiac', '1.3.0-persistfix1')]"
+
+      ]
+
+  ~ Microsoft.App/containerApps/rt-vendorlogic-ui-prod-v130 [2023-05-01]
+    - properties.configuration.ingress.exposedPort: 0
+    - properties.configuration.ingress.traffic: [
+        0:
+
+          latestRevision: true
+          weight:         100
+
+      ]
+    - properties.runningStatus:                     "Running"
+    ~ properties.configuration.registries: [
+      ~ 0:
+
+        ~ server: "acrdiiacv130vlui.azurecr.io" => "[reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui', '2023-11-01-preview').loginServer]"
+
+      ]
+    ~ properties.configuration.secrets: [
+      ~ 0:
+
+        ~ keyVaultUrl: "https://kv-diiac-vendorlogic.vault.azure.net/secrets/diiac-admin-api-token" => "[format('{0}/diiac-admin-api-token', format('{0}secrets', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', '2023-07-01').vaultUri))]"
+
+      ~ 1:
+
+        ~ keyVaultUrl: "https://kv-diiac-vendorlogic.vault.azure.net/secrets/diiac-signing-private-key-pem" => "[format('{0}/diiac-signing-private-key-pem', format('{0}secrets', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', '2023-07-01').vaultUri))]"
+
+      ]
+    ~ properties.template.containers: [
+      ~ 0:
+
+        ~ image: "acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-adminheaderfix" => "[format('{0}/{1}/governance-runtime:{2}', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui', '2023-11-01-preview').loginServer, 'diiac', '1.3.0-persistfix1')]"
+
+      ]
+
+  ~ Microsoft.App/containerApps/ui-vendorlogic-ui-prod-v130 [2023-05-01]
+    - properties.configuration.ingress.exposedPort: 0
+    - properties.configuration.ingress.traffic: [
+        0:
+
+          latestRevision: true
+          weight:         100
+
+      ]
+    - properties.runningStatus:                     "Running"
+    ~ properties.configuration.registries: [
+      ~ 0:
+
+        ~ server: "acrdiiacv130vlui.azurecr.io" => "[reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui', '2023-11-01-preview').loginServer]"
+
+      ]
+    ~ properties.template.containers: [
+      ~ 0:
+
+        ~ env: [
+          ~ 1:
+
+            ~ value: "https://br-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io" => "[format('https://{0}.{1}', 'br-vendorlogic-ui-prod-v130', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130', '2023-05-01').defaultDomain)]"
+
+          ]
+        ~ image: "acrdiiacv130vlui.azurecr.io/diiac/frontend:1.3.0-groupmapfix" => "[format('{0}/{1}/frontend:{2}', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui', '2023-11-01-preview').loginServer, 'diiac', '1.3.0-persistfix1')]"
+
+      ]
+
+  ~ Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130 [2023-05-01]
+    - properties.peerAuthentication:
+
+        mtls.enabled: false
+
+    ~ properties.appLogsConfiguration.logAnalyticsConfiguration.customerId: "15472866-396c-46e5-8a23-7b1d9f888a42" => "[reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.OperationalInsights/workspaces/law-vendorlogic-ui-prod-v130', '2023-09-01').customerId]"
+
+  ~ Microsoft.ContainerRegistry/registries/acrdiiacv130vlui [2023-11-01-preview]
+    - properties.dataEndpointEnabled: false
+    - properties.encryption:
+
+        status: "disabled"
+
+
+  ~ Microsoft.ContainerRegistry/registries/acrdiiacv130vlui/providers/Microsoft.Authorization/roleAssignments/1e7e60f1-0695-544c-a71b-5d5447cc0c87 [2022-04-01]
+    ~ properties.principalId:   "fbc0c195-d41a-40f8-aea7-c91fad576d7b" => "[reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130', '2023-01-31').principalId]"
+    x properties.principalType: "ServicePrincipal"
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default [2023-05-01]
+    - properties:
+
+        shareDeleteRetentionPolicy.days:    7
+        shareDeleteRetentionPolicy.enabled: true
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-decision-packs [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-human-input [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-ledger [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-state [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-artifacts [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-audit [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-exports [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  ~ Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-state [2023-05-01]
+    - properties:
+
+        accessTier: "TransactionOptimized"
+        shareQuota: 102400
+
+
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-decision-packs-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-human-input-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-ledger-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-state-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-artifacts-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-audit-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-exports-storage [2023-05-01]
+  = Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-state-storage [2023-05-01]
+  = Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130 [2023-01-31]
+  = Microsoft.OperationalInsights/workspaces/law-vendorlogic-ui-prod-v130 [2023-09-01]
+  = Microsoft.Storage/storageAccounts/stdiiacv130vlui01 [2023-05-01]
+  * Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/managedCertificates/mc-acae-vendorlog-diiacui-vendorlo-1321
+
+Resource changes: 15 to modify, 12 no change, 1 unsupported, 1 to ignore.
+
+Diagnostics (1): 
+[extensionResourceId('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', 'Microsoft.Authorization/roleAssignments', guid('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130', '2023-01-31').principalId, 'kvsecrets-user'))] (Unsupported) Changes to the resource declared at 'properties.template.resources[2].properties.template.resources[0]' on line 1 and column 36713 cannot be analyzed because its resource ID or API version cannot be calculated until the deployment is under way. Please see https://aka.ms/WhatIfUnidentifiableResource for more guidance.
+

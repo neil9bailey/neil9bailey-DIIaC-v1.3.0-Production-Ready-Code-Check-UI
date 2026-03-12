@@ -1,0 +1,6 @@
+{
+    "contains_localhost_3001":  false,
+    "contains_auth_callback_localhost":  false,
+    "contains_bridge_url":  true,
+    "contains_custom_callback":  true
+}

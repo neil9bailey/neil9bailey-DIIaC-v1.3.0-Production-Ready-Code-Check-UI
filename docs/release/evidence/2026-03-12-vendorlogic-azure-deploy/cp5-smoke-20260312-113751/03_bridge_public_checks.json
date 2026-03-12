@@ -1,0 +1,23 @@
+﻿{
+    "health":  {
+                   "status":  "OK",
+                   "service":  "backend-ui-bridge",
+                   "auth_mode":  "entra_jwt_rs256",
+                   "timestamp":  "2026-03-12T11:37:55.314Z"
+               },
+    "readiness":  {
+                      "status":  "READY",
+                      "checks":  {
+                                     "bridge_state_writable":  true,
+                                     "runtime_reachable":  true
+                                 },
+                      "timestamp":  "2026-03-12T11:37:55.356Z"
+                  },
+    "auth_status":  {
+                        "auth_mode":  "entra_jwt_rs256",
+                        "entra_enabled":  true,
+                        "tenant_id":  "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+                        "audience":  "api://b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+                        "llm_provider_mode":  "copilot_only"
+                    }
+}

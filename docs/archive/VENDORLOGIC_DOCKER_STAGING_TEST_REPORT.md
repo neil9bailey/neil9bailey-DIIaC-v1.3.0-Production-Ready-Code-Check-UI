@@ -1,3 +1,4 @@
+> Historical archive notice: This document is retained for audit traceability and is not the authoritative source for current v1.3.0-ui operations. Use docs/README.md and current deployment/security runbooks for active guidance.
 # DIIaC v1.2.0 — Vendorlogic Docker Desktop Staging: Proof of Test & Results
 
 **Date:** 2026-03-07
@@ -359,3 +360,4 @@ This staging run validates that DIIaC v1.2.0 is **production-ready for the Vendo
 | Signing key PEM (Key Vault upload) | FIXED — re-uploaded with `--file` flag |
 
 **Conclusion:** The v1.2.0 governance runtime, when deployed from Key Vault secrets on Docker Desktop, behaves identically to the intended production configuration. The cryptographic chain (signing, hashing, ledger, Merkle tree, verification) is unbroken. The stack is ready to promote to Azure production infrastructure following `VENDORLOGIC_DEPLOYMENT_GUIDE.md`.
+

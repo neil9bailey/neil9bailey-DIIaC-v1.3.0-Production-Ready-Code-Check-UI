@@ -1,0 +1,4 @@
+*** UnKnown can't find diiacui.vendorlogic.io: Non-existent domain
+Server:  UnKnown
+Address:  192.168.4.1
+

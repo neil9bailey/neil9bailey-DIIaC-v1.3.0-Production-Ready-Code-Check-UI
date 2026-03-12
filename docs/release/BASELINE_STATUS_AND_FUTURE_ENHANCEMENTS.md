@@ -1,39 +1,32 @@
-# Baseline Status and Future Enhancements
+# Baseline Status And Future Enhancements (v1.3.0-ui)
 
-## Completed in current baseline
-1. Deterministic governed compile flow with role-driven inputs.
-2. Cryptographic verification surfaces:
-   - execution verification
-   - pack verification
-   - merkle proof verification
-   - replay attestation verification
-   - public key exposure
-3. Trust and audit operations:
-   - ledger growth/trust status
-   - admin logs/health/metrics
-   - audit export generation + download
-4. Security/runtime hardening:
-   - admin auth default enforcement in non-dev
-   - payload bounds on critical write endpoints
-   - runtime readiness checks
-   - structured runtime dependency error taxonomy
-5. Verification hardening:
-   - offline verifier runbook
-   - tamper tests for pack/merkle mismatches
+## Current Baseline Status
 
-## Remaining hardening priorities
-1. UI end-to-end confidence
-   - runtime API E2E smoke script implemented (`scripts_e2e_runtime_smoke.py`) for role input/compile/trust/admin/logs/audit flows
-   - remaining: browser/UI-level scripted E2E and baseline screenshots
-2. Operational rollout maturity
-   - production-mode readiness validation script implemented (`scripts_production_readiness_check.py`)
-   - remaining: richer threshold/alert recommendations for metrics and incident triage guidance
-   - deployment validation runbook implemented (`DEPLOYMENT_VALIDATION_RUNBOOK.md`)
-3. Documentation alignment hygiene
-   - keep architecture/alignment docs synchronized with implemented behavior and tests each release slice
+- Version baseline: `v1.3.0-ui`
+- Deployment pattern: dedicated ACA stack
+- External UI domain: `diiacui.vendorlogic.io`
+- Identity: Entra production auth
+- Secrets: Key Vault only
+- LLM provider mode: `copilot_only`
+- Evidence posture: checkpoint artifacts captured under `docs/release/evidence/`
 
-## Release criteria for baseline validation
-- All automated tests green (`pytest -q`).
-- Admin route auth deny/allow matrix remains passing.
-- Deterministic replay and verification tamper checks remain passing.
-- No unresolved drift between code behavior and published docs.
+## Stable Today
+
+- End-to-end UI -> bridge -> runtime governance flow
+- Signed decision artifacts and trust verification surfaces
+- Role-based access mapped from Entra claims
+- Custom-domain UI access with TLS
+
+## Planned Enhancements
+
+1. Hardened automation around domain binding and certificate lifecycle checks.
+2. Expanded policy/evidence quality metrics surfaced directly in UI.
+3. Additional regression suites for auth and role-mapping edge cases.
+4. Stronger environment promotion workflows (staging -> production).
+
+## Guardrails To Keep
+
+- What-if before every apply
+- Non-destructive rollout posture
+- Key Vault-only secrets handling
+- Evidence capture at each significant checkpoint

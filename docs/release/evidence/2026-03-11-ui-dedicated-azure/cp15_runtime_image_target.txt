@@ -1,0 +1,1 @@
+image=acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2

@@ -1,0 +1,6 @@
+2026-03-12T03:02:37.6146248+00:00 latest=rt-vendorlogic-ui-prod-v130--0000004 health=None run=Activating replicas=1 image=acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2
+2026-03-12T03:02:50.6192285+00:00 latest=rt-vendorlogic-ui-prod-v130--0000004 health=None run=Activating replicas=1 image=acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2
+2026-03-12T03:03:03.0698207+00:00 latest=rt-vendorlogic-ui-prod-v130--0000004 health=None run=Activating replicas=1 image=acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2
+2026-03-12T03:03:15.6027982+00:00 latest=rt-vendorlogic-ui-prod-v130--0000004 health=None run=Activating replicas=1 image=acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2
+2026-03-12T03:03:28.1651004+00:00 latest=rt-vendorlogic-ui-prod-v130--0000004 health=None run=Activating replicas=1 image=acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2
+2026-03-12T03:03:41.1383491+00:00 latest=rt-vendorlogic-ui-prod-v130--0000004 health=Unhealthy run=Failed replicas=1 image=acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2

@@ -1,49 +1,49 @@
-# Deployment Validation Runbook
+# Deployment Validation Runbook (v1.3.0-ui)
 
-## Purpose
-Operational checklist for staging/production promotion validation of the DIIaC baseline.
+Run this after each Azure deployment or image rollout.
 
-## Preconditions
-- `APP_ENV=production`
-- `ADMIN_AUTH_ENABLED=true`
-- `ADMIN_API_TOKEN` configured
-- `STRICT_DETERMINISTIC_MODE=true`
+## A. Platform Health
 
-## Validation sequence
-1. Unit and integration checks
-   - `pytest -q`
-2. Runtime API smoke checks
-   - `python scripts_e2e_runtime_smoke.py`
-3. Production-mode security/readiness checks
-   - `python scripts_production_readiness_check.py`
+1. Check UI endpoint returns HTTP 200 at `https://diiacui.vendorlogic.io`.
+2. Check bridge health/auth endpoint.
+3. Check runtime health/readiness endpoints.
+4. Confirm container app revisions are healthy and active.
 
-## Acceptance criteria
-- All commands above return success.
-- Admin endpoints deny without token and allow with token.
-- Governed compile returns verifiable execution status.
-- Signed export and audit export flows succeed in production-mode checks.
-- Metrics endpoint returns threshold recommendations payload.
+## B. Identity And RBAC
 
-## Rollback guidance
-- If any step fails, rollback to previous known-good commit and rerun full validation sequence before re-promoting.
+1. Validate Entra login from UI.
+2. Validate bridge reports auth mode `entra_jwt_rs256`.
+3. Validate admin group users receive admin capabilities.
+4. Validate standard users are constrained correctly.
 
+## C. Governance Functional Checks
 
-## Docker BuildKit snapshot corruption recovery
-If `docker compose up --build` fails with an error similar to:
-- `failed to prepare extraction snapshot ... parent snapshot ... does not exist`
+1. Submit role/intent input.
+2. Run compile/decision flow.
+3. Verify execution trace, scoring, and trust endpoints.
+4. Download decision pack and signed exports.
 
-Run:
-- macOS/Linux:
-```bash
-./scripts_recover_docker_buildkit.sh
-```
-- Windows PowerShell:
-```powershell
-.\scripts_recover_docker_buildkit.ps1
-```
+## D. Security Checks
 
-What this does:
-1. Stops compose services and removes orphans.
-2. Prunes BuildKit cache and stale Docker resources.
-3. Rebuilds `backend-ui-bridge` without cache.
-4. Rebuilds and starts the full stack.
+1. Confirm no secret values in app env except Key Vault secret references.
+2. Confirm managed identity has required Key Vault Secrets User role.
+3. Confirm TLS on external endpoints.
+4. Confirm CORS `ALLOWED_ORIGINS` includes only intended origins.
+
+## E. Evidence Capture
+
+Store validation artifacts under:
+
+- `docs/release/evidence/<date-or-checkpoint>/`
+
+Minimum evidence:
+
+- Deployment outputs
+- What-if output used before apply
+- Endpoint probes
+- Auth status snapshots
+- Execution quality summary
+
+## F. Go/No-Go
+
+Go if all A-E pass with no P1/P2 issues. Otherwise stop rollout and remediate.

@@ -1,0 +1,17 @@
+{
+    "checkpoint":  "CP7",
+    "deploymentName":  "diiac-ui-dedicated-cp7-infra-20260311-215020",
+    "validateStatus":  "SUCCESS",
+    "whatIfStatus":  "SUCCESS",
+    "applyStatus":  "SUCCESS",
+    "whatIfCreateCount":  7,
+    "whatIfModifyCount":  0,
+    "whatIfDeleteCount":  0,
+    "dedicatedResourceGroupExists":  true,
+    "containerAppCountInSubscription":  0,
+    "managedEnvironmentCountInSubscription":  1,
+    "rgRootRoleAssignmentId":  "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic/providers/Microsoft.Authorization/roleAssignments/a9b247d1-d791-55bd-876d-55e3230771ae",
+    "acrLoginServer":  "acrdiiacv130vlui.azurecr.io",
+    "managedEnvironmentDefaultDomain":  "blackpond-85ed120f.uksouth.azurecontainerapps.io",
+    "decision":  "PAUSE_FOR_APPROVAL_BEFORE_CP8_APPS"
+}

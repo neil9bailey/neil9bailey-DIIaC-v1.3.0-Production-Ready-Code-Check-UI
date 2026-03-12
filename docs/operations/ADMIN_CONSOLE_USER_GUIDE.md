@@ -1,14 +1,48 @@
-# DIIaC v1.2.0 Admin Console User Guide
+# Admin Console User Guide (v1.3.0-ui)
 
-## Main Actions
-- Submit role inputs: `POST /api/human-input/role`
-- Run governed compile: `POST /api/governed-compile`
-- Verify execution/pack/merkle: `/verify/*`
-- Inspect trust status: `GET /trust/status`
-- Fetch logs: `GET /admin/logs`, `GET /admin/executions/<id>/logs`
-- Generate auditor package: `POST /admin/audit-export`
+This guide covers day-to-day admin use in the DIIaC UI.
 
-## Deterministic validation flow
-1. submit same role inputs to same context id
-2. compile twice with same profile/schema/RP
-3. confirm identical execution id, pack hash, scoring rows
+## Access
+
+- URL: `https://diiacui.vendorlogic.io`
+- Auth: Entra sign-in
+- Admin role source: mapped Entra group membership
+
+## Key Admin Areas
+
+## 1. Health And Status
+
+Use health views to confirm:
+
+- Runtime availability
+- Bridge auth mode and identity state
+- Signing/trust readiness
+- Integration health
+
+## 2. Executions And Evidence
+
+Admin users can:
+
+- Review recent governance executions
+- Inspect trace/scoring outputs
+- Export decision packs and audit artifacts
+- Verify deterministic and signed outputs
+
+## 3. Approvals And Controls
+
+Where enabled, approvals support:
+
+- Governance intercept review
+- Request-level decisioning
+- Auditable approval history
+
+## 4. Config And Diagnostics
+
+Admin views expose effective config snapshots and operational metrics.
+Use this for drift detection and incident triage.
+
+## Operational Practice
+
+- Validate auth status after each deployment.
+- Confirm key governance controls before approving production use.
+- Capture evidence artifacts for significant changes.

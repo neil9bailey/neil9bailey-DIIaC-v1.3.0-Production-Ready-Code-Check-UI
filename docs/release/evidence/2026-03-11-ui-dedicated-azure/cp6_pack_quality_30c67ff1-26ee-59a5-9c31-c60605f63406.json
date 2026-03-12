@@ -1,0 +1,95 @@
+{
+  "base_path": "F:\\code\\diiac\\diiac_v1.3.0_ui\\exports\\decision-pack_30c67ff1-26ee-59a5-9c31-c60605f63406",
+  "exists": true,
+  "is_dir": true,
+  "checks": {
+    "required_files": {
+      "missing": [],
+      "ok": true
+    },
+    "manifest_artifact_hashes": {
+      "ok": true,
+      "mismatches": []
+    },
+    "manifest_leaf_hashes": {
+      "ok": true,
+      "mismatches": []
+    },
+    "pack_hash": {
+      "ok": true,
+      "expected": "a5f4828bc0c2cac1dc78d64fa4249d67017ccbac96190781f672fcd2fb189bed",
+      "actual": "a5f4828bc0c2cac1dc78d64fa4249d67017ccbac96190781f672fcd2fb189bed"
+    },
+    "merkle_root": {
+      "ok": true,
+      "expected": "f3d49c1d6e4af224f03c4800e231537fe7fbaa7c12bbc5dcd5d88a2fe846cf03",
+      "actual": "f3d49c1d6e4af224f03c4800e231537fe7fbaa7c12bbc5dcd5d88a2fe846cf03"
+    },
+    "manifest_hash": {
+      "ok": true,
+      "expected": "dd4f3a9478d778c38384218c064de2fb2afeadefb4491cfc0a836b3672529070",
+      "actual": "dd4f3a9478d778c38384218c064de2fb2afeadefb4491cfc0a836b3672529070"
+    },
+    "sigmeta_payload_alignment": {
+      "ok": true,
+      "details": {
+        "execution_id": true,
+        "pack_hash": true,
+        "merkle_root": true,
+        "manifest_hash": true
+      }
+    },
+    "signature_verify": {
+      "ok": false,
+      "error": "invalid_signature",
+      "signing_key_id": "diiac-vendorlogic-prod"
+    },
+    "replay_certificate": {
+      "strict_deterministic_mode": true,
+      "status": "REPLAY_READY",
+      "expected_execution_id_matches": true,
+      "pack_hash_matches": true,
+      "manifest_hash_matches": true
+    }
+  },
+  "warnings": [],
+  "errors": [],
+  "files": [
+    "board_report.json",
+    "board_report.md",
+    "business_profile_snapshot.json",
+    "deterministic_compilation_log.json",
+    "deterministic_input_snapshot.json",
+    "down_select_recommendation.json",
+    "evidence_trace_map.json",
+    "governance_manifest.json",
+    "llm_analysis_raw.json",
+    "policy_pack_compliance.json",
+    "profile_compliance_matrix.json",
+    "profile_override_log.json",
+    "replay_certificate.json",
+    "role_input_bundle.json",
+    "schema_contract.json",
+    "scoring.json",
+    "signed_export.sig",
+    "signed_export.sigmeta.json",
+    "trace_map.json",
+    "vendor_scoring_matrix.json"
+  ],
+  "file_count": 20,
+  "execution_id": "30c67ff1-26ee-59a5-9c31-c60605f63406",
+  "quality": {
+    "decision_status": "recommended",
+    "selected_vendor": "Cisco",
+    "confidence_score": 79.11,
+    "confidence_level": "MEDIUM",
+    "quality_gate_failures": [],
+    "accuracy_warnings": [],
+    "evidence_refs_total": 2,
+    "strong_refs_count": 2,
+    "policy_pack_count": 2,
+    "ranked_options_count": 2,
+    "scoring_rows_count": 2
+  },
+  "overall": "FAIL"
+}

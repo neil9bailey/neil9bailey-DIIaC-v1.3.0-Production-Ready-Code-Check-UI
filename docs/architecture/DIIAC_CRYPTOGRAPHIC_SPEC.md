@@ -1,14 +1,34 @@
-# DIIaC v1.2.0 Cryptographic Specification
+# Cryptographic Specification (v1.3.0-ui)
 
-- Hashing: SHA-256 lowercase hex.
-- Chain elements: context hash, pack hash, manifest hash, merkle root, ledger record hash chain.
-- Merkle rules:
-  - leaves sorted lexicographically by artifact filename
-  - leaf hash = `sha256(name:hash)`
-  - odd duplication at each layer
-  - parent hash = `sha256(left + right)`
-- Signature workflow:
-  - Ed25519
-  - runtime key via `SIGNING_PRIVATE_KEY_PEM` or ephemeral fallback
-  - key id via `SIGNING_KEY_ID`
-  - public keys from `/verify/public-keys` and `contracts/keys/public_keys.json`
+## Objectives
+
+- Deterministic output integrity
+- Verifiable chain of custody for governance artifacts
+- Replay-safe verification for audit
+
+## Core Primitives
+
+- Hashing: SHA-256
+- Signing: Ed25519
+- Canonical serialization: stable JSON ordering for deterministic hashing
+
+## Integrity Structures
+
+1. File/content hashes in manifests
+2. Merkle tree roots over selected execution artifacts
+3. Ledger hash chain for append-only traceability
+
+## Key Management
+
+- Production private key material is injected from Key Vault.
+- Public keys are maintained in `contracts/keys/public_keys.json`.
+- Ephemeral keys are local/dev only and not acceptable for production trust readiness.
+
+## Verification Expectations
+
+A verification pass requires:
+
+- Hashes match recomputed values.
+- Signature verifies with expected key ID.
+- Ledger chain integrity is intact.
+- Merkle proof/root consistency holds.

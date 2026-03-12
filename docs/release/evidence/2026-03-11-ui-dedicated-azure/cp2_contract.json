@@ -1,0 +1,56 @@
+{
+    "checkpoint":  "CP2",
+    "date":  "2026-03-11",
+    "tenantId":  "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+    "subscriptionId":  "3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7",
+    "location":  "uksouth",
+    "dedicated":  {
+                      "resourceGroup":  "RG_UI_VENDORLOGIC_PROD_V130",
+                      "managedEnvironment":  "acae-vendorlogic-ui-prod-v130",
+                      "acr":  "acrdiiacv130vlui",
+                      "managedIdentity":  "id-vendorlogic-ui-prod-v130",
+                      "logAnalytics":  "law-vendorlogic-ui-prod-v130",
+                      "runtimeApp":  "rt-vendorlogic-ui-prod-v130",
+                      "bridgeApp":  "br-vendorlogic-ui-prod-v130",
+                      "uiApp":  "ui-vendorlogic-ui-prod-v130"
+                  },
+    "sharedOnly":  [
+                       "Entra ID",
+                       "kv-diiac-vendorlogic"
+                   ],
+    "keyVault":  {
+                     "name":  "kv-diiac-vendorlogic",
+                     "resourceGroup":  "RG_ROOT",
+                     "secretNames":  [
+                                         "diiac-admin-api-token",
+                                         "diiac-entra-client-secret",
+                                         "diiac-github-token",
+                                         "diiac-openai-api-key",
+                                         "diiac-signing-private-key-pem"
+                                     ]
+                 },
+    "identity":  {
+                     "authoritativeAdminGroupId":  "81786818-de16-4115-b061-92fce74b00bd",
+                     "standardGroupId":  "9c7dd0d4-5b44-4811-b167-e52df21092d8",
+                     "apiAppId":  "b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+                     "uiAppId":  "b726558d-f1c6-48f7-8a3d-72d5db818d0f"
+                 },
+    "dns":  {
+                "host":  "diiacui.vendorlogic.io",
+                "txtName":  "asuid.diiacui",
+                "txtValue":  "B01B517DF534900404CD467B96A1A1B57E73B6E8EEDF856F26751B5C518EA101",
+                "cnameName":  "diiacui",
+                "cnameTarget":  "TO_BE_SET_AFTER_DEDICATED_UI_APP_CREATE"
+            },
+    "noTouchResourceGroup":  "RG_ROOT",
+    "noTouchResources":  [
+                             "rt-vendorlogic-prod-v130",
+                             "br-vendorlogic-prod-v130",
+                             "ui-vendorlogic-prod-v130",
+                             "acae-vendorlogic-prod-v130",
+                             "acrdiiacv130vl",
+                             "id-vendorlogic-prod-v130",
+                             "law-vendorlogic-prod-v130"
+                         ],
+    "allowedSharedModification":  "Add Key Vault Secrets User role assignment for new dedicated managed identity on kv-diiac-vendorlogic only"
+}

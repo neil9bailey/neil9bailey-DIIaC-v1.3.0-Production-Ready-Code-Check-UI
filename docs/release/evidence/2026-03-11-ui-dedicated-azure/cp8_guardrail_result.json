@@ -1,0 +1,14 @@
+{
+    "checkpoint":  "CP8",
+    "buildPushStatus":  "SUCCESS",
+    "buildPushLog":  "docs/release/evidence/2026-03-11-ui-dedicated-azure/cp8_build_push_20260311-220036.log",
+    "containerAppCountAfterCp8":  0,
+    "acrName":  "acrdiiacv130vlui",
+    "runtimeImage":  "acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-adminheaderfix",
+    "runtimeDigest":  "sha256:fcf056764396cb48c9a7edb00a9f09e9b9b29d1940ac9d95e89d87a913820085",
+    "bridgeImage":  "acrdiiacv130vlui.azurecr.io/diiac/backend-ui-bridge:1.3.0-ingressfix",
+    "bridgeDigest":  "sha256:ebd219c44a00fc1a95b1780848a151820571ef16b5aa30edf21aa0cd44bd083d",
+    "frontendImage":  "acrdiiacv130vlui.azurecr.io/diiac/frontend:1.3.0-groupmapfix",
+    "frontendDigest":  "sha256:396320ab29175ed65618dffc7a6e9650d4fe3968777408d12f9f9f4e1a258003",
+    "decision":  "PAUSE_FOR_APPROVAL_BEFORE_CP9_APP_DEPLOY"
+}

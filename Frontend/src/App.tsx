@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { setRole as setAuthRole, setAccessToken, hasAccessToken } from "./auth";
+import { setRole as setAuthRole, setAccessToken } from "./auth";
 import type { Role } from "./auth";
 import { fetchAuthStatus, type AuthStatusResponse } from "./api";
 
@@ -50,11 +50,6 @@ export default function App() {
   const [authStatusLoading, setAuthStatusLoading] = useState(true);
   const [groupOverageWarning, setGroupOverageWarning] = useState(false);
 
-  // Legacy token-paste state (kept as fallback)
-  const [showTokenDialog, setShowTokenDialog] = useState(false);
-  const [tokenInput, setTokenInput] = useState("");
-  const [legacyTokenSet, setLegacyTokenSet] = useState(hasAccessToken());
-
   // Fetch backend auth status
   useEffect(() => {
     fetchAuthStatus()
@@ -65,21 +60,11 @@ export default function App() {
 
   const entraRequired = authStatus?.entra_enabled === true;
 
-  // Restore legacy token from sessionStorage
-  useEffect(() => {
-    if (!entraRequired) return;
-    const saved = sessionStorage.getItem("entra_token");
-    if (saved) {
-      setAccessToken(saved);
-      setLegacyTokenSet(true);
-    }
-  }, [entraRequired]);
-
   // Sync MSAL auth into the auth module
   useEffect(() => {
     if (!msalAuthenticated || !account) return;
 
-    // Persist role to localStorage so x-role header logic works
+    // Persist role for UI role continuity (and optional dev legacy-header mode)
     localStorage.setItem("role", msalRole);
     setAuthRole(msalRole as Role);
 
@@ -129,25 +114,7 @@ export default function App() {
   // Resolve effective role
   const role: string = msalAuthenticated ? msalRole : legacyRole;
   const [tokenReady, setTokenReady] = useState(false);
-  const authenticated = (msalAuthenticated && tokenReady) || legacyTokenSet || !entraRequired;
-
-  // Legacy token handlers
-  const handleSetToken = useCallback(() => {
-    const trimmed = tokenInput.trim();
-    if (!trimmed) return;
-    setAccessToken(trimmed);
-    sessionStorage.setItem("entra_token", trimmed);
-    setLegacyTokenSet(true);
-    setTokenInput("");
-    setShowTokenDialog(false);
-    window.location.reload();
-  }, [tokenInput]);
-
-  const handleClearToken = useCallback(() => {
-    setAccessToken(null);
-    sessionStorage.removeItem("entra_token");
-    setLegacyTokenSet(false);
-  }, []);
+  const authenticated = entraRequired ? (msalAuthenticated && tokenReady) : true;
 
   // Sign-out handler
   const handleSignOut = useCallback(async () => {
@@ -155,10 +122,8 @@ export default function App() {
       await instance.logoutRedirect({
         postLogoutRedirectUri: window.location.origin,
       });
-    } else {
-      handleClearToken();
     }
-  }, [msalAuthenticated, instance, handleClearToken]);
+  }, [msalAuthenticated, instance]);
 
   // Role display helpers
   function roleBadgeLabel(r: string): string {
@@ -219,15 +184,13 @@ export default function App() {
                 className="header-badge auth-legacy"
                 style={{ cursor: "pointer" }}
                 onClick={() => {
-                  if (!legacyTokenSet && msalEnabled) {
+                  if (msalEnabled) {
                     instance.loginRedirect(loginRequest).catch(console.error);
-                  } else {
-                    setShowTokenDialog(true);
                   }
                 }}
-                title={legacyTokenSet ? "Entra ID authenticated (legacy token)" : "Click to sign in with Entra ID"}
+                title="Click to sign in with Entra ID"
               >
-                {legacyTokenSet ? "Entra ID" : "Sign In"}
+                Sign In
               </span>
             ) : (
               <span className="header-badge auth-legacy" title="Legacy header auth (dev mode)">
@@ -247,7 +210,7 @@ export default function App() {
             )}
 
             {/* Sign Out button */}
-            {(msalAuthenticated || legacyTokenSet) && (
+            {msalAuthenticated && (
               <button
                 className="admin-dashboard-btn"
                 onClick={handleSignOut}
@@ -314,27 +277,6 @@ export default function App() {
                 Tenant: {authStatus.tenant_id}
               </p>
             )}
-
-            {/* Fallback: manual token paste */}
-            <details style={{ marginTop: 24, textAlign: "left" }}>
-              <summary className="muted-text" style={{ cursor: "pointer", fontSize: 12 }}>
-                Advanced: Paste a Bearer token manually
-              </summary>
-              <div style={{ marginTop: 8 }}>
-                <textarea
-                  rows={3}
-                  value={tokenInput}
-                  onChange={(e) => setTokenInput(e.target.value)}
-                  placeholder="Paste your Entra Bearer token here..."
-                  style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: 11 }}
-                />
-                <div className="button-row" style={{ justifyContent: "center", marginTop: 8 }}>
-                  <button className="btn-secondary" onClick={handleSetToken} disabled={!tokenInput.trim()}>
-                    Authenticate
-                  </button>
-                </div>
-              </div>
-            </details>
           </div>
         </main>
       ) : (
@@ -386,52 +328,6 @@ export default function App() {
       <footer className="enterprise-footer">
         &copy; 2026 DIIaC &mdash; Decision Intelligence Infrastructure as Code Platform
       </footer>
-
-      {/* Token Dialog (legacy fallback) */}
-      {showTokenDialog && (
-        <div className="dashboard-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowTokenDialog(false); }}>
-          <div className="dashboard-container" style={{ maxWidth: 520, marginTop: "10vh" }}>
-            <div className="dashboard-header">
-              <h2>Entra ID Authentication</h2>
-              <button className="dashboard-close" onClick={() => setShowTokenDialog(false)}>x</button>
-            </div>
-            <div className="dashboard-body">
-              <p style={{ fontSize: 13, color: "#334155", marginBottom: 12 }}>
-                {legacyTokenSet
-                  ? "You are currently authenticated. You can replace the token or sign out."
-                  : "Paste a valid Entra Bearer token to authenticate."}
-              </p>
-              <textarea
-                rows={4}
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value)}
-                placeholder="Paste Bearer token..."
-                style={{ width: "100%", fontFamily: "var(--font-mono)", fontSize: 11 }}
-              />
-              <div className="button-row" style={{ marginTop: 12 }}>
-                <button className="btn-primary" onClick={handleSetToken} disabled={!tokenInput.trim()}>
-                  Set Token
-                </button>
-                {legacyTokenSet && (
-                  <button className="btn-danger" onClick={() => { handleClearToken(); setShowTokenDialog(false); }}>
-                    Sign Out
-                  </button>
-                )}
-                <button className="btn-secondary" onClick={() => setShowTokenDialog(false)}>
-                  Cancel
-                </button>
-              </div>
-              {authStatus && (
-                <div style={{ marginTop: 12, fontSize: 11, color: "#64748b" }}>
-                  Mode: {authStatus.auth_mode} &mdash;
-                  Tenant: {authStatus.tenant_id || "n/a"} &mdash;
-                  Audience: {authStatus.audience || "n/a"}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Operational Dashboard Overlay (admin only) */}
       {showDashboard && (

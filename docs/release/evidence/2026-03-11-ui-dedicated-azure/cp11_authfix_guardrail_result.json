@@ -1,0 +1,17 @@
+{
+    "checkpoint":  "CP11",
+    "deploymentName":  "diiac-ui-dedicated-cp11-authfix-20260311-230359",
+    "frontendTag":  "1.3.0-groupmapfix-hostfix-entrafix",
+    "uiImage":  "acrdiiacv130vlui.azurecr.io/diiac/frontend:1.3.0-groupmapfix-hostfix-entrafix",
+    "uiProvisioningState":  "Succeeded",
+    "uiRunningStatus":  "Running",
+    "bundleContainsLocalhostApi":  false,
+    "bundleContainsLocalhostRedirect":  false,
+    "bundleContainsBridgeUrl":  true,
+    "bundleContainsCustomRedirect":  true,
+    "bridgeAuthStatus":  "{\"auth_mode\":\"entra_jwt_rs256\",\"entra_enabled\":true,\"tenant_id\":\"1384b1c5-2bae-45a1-a4b4-e94e3315eb41\",\"audience\":\"api://b726558d-f1c6-48f7-8a3d-72d5db818d0f\",\"llm_provider_mode\":\"copilot_only\"}",
+    "activeHostnameBindings":  1,
+    "hostname":  "diiacui.vendorlogic.io",
+    "bindingType":  "SniEnabled",
+    "decision":  "ENTRA_AUTH_ACTIVE"
+}

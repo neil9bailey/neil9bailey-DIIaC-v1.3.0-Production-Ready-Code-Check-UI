@@ -1,0 +1,13 @@
+﻿{
+    "appId":  "b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+    "displayName":  "diiac-bridge-gateway",
+    "requestedAccessTokenVersion":  2,
+    "spaRedirectUris":  [
+                            "https://diiacui.vendorlogic.io/auth/callback",
+                            "https://diiacui.vendorlogic.io",
+                            "https://diiac.vendorlogic.io",
+                            "https://diiac.vendorlogic.io/auth/callback",
+                            "http://localhost:5173/auth/callback",
+                            "http://localhost:5173"
+                        ]
+}

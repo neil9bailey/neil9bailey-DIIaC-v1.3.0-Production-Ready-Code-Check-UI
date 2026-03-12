@@ -1,0 +1,199 @@
+﻿[
+  {
+    "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/containerApps/br-vendorlogic-ui-prod-v130/revisions/br-vendorlogic-ui-prod-v130--0000002",
+    "name": "br-vendorlogic-ui-prod-v130--0000002",
+    "properties": {
+      "active": true,
+      "createdTime": "2026-03-12T01:17:47+00:00",
+      "fqdn": "br-vendorlogic-ui-prod-v130--0000002.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+      "healthState": "Healthy",
+      "provisioningState": "Provisioned",
+      "replicas": 1,
+      "runningState": "RunningAtMaxScale",
+      "template": {
+        "containers": [
+          {
+            "env": [
+              {
+                "name": "APP_ENV",
+                "value": "production"
+              },
+              {
+                "name": "PYTHON_BASE_URL",
+                "value": "https://rt-vendorlogic-ui-prod-v130.internal.blackpond-85ed120f.uksouth.azurecontainerapps.io"
+              },
+              {
+                "name": "STRICT_DETERMINISTIC_MODE",
+                "value": "true"
+              },
+              {
+                "name": "SIGNING_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "SIGNING_KEY_ID",
+                "value": "diiac-vendorlogic-prod"
+              },
+              {
+                "name": "SIGNING_PRIVATE_KEY_PEM",
+                "secretRef": "signing-private-key-pem"
+              },
+              {
+                "name": "LLM_INGESTION_ENABLED",
+                "value": "true"
+              },
+              {
+                "name": "LLM_STUB_ENABLED",
+                "value": "false"
+              },
+              {
+                "name": "LLM_PROVIDER_MODE",
+                "value": "copilot_only"
+              },
+              {
+                "name": "COPILOT_MODEL",
+                "value": "gpt-4o"
+              },
+              {
+                "name": "ALLOWED_ORIGINS",
+                "value": "https://diiacui.vendorlogic.io,https://ui-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io"
+              },
+              {
+                "name": "AUTH_MODE",
+                "value": "entra_jwt_rs256"
+              },
+              {
+                "name": "ENTRA_ROLE_CLAIM",
+                "value": "roles"
+              },
+              {
+                "name": "ENTRA_EXPECTED_TENANT_ID",
+                "value": "1384b1c5-2bae-45a1-a4b4-e94e3315eb41"
+              },
+              {
+                "name": "ENTRA_EXPECTED_AUDIENCE",
+                "value": "api://b726558d-f1c6-48f7-8a3d-72d5db818d0f"
+              },
+              {
+                "name": "ENTRA_EXPECTED_ISSUERS",
+                "value": "https://login.microsoftonline.com/1384b1c5-2bae-45a1-a4b4-e94e3315eb41/v2.0"
+              },
+              {
+                "name": "ENTRA_GROUP_TO_ROLE_JSON",
+                "value": "{\"81786818-de16-4115-b061-92fce74b00bd\":{\"role\":\"admin\"},\"9c7dd0d4-5b44-4811-b167-e52df21092d8\":{\"role\":\"standard\"}}"
+              },
+              {
+                "name": "ENTRA_PRINCIPAL_TO_ROLE_JSON",
+                "value": "{\"b726558d-f1c6-48f7-8a3d-72d5db818d0f\":\"admin\",\"2f1a1479-90d3-4f46-8107-f9b3f90b0cf7\":\"admin\"}"
+              },
+              {
+                "name": "ENTRA_OIDC_DISCOVERY_URL",
+                "value": "https://login.microsoftonline.com/1384b1c5-2bae-45a1-a4b4-e94e3315eb41/v2.0/.well-known/openid-configuration"
+              },
+              {
+                "name": "ENTRA_JWKS_URI",
+                "value": "https://login.microsoftonline.com/1384b1c5-2bae-45a1-a4b4-e94e3315eb41/discovery/v2.0/keys"
+              },
+              {
+                "name": "ADMIN_API_TOKEN",
+                "secretRef": "admin-api-token"
+              },
+              {
+                "name": "GITHUB_TOKEN",
+                "secretRef": "github-token"
+              },
+              {
+                "name": "BRIDGE_STATE_PATH",
+                "value": "/workspace/state/operations_state.json"
+              }
+            ],
+            "image": "acrdiiacv130vlui.azurecr.io/diiac/backend-ui-bridge:1.3.0-persistfix1",
+            "name": "backend-ui-bridge",
+            "probes": [
+              {
+                "failureThreshold": 3,
+                "httpGet": {
+                  "path": "/health",
+                  "port": 3001
+                },
+                "initialDelaySeconds": 20,
+                "periodSeconds": 20,
+                "timeoutSeconds": 5,
+                "type": "Liveness"
+              },
+              {
+                "failureThreshold": 3,
+                "httpGet": {
+                  "path": "/readiness",
+                  "port": 3001
+                },
+                "initialDelaySeconds": 10,
+                "periodSeconds": 10,
+                "timeoutSeconds": 5,
+                "type": "Readiness"
+              }
+            ],
+            "resources": {
+              "cpu": 0.25,
+              "memory": "0.5Gi"
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/workspace/artefacts/human-input",
+                "volumeName": "bridge-human-input-volume"
+              },
+              {
+                "mountPath": "/workspace/artefacts/decision-packs",
+                "volumeName": "bridge-decision-packs-volume"
+              },
+              {
+                "mountPath": "/workspace/state",
+                "volumeName": "bridge-state-volume"
+              },
+              {
+                "mountPath": "/workspace/ledger",
+                "volumeName": "bridge-ledger-volume"
+              }
+            ]
+          }
+        ],
+        "initContainers": null,
+        "revisionSuffix": null,
+        "scale": {
+          "cooldownPeriod": null,
+          "maxReplicas": 1,
+          "minReplicas": 0,
+          "pollingInterval": null,
+          "rules": null
+        },
+        "serviceBinds": null,
+        "terminationGracePeriodSeconds": null,
+        "volumes": [
+          {
+            "name": "bridge-human-input-volume",
+            "storageName": "bridge-human-input-storage",
+            "storageType": "AzureFile"
+          },
+          {
+            "name": "bridge-decision-packs-volume",
+            "storageName": "bridge-decision-packs-storage",
+            "storageType": "AzureFile"
+          },
+          {
+            "name": "bridge-state-volume",
+            "storageName": "bridge-state-storage",
+            "storageType": "AzureFile"
+          },
+          {
+            "name": "bridge-ledger-volume",
+            "storageName": "bridge-ledger-storage",
+            "storageType": "AzureFile"
+          }
+        ]
+      },
+      "trafficWeight": 100
+    },
+    "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+    "type": "Microsoft.App/containerapps/revisions"
+  }
+]

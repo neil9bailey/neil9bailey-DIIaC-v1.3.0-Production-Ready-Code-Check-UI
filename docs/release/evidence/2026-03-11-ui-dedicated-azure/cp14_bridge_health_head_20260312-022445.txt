@@ -1,0 +1,12 @@
+HTTP/1.1 200 OK
+x-powered-by: Express
+vary: Origin
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-xss-protection: 1; mode=block
+referrer-policy: strict-origin-when-cross-origin
+content-type: application/json; charset=utf-8
+content-length: 114
+etag: W/"72-VRfAgEcB5XZr2DrMCX15Vp7RSVk"
+date: Thu, 12 Mar 2026 02:25:02 GMT
+

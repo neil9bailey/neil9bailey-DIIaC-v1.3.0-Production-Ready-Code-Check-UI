@@ -1,0 +1,63 @@
+﻿{
+    "timestamp_utc":  "2026-03-12T01:10:06.1236644Z",
+    "bridge_base":  "https://br-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+    "ui_default":  "https://ui-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+    "ui_custom":  "https://diiacui.vendorlogic.io",
+    "checks":  {
+                   "bridge_health_status":  404,
+                   "bridge_readiness_status":  404,
+                   "bridge_readiness_attempts":  [
+                                                     {
+                                                         "attempt":  1,
+                                                         "status":  404,
+                                                         "timestamp":  "2026-03-12T01:09:00.9302902Z"
+                                                     },
+                                                     {
+                                                         "attempt":  2,
+                                                         "status":  404,
+                                                         "timestamp":  "2026-03-12T01:09:09.0337050Z"
+                                                     },
+                                                     {
+                                                         "attempt":  3,
+                                                         "status":  404,
+                                                         "timestamp":  "2026-03-12T01:09:17.1396277Z"
+                                                     },
+                                                     {
+                                                         "attempt":  4,
+                                                         "status":  404,
+                                                         "timestamp":  "2026-03-12T01:09:25.2076821Z"
+                                                     },
+                                                     {
+                                                         "attempt":  5,
+                                                         "status":  404,
+                                                         "timestamp":  "2026-03-12T01:09:33.3075542Z"
+                                                     },
+                                                     {
+                                                         "attempt":  6,
+                                                         "status":  404,
+                                                         "timestamp":  "2026-03-12T01:09:41.3951558Z"
+                                                     },
+                                                     {
+                                                         "attempt":  7,
+                                                         "status":  404,
+                                                         "timestamp":  "2026-03-12T01:09:49.4792151Z"
+                                                     },
+                                                     {
+                                                         "attempt":  8,
+                                                         "status":  404,
+                                                         "timestamp":  "2026-03-12T01:09:57.5712333Z"
+                                                     }
+                                                 ],
+                   "bridge_auth_status":  {
+                                              "auth_mode":  "entra_jwt_rs256",
+                                              "entra_enabled":  true,
+                                              "tenant_id":  "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+                                              "audience":  "api://b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+                                              "llm_provider_mode":  "copilot_only"
+                                          },
+                   "bridge_auth_me_without_token_status":  401,
+                   "bridge_admin_health_without_token_status":  401,
+                   "ui_default_status":  403,
+                   "ui_custom_status":  0
+               }
+}

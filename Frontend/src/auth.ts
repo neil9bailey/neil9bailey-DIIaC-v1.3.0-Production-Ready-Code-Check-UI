@@ -7,6 +7,8 @@ export type Role = "admin" | "standard" | "customer" | "viewer";
 // ─── Token + role state ───────────────────────────────────────
 let _accessToken: string | null = null;
 let _currentRole: Role = "standard";
+const LEGACY_ROLE_HEADER_ENABLED =
+  import.meta.env.DEV || String(import.meta.env.VITE_LEGACY_ROLE_HEADER_ENABLED || "").toLowerCase() === "true";
 
 export function setAccessToken(token: string | null): void {
   _accessToken = token;
@@ -40,11 +42,14 @@ export function isStandard(): boolean {
  * Returns headers for authenticated API calls.
  *
  * When an MSAL access token is set, sends Bearer auth.
- * Otherwise falls back to legacy x-role header (dev mode).
+ * Legacy x-role header fallback is opt-in for local/dev only.
  */
 export function authHeaders(): Record<string, string> {
   if (_accessToken) {
     return { Authorization: `Bearer ${_accessToken}` };
   }
-  return { "x-role": _currentRole };
+  if (LEGACY_ROLE_HEADER_ENABLED) {
+    return { "x-role": _currentRole };
+  }
+  return {};
 }

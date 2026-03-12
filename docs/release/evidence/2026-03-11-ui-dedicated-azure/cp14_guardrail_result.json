@@ -1,0 +1,16 @@
+{
+  "checkpoint": "cp14_plan_sigfix1",
+  "whatif_file": "docs/release/evidence/2026-03-11-ui-dedicated-azure/cp4_whatif_diiac-ui-dedicated-cp14-sigfix-plan-20260312-021902.json",
+  "resource_level_counts": {
+    "create": 0,
+    "modify": 15,
+    "delete": 0,
+    "nochange": 12,
+    "unsupported": 0
+  },
+  "rg_root_resource_operations_detected": 0,
+  "rg_root_resource_operation_lines": [],
+  "runtime_image_change_detected": true,
+  "runtime_image_change_line": "~ image: \"acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-persistfix1\" => \"[format('{0}/{1}/governance-runtime:{2}', reference('/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui', '2023-11-01-preview').loginServer, 'diiac', '1.3.0-sigfix1')]\"",
+  "safe_to_apply": true
+}

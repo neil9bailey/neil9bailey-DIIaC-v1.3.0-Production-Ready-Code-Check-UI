@@ -1,0 +1,44 @@
+﻿[
+    {
+        "attempt":  1,
+        "ok":  false,
+        "status":  0,
+        "error":  "The underlying connection was closed: An unexpected error occurred on a send.",
+        "timestamp":  "2026-03-12T01:19:40.3917251Z"
+    },
+    {
+        "attempt":  2,
+        "ok":  false,
+        "status":  0,
+        "error":  "The underlying connection was closed: An unexpected error occurred on a send.",
+        "timestamp":  "2026-03-12T01:19:44.4582508Z"
+    },
+    {
+        "attempt":  3,
+        "ok":  false,
+        "status":  0,
+        "error":  "The underlying connection was closed: An unexpected error occurred on a send.",
+        "timestamp":  "2026-03-12T01:19:48.5258266Z"
+    },
+    {
+        "attempt":  4,
+        "ok":  false,
+        "status":  0,
+        "error":  "The underlying connection was closed: An unexpected error occurred on a send.",
+        "timestamp":  "2026-03-12T01:19:52.7006791Z"
+    },
+    {
+        "attempt":  5,
+        "ok":  false,
+        "status":  0,
+        "error":  "The underlying connection was closed: An unexpected error occurred on a send.",
+        "timestamp":  "2026-03-12T01:19:56.7514532Z"
+    },
+    {
+        "attempt":  6,
+        "ok":  false,
+        "status":  0,
+        "error":  "The underlying connection was closed: An unexpected error occurred on a send.",
+        "timestamp":  "2026-03-12T01:20:00.8132722Z"
+    }
+]

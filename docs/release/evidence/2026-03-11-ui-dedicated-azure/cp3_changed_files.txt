@@ -1,0 +1,7 @@
+infra/aca-dedicated-ui/main.rg.bicep
+infra/aca-dedicated-ui/main.sub.bicep
+infra/aca-dedicated-ui/modules/keyvault-secrets-user-role.bicep
+infra/aca-dedicated-ui/vendorlogic-prod.sub.bicepparam
+infra/aca-dedicated-ui/README.md
+scripts/deploy-azure-dedicated-ui.sh
+scripts/build-push-dedicated-ui-images.sh

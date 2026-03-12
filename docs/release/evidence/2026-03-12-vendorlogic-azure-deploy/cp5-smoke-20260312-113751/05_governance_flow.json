@@ -1,0 +1,221 @@
+﻿{
+    "context_id":  "ctx-prod-smoke-20260312-113751",
+    "execution_id":  "bb4d6134-32db-574e-aa5d-aa8c4f09e05e",
+    "role_input_response":  {
+                                "evidence_ref_warnings":  [
+                                                              "Weak evidence ref \u0027REF-RAIL-001: UK rail network SD-WAN transformation mandate\u0027 (generic_token). Prefer URI/document/hash references."
+                                                          ],
+                                "execution_context_id":  "ctx-prod-smoke-20260312-113751",
+                                "idempotency_key":  "role-e97dd0be5999dd61ba76f589",
+                                "role_count":  1,
+                                "stored":  true
+                            },
+    "compile_response":  {
+                             "context_hash":  "ea12e852002acdbd228983dbce8faa78d16daded4d9c9e9c7e2eb44db321f498",
+                             "decision_summary":  {
+                                                      "accuracy_warnings":  [
+                                                                                "No strong document/URI evidence references were provided.",
+                                                                                "Weak evidence references detected (1). Add URI/document/hash-based refs for stronger traceability.",
+                                                                                "Quality gate: strong evidence refs 0 below minimum 2",
+                                                                                "Quality gate: evidence coverage 0.00 below minimum 0.60",
+                                                                                "Policy pack controls failed: EU-AIA-ART10-DATA-GOVERNANCE, EU-AIA-ART15-ACCURACY-ROBUSTNESS, UK-DUAA-2025-QUALITY-ASSURANCE"
+                                                                            ],
+                                                      "alternatives_considered":  [
+                                                                                      "GovCloud Managed Infrastructure",
+                                                                                      "SecureStack Container Services"
+                                                                                  ],
+                                                      "confidence_level":  "LOW",
+                                                      "confidence_rationale":  "Confidence is derived from deterministic scoring, control compliance, evidence quality/freshness, and governance mode checks.",
+                                                      "confidence_score":  43.17,
+                                                      "constraints_mode_controls_source":  "profile_required_controls",
+                                                      "control_failure_reasons":  [
+                                                                                      "policy_pack_control_failed:EU-AIA-ART10-DATA-GOVERNANCE",
+                                                                                      "policy_pack_control_failed:EU-AIA-ART15-ACCURACY-ROBUSTNESS",
+                                                                                      "policy_pack_control_failed:UK-DUAA-2025-QUALITY-ASSURANCE"
+                                                                                  ],
+                                                      "decision_basis":  "Deterministic weighted scoring + profile/policy controls + role evidence",
+                                                      "decision_status":  "not_recommended",
+                                                      "governance_modes":  [
+                                                                               "FIRST-PRINCIPLES MODE",
+                                                                               "DEVIL\u0027S ADVOCATE MODE",
+                                                                               "CONSTRAINTS-FIRST MODE"
+                                                                           ],
+                                                      "policy_pack_summary":  [
+                                                                                  {
+                                                                                      "fail_count":  2,
+                                                                                      "pack_id":  "eu_ai_act_deployer_v1"
+                                                                                  },
+                                                                                  {
+                                                                                      "fail_count":  1,
+                                                                                      "pack_id":  "uk_ai_governance_v1"
+                                                                                  }
+                                                                              ],
+                                                      "quality_gate_failures":  [
+                                                                                    "strong evidence refs 0 below minimum 2",
+                                                                                    "evidence coverage 0.00 below minimum 0.60"
+                                                                                ],
+                                                      "selected_vendor":  null,
+                                                      "signing_trust":  {
+                                                                            "active_key_registered":  true,
+                                                                            "key_mode":  "configured",
+                                                                            "production_trust_ready":  true,
+                                                                            "registered_key_count":  1,
+                                                                            "signing_key_id":  "diiac-vendorlogic-prod",
+                                                                            "warnings":  [
+
+                                                                                         ]
+                                                                        }
+                                                  },
+                             "deterministic_input_snapshot_hash":  "ea12e852002acdbd228983dbce8faa78d16daded4d9c9e9c7e2eb44db321f498",
+                             "execution_id":  "bb4d6134-32db-574e-aa5d-aa8c4f09e05e",
+                             "execution_state":  {
+                                                     "signature_present":  true,
+                                                     "signing_enabled":  true
+                                                 },
+                             "governance_modes":  [
+                                                      "FIRST-PRINCIPLES MODE",
+                                                      "DEVIL\u0027S ADVOCATE MODE",
+                                                      "CONSTRAINTS-FIRST MODE"
+                                                  ],
+                             "manifest_hash":  "1fcb2961d8c231288674807467c6e0be17837861612f658a135fb1ae36f8842e",
+                             "merkle_root":  "9b0e0d65d093a73ed1944647e72eae859cfa12c578305e0bed9acb1239408aae",
+                             "pack_hash":  "f28945a5693dfc9d617422b6b860ee812f939746f83d09a2eaa147423568749a",
+                             "profile_id":  "transport_profile_v1",
+                             "rp_levels":  {
+                                               "policy_level":  "P3",
+                                               "reasoning_level":  "R5"
+                                           },
+                             "schema_id":  "GENERAL_SOLUTION_BOARD_REPORT_V1"
+                         },
+    "verify_execution":  {
+                             "execution_id":  "bb4d6134-32db-574e-aa5d-aa8c4f09e05e",
+                             "ledger_match":  true,
+                             "ledger_record_hash":  "10135217a65a47acb0e4540160a14f3bf44065f2ed1208ca23a1c84eec71d3b0",
+                             "manifest_hash":  "1fcb2961d8c231288674807467c6e0be17837861612f658a135fb1ae36f8842e",
+                             "merkle_root":  "9b0e0d65d093a73ed1944647e72eae859cfa12c578305e0bed9acb1239408aae",
+                             "pack_hash":  "f28945a5693dfc9d617422b6b860ee812f939746f83d09a2eaa147423568749a",
+                             "signature_present":  true,
+                             "status":  "VERIFIABLE"
+                         },
+    "merkle":  {
+                   "algorithm":  "sha256",
+                   "leaf_canonicalization":  "sha256(name + \u0027:\u0027 + hash)",
+                   "leaf_count":  15,
+                   "leaves":  [
+                                  {
+                                      "hash":  "87dd161401f6242673bb29ab74e4323abd79f31d987998931800411f0f6bbd96",
+                                      "leaf_hash":  "2816bc3c3cf9a8f38d50b36b892b8ac2bd4895677ede50616b059c254ef9ba00",
+                                      "name":  "board_report.json"
+                                  },
+                                  {
+                                      "hash":  "a6c07b771fbdd05d835b1cfe5830a96d7b93891259b7346fe16a9cb9ca85cac5",
+                                      "leaf_hash":  "e24be271c5f5be7df59a29121a955f7fb1470bd2c90fccf7bd4df4f96cfc24bd",
+                                      "name":  "board_report.md"
+                                  },
+                                  {
+                                      "hash":  "5a7dfb6ea439cca37b122a29e676ddb9ae48f4ada8b5153e8b6f6d09f6d89af0",
+                                      "leaf_hash":  "53ece8fa0b391a9a4df5fa1e700eb72d9592d341ccd5b6739a3fa6e7d4b1d1a4",
+                                      "name":  "business_profile_snapshot.json"
+                                  },
+                                  {
+                                      "hash":  "c853fb5112c25571e1358c478be4977d898e8b7f0478b49af6cf923cad84dfab",
+                                      "leaf_hash":  "70d8efd934d6e9f4d05720a4456f8fba1a65a241df4b112fcf3716307aec71c4",
+                                      "name":  "deterministic_compilation_log.json"
+                                  },
+                                  {
+                                      "hash":  "f0f2d2ea146168d5762b684a47c4f6284aad09139b6e2a583626c940490f20cb",
+                                      "leaf_hash":  "c4deb1cdb4b6db8725141ae3a1e74d79542a9e6b99c8e548fc28fe05803b168b",
+                                      "name":  "deterministic_input_snapshot.json"
+                                  },
+                                  {
+                                      "hash":  "1d56fbae66b8b805fad0d190c1e1e6ef460beae88ca3d79879fa825787fbb045",
+                                      "leaf_hash":  "85238374d21c8e41ab0d0e93a157982f703adb3f7d9d8da00748112dde85216c",
+                                      "name":  "down_select_recommendation.json"
+                                  },
+                                  {
+                                      "hash":  "34d3111fe9c8287670f71229a0ca72b666f2b9223c83fec1140e68d352962a59",
+                                      "leaf_hash":  "7c3c12f143d6b12ebd9b6779f9b23bfde78e75bafb1693210dbf42c4b902189c",
+                                      "name":  "evidence_trace_map.json"
+                                  },
+                                  {
+                                      "hash":  "7c1923d32b633fa424cd7192ad9edc5a260cb7fdf0c7a1ae0b027e18a4368c43",
+                                      "leaf_hash":  "3a712c95ccfb67d1173c4e51f98a92faa3c0def96953fa70d206393b48bc5f35",
+                                      "name":  "policy_pack_compliance.json"
+                                  },
+                                  {
+                                      "hash":  "8dd0fbc01a404f640a2fcd56281f2104908d5430f3771feae8b086b5041dd95c",
+                                      "leaf_hash":  "1b51d0731d793f309f63b1090b896491e4a4dacbd95fd3b7acc4dfb3d665c24b",
+                                      "name":  "profile_compliance_matrix.json"
+                                  },
+                                  {
+                                      "hash":  "18f11a17f917091211fcd46f114d13f776287fffb3330f1ad317e9f60f0a1a00",
+                                      "leaf_hash":  "a72e6c4f69bef1e1a428c5090d071ab81a8fae76b00ddc2e69c266e199d09b25",
+                                      "name":  "profile_override_log.json"
+                                  },
+                                  {
+                                      "hash":  "e8671df10eddcc89738223e8bed0919bcae00a96af4b5f1b88c83dbea3adb119",
+                                      "leaf_hash":  "9388a024040215718f0cdb024bb8267d19b42c1027f77eaf96f6e27a5da81750",
+                                      "name":  "role_input_bundle.json"
+                                  },
+                                  {
+                                      "hash":  "fe8489e9907a6adffbfd4c342f0568964a9c37210d5865a64565a1a3751bea1a",
+                                      "leaf_hash":  "db2ccb679f63f5cc77876a3c0c46cf4ba3a1b9a7023d299fe70e6cd83169de5a",
+                                      "name":  "schema_contract.json"
+                                  },
+                                  {
+                                      "hash":  "11bdaf47e1a61971deceffda99110e53a7ebf7c150a80dde38566e7deab6d1bd",
+                                      "leaf_hash":  "080a717370fdbbffb7aa0ed97872a1c241e2eff3ccfbc1fd1f7522bd0b24f92f",
+                                      "name":  "scoring.json"
+                                  },
+                                  {
+                                      "hash":  "34d3111fe9c8287670f71229a0ca72b666f2b9223c83fec1140e68d352962a59",
+                                      "leaf_hash":  "7a22d4fe7868ff232d224f4fffd97321ffda04843a89c8d003b9401c82847db4",
+                                      "name":  "trace_map.json"
+                                  },
+                                  {
+                                      "hash":  "11bdaf47e1a61971deceffda99110e53a7ebf7c150a80dde38566e7deab6d1bd",
+                                      "leaf_hash":  "43818f25b16e3e89ad3402552a03225e089b713033b3595819accbbe7ad4311c",
+                                      "name":  "vendor_scoring_matrix.json"
+                                  }
+                              ],
+                   "merkle_root":  "9b0e0d65d093a73ed1944647e72eae859cfa12c578305e0bed9acb1239408aae"
+               },
+    "signed_export":  {
+                          "sig_path":  "/app/exports/decision-pack_bb4d6134-32db-574e-aa5d-aa8c4f09e05e.sig",
+                          "sigmeta":  {
+                                          "execution_id":  "bb4d6134-32db-574e-aa5d-aa8c4f09e05e",
+                                          "manifest_hash":  "1fcb2961d8c231288674807467c6e0be17837861612f658a135fb1ae36f8842e",
+                                          "merkle_root":  "9b0e0d65d093a73ed1944647e72eae859cfa12c578305e0bed9acb1239408aae",
+                                          "pack_hash":  "f28945a5693dfc9d617422b6b860ee812f939746f83d09a2eaa147423568749a",
+                                          "signature_alg":  "Ed25519",
+                                          "signed_at":  "2026-03-12T11:37:57.155004+00:00",
+                                          "signing_key_id":  "diiac-vendorlogic-prod",
+                                          "zip_sha256":  "939778a00db4dacbe2ab11859e188f85bd8a597756a7f6b9d1f9492779f09f62"
+                                      },
+                          "sigmeta_path":  "/app/exports/decision-pack_bb4d6134-32db-574e-aa5d-aa8c4f09e05e.sigmeta.json",
+                          "zip_path":  "/app/exports/decision-pack_bb4d6134-32db-574e-aa5d-aa8c4f09e05e.zip"
+                      },
+    "verify_pack":  {
+                        "hash_valid":  true,
+                        "manifest_consistent":  true,
+                        "overall_valid":  true,
+                        "signature_valid":  true
+                    },
+    "trust_status":  {
+                         "latest_merkle_root":  "9b0e0d65d093a73ed1944647e72eae859cfa12c578305e0bed9acb1239408aae",
+                         "latest_record_hash":  "10135217a65a47acb0e4540160a14f3bf44065f2ed1208ca23a1c84eec71d3b0",
+                         "ledger_chain_valid":  true,
+                         "ledger_records":  44
+                     },
+    "audit_export":  {
+                         "audit_export_id":  "audit-2ccd2e8bfb26",
+                         "download_url":  "/admin/audit/exports/audit-2ccd2e8bfb26/download",
+                         "storage_path":  "/app/audit_exports/audit-2ccd2e8bfb26.json",
+                         "storage_path_relative":  "audit_exports/audit-2ccd2e8bfb26.json"
+                     },
+    "zip_export":  {
+                       "file":  "decision-pack_bb4d6134-32db-574e-aa5d-aa8c4f09e05e.zip",
+                       "sha256":  "939778A00DB4DACBE2AB11859E188F85BD8A597756A7F6B9D1F9492779F09F62",
+                       "bytes":  20076
+                   }
+}

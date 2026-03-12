@@ -1,3 +1,4 @@
+> Historical archive notice: This document is retained for audit traceability and is not the authoritative source for current v1.3.0-ui operations. Use docs/README.md and current deployment/security runbooks for active guidance.
 # DIIaC v1.2.0 — Production Certification and Audit Report
 
 **Document ID:** CERT-DIIAC-v1.2.0-2026-03-09
@@ -318,3 +319,4 @@ This certification covers the governance framework, LLM integration determinism,
 **Document Version:** 1.0
 **Assessment Method:** Direct source code inspection, artifact verification, hash chain validation
 **Codebase Version:** DIIaC v1.2.0
+

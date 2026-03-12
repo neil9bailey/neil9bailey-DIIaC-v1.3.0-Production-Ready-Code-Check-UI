@@ -1,3 +1,4 @@
+> Historical archive notice: This document is retained for audit traceability and is not the authoritative source for current v1.3.0-ui operations. Use docs/README.md and current deployment/security runbooks for active guidance.
 # DIIaC v1.2.0 — Production Readiness Report
 
 **Date:** 2026-03-06
@@ -227,3 +228,4 @@ The only items that require the live deployment environment (not testable in CI)
 
 These items are covered by the `DIIAC_CLEAN_BUILD_TEST_VALIDATION_GUIDE.md` Phases 1-3 and 7-8,
 which should be executed on the deployment machine with Docker Desktop.
+

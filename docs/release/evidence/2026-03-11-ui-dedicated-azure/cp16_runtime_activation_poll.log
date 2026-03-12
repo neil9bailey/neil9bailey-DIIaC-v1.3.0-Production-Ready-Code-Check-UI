@@ -1,0 +1,14 @@
+2026-03-12T03:10:42.0774700+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:10:54.6966182+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:11:07.2966872+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:11:19.9324737+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:11:32.4635358+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:11:45.4525160+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:11:57.8719616+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:12:10.4368999+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:12:22.9935433+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:12:35.5612707+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:12:49.6735277+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:13:02.8454449+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:13:15.8391144+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=Activating replicas=1
+2026-03-12T03:13:28.9219307+00:00 latest=rt-vendorlogic-ui-prod-v130--0000005 health=None run=ActivationFailed replicas=0

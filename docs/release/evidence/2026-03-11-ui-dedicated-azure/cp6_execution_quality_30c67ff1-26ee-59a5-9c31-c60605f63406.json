@@ -1,0 +1,22 @@
+﻿{
+    "/verify/execution/30c67ff1-26ee-59a5-9c31-c60605f63406":  {
+                                                                   "status":  401,
+                                                                   "body":  null,
+                                                                   "error":  "The remote server returned an error: (401) Unauthorized."
+                                                               },
+    "/executions/30c67ff1-26ee-59a5-9c31-c60605f63406/scoring":  {
+                                                                     "status":  401,
+                                                                     "body":  null,
+                                                                     "error":  "The remote server returned an error: (401) Unauthorized."
+                                                                 },
+    "/executions/30c67ff1-26ee-59a5-9c31-c60605f63406/reports":  {
+                                                                     "status":  401,
+                                                                     "body":  null,
+                                                                     "error":  "The remote server returned an error: (401) Unauthorized."
+                                                                 },
+    "/trust/status":  {
+                          "status":  401,
+                          "body":  null,
+                          "error":  "The remote server returned an error: (401) Unauthorized."
+                      }
+}

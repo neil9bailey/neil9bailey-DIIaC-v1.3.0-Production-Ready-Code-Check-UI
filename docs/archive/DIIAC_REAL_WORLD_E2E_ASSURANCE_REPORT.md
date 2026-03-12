@@ -1,3 +1,4 @@
+> Historical archive notice: This document is retained for audit traceability and is not the authoritative source for current v1.3.0-ui operations. Use docs/README.md and current deployment/security runbooks for active guidance.
 # DIIaC Real-World E2E Assurance Report (HITL)
 
 ## Objective
@@ -76,3 +77,4 @@ The production path is operating as designed for governed decision-making: **hum
 ## Reproduction note
 Raw machine output from this run was captured at:
 - `/tmp/diiac_bridge_realworld_strict.json`
+

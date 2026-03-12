@@ -1,56 +1,29 @@
-# DIIaC Offline Verifier Runbook
+# Offline Verifier Runbook (v1.3.0-ui)
 
-This runbook describes a minimal offline verification workflow for a governed execution decision pack.
+This runbook validates exported decision packs in an offline or controlled environment.
 
 ## Inputs
-- `execution_id`
-- Signed pack export generated from: `GET /decision-pack/<execution_id>/export-signed`
-- Runtime public keys from: `GET /verify/public-keys`
 
-## Workflow
-1. Export signed decision pack:
-   - call `GET /decision-pack/<execution_id>/export-signed`
-   - capture `zip_path`, `sig_path`, and `sigmeta_path`
-2. Gather verification references:
-   - call `GET /verify/execution/<execution_id>`
-   - record `pack_hash`, `manifest_hash`, `merkle_root`
-3. Verify runtime key registry:
-   - call `GET /verify/public-keys`
-   - confirm expected `signing_key_id` exists
-4. Verify pack consistency:
-   - call `POST /verify/pack` with:
-     - `execution_id`
-     - `pack_hash`
-     - `manifest_hash`
-   - expect `overall_valid=true`
-5. Verify merkle proof for artifacts:
-   - call `GET /executions/<execution_id>/merkle/proof/<artefact_name>`
-   - pass response directly into `POST /verify/merkle-proof`
-   - expect `proof_valid=true`
+- Exported decision pack archive
+- Public key registry (`contracts/keys/public_keys.json`)
+- Hash/signature metadata from pack manifest
 
-## Sample commands
-```bash
-# 1) Export signed pack
-curl -s "http://localhost:8000/decision-pack/${EXECUTION_ID}/export-signed" | jq
+## Verification Steps
 
-# 2) Verify execution state
-curl -s "http://localhost:8000/verify/execution/${EXECUTION_ID}" | jq
+1. Extract pack contents.
+2. Validate manifest structure.
+3. Recompute hashes for manifest-linked files.
+4. Validate Merkle root and hash chain references.
+5. Validate signature against configured key ID and public key.
+6. Confirm replay verification succeeds.
 
-# 3) Verify public keys
-curl -s "http://localhost:8000/verify/public-keys" | jq
+## Expected Output
 
-# 4) Verify pack integrity
-curl -s -X POST "http://localhost:8000/verify/pack" \
-  -H 'Content-Type: application/json' \
-  -d "{\"execution_id\":\"${EXECUTION_ID}\",\"pack_hash\":\"${PACK_HASH}\",\"manifest_hash\":\"${MANIFEST_HASH}\"}" | jq
+- Deterministic verification result (`pass`/`fail`)
+- Failure reason list when verification does not pass
+- Immutable verification log for audit storage
 
-# 5) Verify merkle proof for board_report.json
-PROOF_JSON=$(curl -s "http://localhost:8000/executions/${EXECUTION_ID}/merkle/proof/board_report.json")
-curl -s -X POST "http://localhost:8000/verify/merkle-proof" \
-  -H 'Content-Type: application/json' \
-  -d "$PROOF_JSON" | jq
-```
+## Notes
 
-## Tamper-check expectations
-- Wrong `pack_hash` or wrong `manifest_hash` in `/verify/pack` should produce `overall_valid=false`.
-- Modified merkle siblings/index/root in `/verify/merkle-proof` should produce `proof_valid=false`.
+- Production key material must remain in Key Vault; only public keys are used for offline verification.
+- Any key mismatch or hash drift is a deployment/audit event and must be escalated.

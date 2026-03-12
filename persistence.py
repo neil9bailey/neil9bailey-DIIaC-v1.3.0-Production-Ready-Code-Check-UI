@@ -1,4 +1,4 @@
-"""DIIaC State Persistence — SQLite write-through store.
+﻿"""DIIaC State Persistence â€” SQLite write-through store.
 
 Provides durable storage for all governance runtime state so that
 trust ledger, execution history, logs, and role inputs survive
@@ -7,6 +7,7 @@ container restarts.
 from __future__ import annotations
 
 import json
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -16,15 +17,61 @@ class StateStore:
     """SQLite-backed persistence for DIIaC governance runtime state."""
 
     def __init__(self, db_path: str | Path) -> None:
-        self._conn = sqlite3.connect(
-            str(db_path),
-            check_same_thread=False,
-        )
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA synchronous=NORMAL")
-        self._create_tables()
+        use_nolock = os.getenv("DIIAC_SQLITE_NOLOCK", "false").lower() == "true"
+        if use_nolock:
+            db_uri = f"file:{db_path}?mode=rwc&cache=shared&nolock=1"
+            self._conn = sqlite3.connect(
+                db_uri,
+                check_same_thread=False,
+                timeout=30,
+                uri=True,
+            )
+        else:
+            self._conn = sqlite3.connect(
+                str(db_path),
+                check_same_thread=False,
+                timeout=30,
+            )
+        self._configure_pragmas()
+        self._ensure_tables()
 
-    # ── Schema ────────────────────────────────────────────────────────────
+    def _configure_pragmas(self) -> None:
+        """Apply SQLite pragmas with safe fallback for network-backed state files."""
+        try:
+            row = self._conn.execute("PRAGMA journal_mode=WAL").fetchone()
+            mode = str(row[0]).lower() if row else ""
+            if mode != "wal":
+                self._conn.execute("PRAGMA journal_mode=DELETE")
+        except sqlite3.OperationalError:
+            self._conn.execute("PRAGMA journal_mode=DELETE")
+        try:
+            self._conn.execute("PRAGMA busy_timeout=60000")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            self._conn.execute("PRAGMA synchronous=NORMAL")
+        except sqlite3.OperationalError:
+            pass
+
+    def _has_required_tables(self) -> bool:
+        try:
+            row = self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='ledger'"
+            ).fetchone()
+            return bool(row)
+        except sqlite3.OperationalError:
+            return False
+
+    def _ensure_tables(self) -> None:
+        try:
+            self._create_tables()
+        except sqlite3.OperationalError as exc:
+            if "database is locked" not in str(exc).lower():
+                raise
+            if not self._has_required_tables():
+                raise
+
+    # â”€â”€ Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _create_tables(self) -> None:
         cur = self._conn.cursor()
@@ -77,7 +124,7 @@ class StateStore:
         """)
         self._conn.commit()
 
-    # ── Write methods ─────────────────────────────────────────────────────
+    # â”€â”€ Write methods â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def append_backend_log(self, evt: dict[str, Any]) -> None:
         self._conn.execute(
@@ -134,7 +181,7 @@ class StateStore:
         )
         self._conn.commit()
 
-    # ── Read methods (startup restoration) ────────────────────────────────
+    # â”€â”€ Read methods (startup restoration) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def load_all_backend_logs(self) -> list[dict[str, Any]]:
         rows = self._conn.execute(
@@ -215,7 +262,7 @@ class StateStore:
             for r in rows
         }
 
-    # ── Health check ──────────────────────────────────────────────────────
+    # â”€â”€ Health check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def is_healthy(self) -> bool:
         try:
@@ -224,7 +271,8 @@ class StateStore:
         except Exception:
             return False
 
-    # ── Cleanup ───────────────────────────────────────────────────────────
+    # â”€â”€ Cleanup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def close(self) -> None:
         self._conn.close()
+

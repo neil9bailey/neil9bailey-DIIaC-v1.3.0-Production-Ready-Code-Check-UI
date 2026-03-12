@@ -1,0 +1,11 @@
+﻿{
+    "timestamp_utc":  "2026-03-12T03:02:21Z",
+    "latest_runtime_revision":  "rt-vendorlogic-ui-prod-v130--0000004",
+    "latest_runtime_image":  "acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-sigfix2",
+    "latest_runtime_health":  "None",
+    "latest_runtime_running_state":  "Activating",
+    "healthy_active_runtime_revisions":  "rt-vendorlogic-ui-prod-v130--fcy73or",
+    "ui_custom_domain_status_code":  "200",
+    "bridge_health_status_code":  "200",
+    "bridge_readiness_status_code":  "200"
+}

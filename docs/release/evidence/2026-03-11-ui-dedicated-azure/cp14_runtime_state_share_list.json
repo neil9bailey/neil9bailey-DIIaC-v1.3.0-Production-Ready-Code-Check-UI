@@ -1,0 +1,56 @@
+﻿[
+  {
+    "changeTime": "2026-03-12T01:07:13.291882+00:00",
+    "contentLength": null,
+    "creationTime": "2026-03-12T01:07:13.291882+00:00",
+    "fileAttributes": "Archive",
+    "fileId": "9223442405598953472",
+    "fileMode": null,
+    "fileType": null,
+    "group": null,
+    "isDirectory": false,
+    "lastAccessTime": "2026-03-12T01:07:13.291882+00:00",
+    "lastWriteTime": "2026-03-12T01:07:13.291882+00:00",
+    "lease": {
+      "duration": null,
+      "state": null,
+      "status": null
+    },
+    "linkCount": null,
+    "metadata": null,
+    "name": "diiac_state.db",
+    "nfsFileType": null,
+    "owner": null,
+    "parentId": null,
+    "path": null,
+    "permissionKey": "491810489504625089*12570579316545821007",
+    "properties": {
+      "contentLength": 0,
+      "contentRange": null,
+      "contentSettings": {
+        "cacheControl": null,
+        "contentDisposition": null,
+        "contentEncoding": null,
+        "contentLanguage": null,
+        "contentMd5": null,
+        "contentType": null
+      },
+      "copy": {
+        "completionTime": null,
+        "destinationSnapshot": null,
+        "id": null,
+        "incrementalCopy": null,
+        "progress": null,
+        "source": null,
+        "status": null,
+        "statusDescription": null
+      },
+      "etag": "\"0x8DE7FD3B1EA002C\"",
+      "lastModified": "2026-03-12T01:07:13+00:00",
+      "serverEncrypted": null
+    },
+    "share": null,
+    "snapshot": null,
+    "type": "file"
+  }
+]

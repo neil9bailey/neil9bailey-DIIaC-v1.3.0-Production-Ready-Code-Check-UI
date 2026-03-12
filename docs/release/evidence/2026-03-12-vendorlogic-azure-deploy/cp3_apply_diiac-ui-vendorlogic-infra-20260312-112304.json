@@ -1,0 +1,548 @@
+{
+  "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/providers/Microsoft.Resources/deployments/diiac-ui-vendorlogic-infra-20260312-112304",
+  "location": "uksouth",
+  "name": "diiac-ui-vendorlogic-infra-20260312-112304",
+  "properties": {
+    "correlationId": "58441d75-b74d-491a-9112-f557f3094bb4",
+    "debugSetting": null,
+    "dependencies": [
+      {
+        "dependsOn": [
+          {
+            "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130",
+            "resourceName": "RG_UI_VENDORLOGIC_PROD_V130",
+            "resourceType": "Microsoft.Resources/resourceGroups"
+          }
+        ],
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Resources/deployments/dedicated-ui-stack",
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceName": "dedicated-ui-stack",
+        "resourceType": "Microsoft.Resources/deployments"
+      },
+      {
+        "dependsOn": [
+          {
+            "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Resources/deployments/dedicated-ui-stack",
+            "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+            "resourceName": "dedicated-ui-stack",
+            "resourceType": "Microsoft.Resources/deployments"
+          },
+          {
+            "apiVersion": "2025-04-01",
+            "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Resources/deployments/dedicated-ui-stack",
+            "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+            "resourceName": "dedicated-ui-stack",
+            "resourceType": "Microsoft.Resources/deployments"
+          }
+        ],
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_Root/providers/Microsoft.Resources/deployments/dedicated-ui-keyvault-secrets-user",
+        "resourceGroup": "RG_Root",
+        "resourceName": "dedicated-ui-keyvault-secrets-user",
+        "resourceType": "Microsoft.Resources/deployments"
+      }
+    ],
+    "diagnostics": null,
+    "duration": "PT34.3535649S",
+    "error": null,
+    "extensions": [],
+    "mode": "Incremental",
+    "onErrorDeployment": null,
+    "outputResources": [
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_Root/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic/providers/Microsoft.Authorization/roleAssignments/a9b247d1-d791-55bd-876d-55e3230771ae",
+        "identifiers": null,
+        "resourceGroup": "RG_Root",
+        "resourceType": "Microsoft.Authorization/roleAssignments"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130",
+        "identifiers": null,
+        "resourceType": "Microsoft.Resources/resourceGroups"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-decision-packs-storage",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments/storages"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-human-input-storage",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments/storages"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-ledger-storage",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments/storages"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/bridge-state-storage",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments/storages"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-artifacts-storage",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments/storages"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-audit-storage",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments/storages"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-exports-storage",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments/storages"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/storages/runtime-state-storage",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.App/managedEnvironments/storages"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.ContainerRegistry/registries"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ContainerRegistry/registries/acrdiiacv130vlui/providers/Microsoft.Authorization/roleAssignments/1e7e60f1-0695-544c-a71b-5d5447cc0c87",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Authorization/roleAssignments"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.ManagedIdentity/userAssignedIdentities"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.OperationalInsights/workspaces/law-vendorlogic-ui-prod-v130",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.OperationalInsights/workspaces"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-decision-packs",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices/shares"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-human-input",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices/shares"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-ledger",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices/shares"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-bridge-state",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices/shares"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-artifacts",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices/shares"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-audit",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices/shares"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-exports",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices/shares"
+      },
+      {
+        "apiVersion": null,
+        "extension": null,
+        "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.Storage/storageAccounts/stdiiacv130vlui01/fileServices/default/shares/diiac-runtime-state",
+        "identifiers": null,
+        "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+        "resourceType": "Microsoft.Storage/storageAccounts/fileServices/shares"
+      }
+    ],
+    "outputs": {
+      "bridgeExternalBaseUrl": {
+        "type": "String",
+        "value": ""
+      },
+      "dedicatedAcrLoginServer": {
+        "type": "String",
+        "value": "acrdiiacv130vlui.azurecr.io"
+      },
+      "dedicatedAcrName": {
+        "type": "String",
+        "value": "acrdiiacv130vlui"
+      },
+      "dedicatedManagedEnvironmentDefaultDomain": {
+        "type": "String",
+        "value": "blackpond-85ed120f.uksouth.azurecontainerapps.io"
+      },
+      "dedicatedManagedEnvironmentId": {
+        "type": "String",
+        "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130"
+      },
+      "dedicatedManagedIdentityId": {
+        "type": "String",
+        "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130"
+      },
+      "dedicatedManagedIdentityPrincipalId": {
+        "type": "String",
+        "value": "fbc0c195-d41a-40f8-aea7-c91fad576d7b"
+      },
+      "dedicatedStorageAccountName": {
+        "type": "String",
+        "value": "stdiiacv130vlui01"
+      },
+      "dnsCnameHost": {
+        "type": "String",
+        "value": "diiacui"
+      },
+      "dnsCnameTarget": {
+        "type": "String",
+        "value": ""
+      },
+      "dnsTxtHost": {
+        "type": "String",
+        "value": "asuid.diiacui"
+      },
+      "dnsTxtValue": {
+        "type": "String",
+        "value": ""
+      },
+      "resourceGroupName": {
+        "type": "String",
+        "value": "RG_UI_VENDORLOGIC_PROD_V130"
+      },
+      "runtimeInternalBaseUrl": {
+        "type": "String",
+        "value": ""
+      },
+      "sharedKeyVaultId": {
+        "type": "String",
+        "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_Root/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic"
+      },
+      "sharedKeyVaultSecretsUserRoleAssignmentId": {
+        "type": "String",
+        "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic/providers/Microsoft.Authorization/roleAssignments/a9b247d1-d791-55bd-876d-55e3230771ae"
+      },
+      "sharedKeyVaultUri": {
+        "type": "String",
+        "value": "https://kv-diiac-vendorlogic.vault.azure.net/"
+      },
+      "uiAppFqdn": {
+        "type": "String",
+        "value": ""
+      },
+      "uiCustomDomain": {
+        "type": "String",
+        "value": "diiacui.vendorlogic.io"
+      }
+    },
+    "parameters": {
+      "bridgeAppName": {
+        "type": "String",
+        "value": "br-vendorlogic-ui-prod-v130"
+      },
+      "bridgeCpu": {
+        "type": "String",
+        "value": "0.25"
+      },
+      "bridgeImageTag": {
+        "type": "String",
+        "value": "1.3.0-persistfix1"
+      },
+      "bridgeMaxReplicas": {
+        "type": "Int",
+        "value": 1
+      },
+      "bridgeMemory": {
+        "type": "String",
+        "value": "0.5Gi"
+      },
+      "bridgeMinReplicas": {
+        "type": "Int",
+        "value": 0
+      },
+      "containerAppsEnvironmentName": {
+        "type": "String",
+        "value": "acae-vendorlogic-ui-prod-v130"
+      },
+      "containerRegistryName": {
+        "type": "String",
+        "value": "acrdiiacv130vlui"
+      },
+      "copilotModel": {
+        "type": "String",
+        "value": "gpt-4o"
+      },
+      "deployApps": {
+        "type": "Bool",
+        "value": false
+      },
+      "entraAdminGroupId": {
+        "type": "String",
+        "value": "81786818-de16-4115-b061-92fce74b00bd"
+      },
+      "entraApiAppId": {
+        "type": "String",
+        "value": "b726558d-f1c6-48f7-8a3d-72d5db818d0f"
+      },
+      "entraPrincipalToRoleJson": {
+        "type": "String",
+        "value": "{\"b726558d-f1c6-48f7-8a3d-72d5db818d0f\":\"admin\",\"2f1a1479-90d3-4f46-8107-f9b3f90b0cf7\":\"admin\"}"
+      },
+      "entraStandardGroupId": {
+        "type": "String",
+        "value": "9c7dd0d4-5b44-4811-b167-e52df21092d8"
+      },
+      "entraTenantId": {
+        "type": "String",
+        "value": "1384b1c5-2bae-45a1-a4b4-e94e3315eb41"
+      },
+      "entraUiAppId": {
+        "type": "String",
+        "value": "b726558d-f1c6-48f7-8a3d-72d5db818d0f"
+      },
+      "frontendCpu": {
+        "type": "String",
+        "value": "0.25"
+      },
+      "frontendImageTag": {
+        "type": "String",
+        "value": "1.3.0-persistfix1"
+      },
+      "frontendMemory": {
+        "type": "String",
+        "value": "0.5Gi"
+      },
+      "imageRepositoryPrefix": {
+        "type": "String",
+        "value": "diiac"
+      },
+      "logAnalyticsWorkspaceName": {
+        "type": "String",
+        "value": "law-vendorlogic-ui-prod-v130"
+      },
+      "managedIdentityName": {
+        "type": "String",
+        "value": "id-vendorlogic-ui-prod-v130"
+      },
+      "resourceGroupLocation": {
+        "type": "String",
+        "value": "uksouth"
+      },
+      "resourceGroupName": {
+        "type": "String",
+        "value": "RG_UI_VENDORLOGIC_PROD_V130"
+      },
+      "runtimeAppName": {
+        "type": "String",
+        "value": "rt-vendorlogic-ui-prod-v130"
+      },
+      "runtimeAppVersion": {
+        "type": "String",
+        "value": "v1.3.0-ui"
+      },
+      "runtimeCpu": {
+        "type": "String",
+        "value": "0.25"
+      },
+      "runtimeImageTag": {
+        "type": "String",
+        "value": "1.3.0-sigfix4"
+      },
+      "runtimeMaxReplicas": {
+        "type": "Int",
+        "value": 1
+      },
+      "runtimeMemory": {
+        "type": "String",
+        "value": "0.5Gi"
+      },
+      "runtimeMinReplicas": {
+        "type": "Int",
+        "value": 0
+      },
+      "sharedKeyVaultName": {
+        "type": "String",
+        "value": "kv-diiac-vendorlogic"
+      },
+      "sharedKeyVaultResourceGroupName": {
+        "type": "String",
+        "value": "RG_Root"
+      },
+      "sharedKeyVaultSubscriptionId": {
+        "type": "String",
+        "value": "3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7"
+      },
+      "signingKeyId": {
+        "type": "String",
+        "value": "diiac-vendorlogic-prod"
+      },
+      "storageAccountName": {
+        "type": "String",
+        "value": "stdiiacv130vlui01"
+      },
+      "uiAppName": {
+        "type": "String",
+        "value": "ui-vendorlogic-ui-prod-v130"
+      },
+      "uiCustomDomainCertificateId": {
+        "type": "String",
+        "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/managedCertificates/mc-acae-vendorlog-diiacui-vendorlo-1321"
+      },
+      "uiDnsSubdomain": {
+        "type": "String",
+        "value": "diiacui"
+      },
+      "uiMaxReplicas": {
+        "type": "Int",
+        "value": 1
+      },
+      "uiMinReplicas": {
+        "type": "Int",
+        "value": 0
+      },
+      "uiPublicDomain": {
+        "type": "String",
+        "value": "diiacui.vendorlogic.io"
+      }
+    },
+    "parametersLink": null,
+    "providers": [
+      {
+        "id": null,
+        "namespace": "Microsoft.Resources",
+        "providerAuthorizationConsentState": null,
+        "registrationPolicy": null,
+        "registrationState": null,
+        "resourceTypes": [
+          {
+            "aliases": null,
+            "apiProfiles": null,
+            "apiVersions": null,
+            "capabilities": null,
+            "defaultApiVersion": null,
+            "locationMappings": null,
+            "locations": [
+              "uksouth"
+            ],
+            "properties": null,
+            "resourceType": "resourceGroups",
+            "zoneMappings": null
+          },
+          {
+            "aliases": null,
+            "apiProfiles": null,
+            "apiVersions": null,
+            "capabilities": null,
+            "defaultApiVersion": null,
+            "locationMappings": null,
+            "locations": [
+              null
+            ],
+            "properties": null,
+            "resourceType": "deployments",
+            "zoneMappings": null
+          }
+        ]
+      }
+    ],
+    "provisioningState": "Succeeded",
+    "templateHash": "17525426993529733713",
+    "templateLink": null,
+    "timestamp": "2026-03-12T11:24:51.704020+00:00",
+    "validatedResources": null,
+    "validationLevel": null
+  },
+  "tags": null,
+  "type": "Microsoft.Resources/deployments"
+}

@@ -1,0 +1,6 @@
+CNAME_HOST=diiacui
+CNAME_TARGET=ui-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io
+TXT_HOST=asuid.diiacui
+TXT_VALUE=B01B517DF534900404CD467B96A1A1B57E73B6E8EEDF856F26751B5C518EA101
+UI_PUBLIC_DOMAIN=diiacui.vendorlogic.io
+UI_DNS_SUBDOMAIN=diiacui

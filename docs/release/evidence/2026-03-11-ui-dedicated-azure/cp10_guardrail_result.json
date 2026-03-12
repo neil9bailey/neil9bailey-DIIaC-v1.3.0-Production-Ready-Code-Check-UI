@@ -1,0 +1,15 @@
+{
+    "checkpoint":  "CP10",
+    "dnsCnameVerified":  true,
+    "dnsTxtVerified":  true,
+    "hostname":  "diiacui.vendorlogic.io",
+    "hostnameBindingType":  "SniEnabled",
+    "certificateId":  "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/managedCertificates/mc-acae-vendorlog-diiacui-vendorlo-1321",
+    "managedCertificateName":  "mc-acae-vendorlog-diiacui-vendorlo-1321",
+    "managedCertificateProvisioningState":  "Succeeded",
+    "customDomainHttpStatus":  200,
+    "customDomainContentType":  "text/html",
+    "runningContainerAppCount":  3,
+    "totalContainerAppCount":  3,
+    "decision":  "DEPLOYMENT_COMPLETE"
+}

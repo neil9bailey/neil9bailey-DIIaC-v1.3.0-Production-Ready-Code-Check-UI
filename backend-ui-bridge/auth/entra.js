@@ -5,8 +5,8 @@
 //   AUTH_MODE=entra_jwt_rs256  — Production: validates RS256 JWTs via Entra OIDC/JWKS
 //   AUTH_MODE=entra_jwt_hs256  — Integration test only: validates HS256 JWTs with shared secret
 //
-// When AUTH_MODE is unset or any other value, the middleware passes through
-// (legacy x-role header auth continues to work via rbac.js).
+// When AUTH_MODE is unset or unsupported, production fails closed while
+// development mode can opt into legacy x-role header auth.
 
 import { createRemoteJWKSet, jwtVerify, errors as joseErrors } from "jose";
 import crypto from "crypto";
@@ -282,21 +282,42 @@ async function validateHS256(token) {
  *   - Populates req.entraAuth with identity context
  *   - Sets req.headers["x-role"] so downstream requireRole() works unchanged
  *
- * When AUTH_MODE is unset/other:
- *   - Passes through (legacy x-role header auth)
+ * When AUTH_MODE is unset/unsupported:
+ *   - Development: passes through for local legacy-role testing
+ *   - Production: fails closed for all non-public routes
  */
 export function entraAuth() {
   const isEntraRS256 = AUTH_MODE === "entra_jwt_rs256";
   const isEntraHS256 = AUTH_MODE === "entra_jwt_hs256";
   const entraEnabled = isEntraRS256 || isEntraHS256;
+  const isDev = process.env.APP_ENV === "development" || process.env.APP_ENV === "dev";
+
+  // Paths that must be accessible without a Bearer token
+  const publicPaths = new Set([
+    "/health",
+    "/readiness",
+    "/auth/status",
+    "/auth/callback",
+  ]);
 
   if (!entraEnabled) {
-    // Return no-op middleware when Entra is not active
-    return (_req, _res, next) => next();
+    if (isDev) {
+      console.warn("[entra] AUTH_MODE not set to entra_jwt_*; legacy header auth is enabled for development only.");
+      return (_req, _res, next) => next();
+    }
+    return (req, res, next) => {
+      if (publicPaths.has(req.path)) {
+        return next();
+      }
+      return res.status(503).json({
+        error: "auth_mode_misconfigured",
+        message: "Entra ID authentication must be enabled in production.",
+        auth_mode: AUTH_MODE || "unset",
+      });
+    };
   }
 
   // Log configuration summary at startup (values redacted in production)
-  const isDev = process.env.APP_ENV === "development" || process.env.APP_ENV === "dev";
   console.log(`[entra] AUTH_MODE=${AUTH_MODE}`);
   console.log(`[entra] tenant=${isDev ? ENTRA_EXPECTED_TENANT_ID : (ENTRA_EXPECTED_TENANT_ID ? "***configured***" : "(not set)")}`);
   console.log(`[entra] audience=${isDev ? (ENTRA_ACCEPTED_AUDIENCES ? ENTRA_ACCEPTED_AUDIENCES.join(", ") : "(any)") : (ENTRA_ACCEPTED_AUDIENCES ? "***configured***" : "(any)")}`);
@@ -313,14 +334,6 @@ export function entraAuth() {
     console.log(`[entra] oidc_discovery=${isDev ? (ENTRA_OIDC_DISCOVERY_URL || "(derived from tenant)") : "***configured***"}`);
     console.log(`[entra] jwks_uri=${ENTRA_JWKS_URI ? (isDev ? ENTRA_JWKS_URI : "***configured***") : "(not configured)"}`);
   }
-
-  // Paths that must be accessible without a Bearer token
-  const publicPaths = new Set([
-    "/health",
-    "/readiness",
-    "/auth/status",
-    "/auth/callback",
-  ]);
 
   return async function entraAuthMiddleware(req, res, next) {
     if (publicPaths.has(req.path)) {
@@ -409,5 +422,5 @@ export function isEntraEnabled() {
  * Returns the current auth mode string for diagnostics.
  */
 export function getAuthMode() {
-  return AUTH_MODE || "legacy_header";
+  return AUTH_MODE || "unset";
 }

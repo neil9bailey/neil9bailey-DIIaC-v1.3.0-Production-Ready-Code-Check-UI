@@ -1,0 +1,24 @@
+{
+    "checkpoint":  "CP4",
+    "date":  "2026-03-11",
+    "status":  "blocked",
+    "applyExecuted":  false,
+    "blocker":  {
+                    "type":  "aca_environment_quota",
+                    "subscriptionId":  "3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7",
+                    "errors":  [
+                                   "MaxNumberOfRegionalEnvironmentsInSubExceeded (uksouth)",
+                                   "MaxNumberOfGlobalEnvironmentsInSubExceeded (global)"
+                               ]
+                },
+    "checks":  {
+                   "validateUksouthInfraOnly":  "FAILED",
+                   "validateUkwestInfraOnly":  "FAILED",
+                   "validateUkwestWithApps":  "FAILED",
+                   "whatIfUkwestInfraOnly":  "FAILED",
+                   "whatIfUkwestWithApps":  "FAILED",
+                   "dedicatedResourceGroupExistsPostCheck":  false,
+                   "dedicatedResourceGroupResourcesPostCheckCount":  0
+               },
+    "nextDecisionRequired":  "select_feasible_topology_given_aca_environment_limit"
+}

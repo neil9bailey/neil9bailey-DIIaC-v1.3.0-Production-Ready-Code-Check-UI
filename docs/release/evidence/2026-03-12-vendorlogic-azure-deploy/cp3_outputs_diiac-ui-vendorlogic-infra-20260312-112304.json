@@ -1,0 +1,78 @@
+{
+  "bridgeExternalBaseUrl": {
+    "type": "String",
+    "value": ""
+  },
+  "dedicatedAcrLoginServer": {
+    "type": "String",
+    "value": "acrdiiacv130vlui.azurecr.io"
+  },
+  "dedicatedAcrName": {
+    "type": "String",
+    "value": "acrdiiacv130vlui"
+  },
+  "dedicatedManagedEnvironmentDefaultDomain": {
+    "type": "String",
+    "value": "blackpond-85ed120f.uksouth.azurecontainerapps.io"
+  },
+  "dedicatedManagedEnvironmentId": {
+    "type": "String",
+    "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130"
+  },
+  "dedicatedManagedIdentityId": {
+    "type": "String",
+    "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130"
+  },
+  "dedicatedManagedIdentityPrincipalId": {
+    "type": "String",
+    "value": "fbc0c195-d41a-40f8-aea7-c91fad576d7b"
+  },
+  "dedicatedStorageAccountName": {
+    "type": "String",
+    "value": "stdiiacv130vlui01"
+  },
+  "dnsCnameHost": {
+    "type": "String",
+    "value": "diiacui"
+  },
+  "dnsCnameTarget": {
+    "type": "String",
+    "value": ""
+  },
+  "dnsTxtHost": {
+    "type": "String",
+    "value": "asuid.diiacui"
+  },
+  "dnsTxtValue": {
+    "type": "String",
+    "value": ""
+  },
+  "resourceGroupName": {
+    "type": "String",
+    "value": "RG_UI_VENDORLOGIC_PROD_V130"
+  },
+  "runtimeInternalBaseUrl": {
+    "type": "String",
+    "value": ""
+  },
+  "sharedKeyVaultId": {
+    "type": "String",
+    "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_Root/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic"
+  },
+  "sharedKeyVaultSecretsUserRoleAssignmentId": {
+    "type": "String",
+    "value": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_ROOT/providers/Microsoft.KeyVault/vaults/kv-diiac-vendorlogic/providers/Microsoft.Authorization/roleAssignments/a9b247d1-d791-55bd-876d-55e3230771ae"
+  },
+  "sharedKeyVaultUri": {
+    "type": "String",
+    "value": "https://kv-diiac-vendorlogic.vault.azure.net/"
+  },
+  "uiAppFqdn": {
+    "type": "String",
+    "value": ""
+  },
+  "uiCustomDomain": {
+    "type": "String",
+    "value": "diiacui.vendorlogic.io"
+  }
+}

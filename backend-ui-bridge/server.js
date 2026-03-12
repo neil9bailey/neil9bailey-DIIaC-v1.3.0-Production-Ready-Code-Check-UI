@@ -3,7 +3,6 @@ import cors from "cors";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
-import archiver from "archiver";
 import { fileURLToPath } from "url";
 import { spawn, spawnSync } from "child_process";
 import OpenAI from "openai";
@@ -65,7 +64,7 @@ function loadOrCreateSigningKeyPair() {
   return { privateKey, publicKey, keyMode: "ephemeral" };
 }
 
-const { privateKey: signingPrivateKey, publicKey: signingPublicKey, keyMode: signingKeyMode } = loadOrCreateSigningKeyPair();
+const { publicKey: signingPublicKey, keyMode: signingKeyMode } = loadOrCreateSigningKeyPair();
 
 if (!fs.existsSync(PUBLIC_KEYS_PATH)) {
   const pubDer = signingPublicKey.export({ type: "spki", format: "der" });
@@ -87,13 +86,9 @@ if (!fs.existsSync(PUBLIC_KEYS_PATH)) {
   );
 }
 
-const localExecutions = new Map();
-
 const LLM_ENABLED = process.env.LLM_INGESTION_ENABLED === "true";
 const LLM_STUB_ENABLED = process.env.LLM_STUB_ENABLED === "true";
 const LLM_PROVIDER_MODE = "copilot_only";
-const LEGACY_GOVERN_DECISION_ENABLED = process.env.LEGACY_GOVERN_DECISION_ENABLED === "true";
-const LOCAL_EXPORT_FALLBACK_ENABLED = process.env.LOCAL_EXPORT_FALLBACK_ENABLED === "true";
 
 const COPILOT_MODEL = process.env.COPILOT_MODEL || "gpt-4o";
 const copilotClient = (LLM_ENABLED && process.env.GITHUB_TOKEN)
@@ -153,6 +148,48 @@ app.use(entraAuth());
 
 app.use(express.json({ limit: "1mb" }));
 app.use("/api/ingest", ingestRouter);
+
+/* ================= HEALTH ================= */
+
+app.get("/health", (_req, res) => {
+  return res.json({
+    status: "OK",
+    service: "backend-ui-bridge",
+    auth_mode: getAuthMode(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
+app.get("/readiness", async (_req, res) => {
+  const checks = {
+    bridge_state_writable: false,
+    runtime_reachable: false,
+  };
+
+  try {
+    const stateDir = path.dirname(BRIDGE_STATE_PATH);
+    fs.mkdirSync(stateDir, { recursive: true });
+    fs.accessSync(stateDir, fs.constants.W_OK);
+    checks.bridge_state_writable = true;
+  } catch (_err) {
+    checks.bridge_state_writable = false;
+  }
+
+  try {
+    await ensurePythonRuntime();
+    const health = await queryPython("/health");
+    checks.runtime_reachable = health.ok;
+  } catch (_err) {
+    checks.runtime_reachable = false;
+  }
+
+  const ready = checks.bridge_state_writable && checks.runtime_reachable;
+  return res.status(ready ? 200 : 503).json({
+    status: ready ? "READY" : "NOT_READY",
+    checks,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 /* ================= SANITISATION ================= */
 
@@ -556,204 +593,6 @@ app.post("/api/impact/policy",
       findings: 0,
       evaluated_at: new Date().toISOString()
     });
-  }
-);
-
-/* ================= GOVERNED EXECUTION ================= */
-
-app.post("/govern/decision",
-  requireRole(["admin"]),
-  async (req, res) => {
-
-    try {
-      if (!LEGACY_GOVERN_DECISION_ENABLED) {
-        return res.status(410).json({
-          error: "legacy_route_retired",
-          message: "Legacy endpoint /govern/decision is retired. Use /api/llm-governed-compile.",
-        });
-      }
-
-      let { provider, reasoning_level = "R2", policy_level = "P1" } = req.body;
-
-      if (typeof provider === "object") {
-        reasoning_level = provider.reasoning_level;
-        policy_level = provider.policy_level;
-        provider = provider.provider;
-      }
-      const providerDecision = enforceProviderMode(provider);
-      if (!providerDecision.ok) {
-        return res.status(400).json({
-          error: providerDecision.error,
-          provider_mode: LLM_PROVIDER_MODE,
-          allowed_provider: providerDecision.provider,
-        });
-      }
-      provider = providerDecision.provider;
-
-      const executionId = crypto.randomUUID();
-
-      const files = fs.readdirSync(HUMAN_INPUT_DIR)
-        .filter(f => f.endsWith(".json"));
-
-      if (!files.length)
-        throw new Error("No human intent found");
-
-      const latest = files.sort().reverse()[0];
-      const contextRaw = fs.readFileSync(path.join(HUMAN_INPUT_DIR, latest), "utf8");
-      const context = JSON.parse(contextRaw);
-      const contextHash = sha256(contextRaw);
-
-      const executionFolder = path.join(DECISION_PACK_BASE, executionId);
-      const artefactsDir = path.join(executionFolder, "artefacts");
-      fs.mkdirSync(artefactsDir, { recursive: true });
-
-      const aiReport = LLM_ENABLED
-        ? await generateAI(context, reasoning_level, policy_level, provider)
-        : {};
-
-      const enforcement = enforceSections(
-        aiReport,
-        reasoning_level,
-        policy_level
-      );
-
-      const signingPayload = {
-        execution_id: executionId,
-        context_hash: contextHash,
-        signing_key_id: SIGNING_KEY_ID,
-        signed_at: new Date().toISOString(),
-      };
-      const signingPayloadJson = JSON.stringify(signingPayload);
-      const signature = SIGNING_ENABLED ? crypto.sign(null, Buffer.from(signingPayloadJson), signingPrivateKey) : Buffer.from("");
-      const sigB64 = SIGNING_ENABLED ? signature.toString("base64") : "";
-
-      const decisionSummary = {
-        execution_id: executionId,
-        provider,
-        reasoning_level,
-        policy_level,
-        governance_contract: "DIIaC_CORE_V1",
-        generated_at: new Date().toISOString(),
-        classification: "BOARD_READY",
-        context_hash: contextHash,
-        JSON: enforcement.report,
-        signing: {
-          signing_enabled: SIGNING_ENABLED,
-          signature_present: Boolean(sigB64),
-          signing_key_id: SIGNING_KEY_ID,
-        },
-        __tier_enforcement: {
-          reasoning_level,
-          policy_level,
-          enforced_sections: enforcement.enforced_sections,
-          enforcement_timestamp: new Date().toISOString()
-        }
-      };
-
-      fs.writeFileSync(
-        path.join(artefactsDir, "decision_summary.json"),
-        JSON.stringify(decisionSummary, null, 2)
-      );
-
-      const sigMeta = {
-        signature_alg: "Ed25519",
-        signing_key_id: SIGNING_KEY_ID,
-        signed_at: signingPayload.signed_at,
-        execution_id: executionId,
-        context_hash: contextHash,
-        signature_payload: signingPayload,
-        signature: sigB64,
-      };
-
-      fs.writeFileSync(path.join(artefactsDir, "signed_export.sig"), sigB64);
-      fs.writeFileSync(path.join(artefactsDir, "signed_export.sigmeta.json"), JSON.stringify(sigMeta, null, 2));
-
-      if (reasoning_level === "R5") {
-        fs.writeFileSync(
-          path.join(artefactsDir, "strategy_report.json"),
-          JSON.stringify(enforcement.report, null, 2)
-        );
-      }
-
-      /* ===== DETERMINISTIC HASHING ===== */
-
-      const artefactFiles = fs.readdirSync(artefactsDir).sort();
-
-      const artefactHashes = artefactFiles.map(file => {
-        const content = fs.readFileSync(path.join(artefactsDir, file), "utf8");
-        return {
-          name: file,
-          hash: sha256(content)
-        };
-      });
-
-      const initialPackHash = sha256(
-        artefactHashes.map(a => a.hash).join("")
-      );
-
-      const manifest = {
-        execution_id: executionId,
-        governance_contract: "DIIaC_CORE_V1",
-        reasoning_level,
-        policy_level,
-        context_hash: contextHash,
-        artefacts: artefactHashes,
-        pack_hash: initialPackHash,
-        generated_at: new Date().toISOString()
-      };
-
-      fs.writeFileSync(
-        path.join(artefactsDir, "governance_manifest.json"),
-        JSON.stringify(manifest, null, 2)
-      );
-
-      const finalFiles = fs.readdirSync(artefactsDir).sort();
-      const finalHashes = finalFiles.map(file => {
-        const content = fs.readFileSync(path.join(artefactsDir, file), "utf8");
-        return sha256(content);
-      });
-
-      const finalPackHash = sha256(finalHashes.join(""));
-
-      const sealed = appendLedger({
-        type: "GOVERNED_EXECUTION",
-        execution_id: executionId,
-        provider,
-        reasoning_level,
-        policy_level,
-        context_hash: contextHash,
-        pack_hash: finalPackHash,
-        artefact_count: finalFiles.length,
-        timestamp: new Date().toISOString()
-      });
-
-      localExecutions.set(executionId, {
-        execution_id: executionId,
-        pack_hash: finalPackHash,
-        context_hash: contextHash,
-        signature: sigB64,
-        signing_key_id: SIGNING_KEY_ID,
-      });
-
-      res.json({
-        execution_state: {
-          execution_id: executionId,
-          provider,
-          reasoning_level,
-          policy_level,
-          pack_hash: finalPackHash,
-          ledger_root: sealed.record_hash,
-          signature_present: Boolean(sigB64),
-          signing_enabled: SIGNING_ENABLED,
-          signing_key_id: SIGNING_KEY_ID,
-          key_mode: signingKeyMode,
-        }
-      });
-
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "governed_execution_failed" });
-    }
   }
 );
 
@@ -1282,29 +1121,6 @@ app.get("/admin/status/containers", requireRole(["admin"]), (_req, res) => {
 
 app.get("/decision-pack/:execution_id/export",
   requireRole(["admin"]),
-  (req, res, next) => {
-    if (!LOCAL_EXPORT_FALLBACK_ENABLED) return next();
-
-    const execId = sanitizeExecId(req.params.execution_id);
-    const artefactsDir = path.join(DECISION_PACK_BASE, execId, "artefacts");
-    if (!fs.existsSync(artefactsDir)) return next();
-
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=decision-pack_${execId}.zip`
-    );
-    res.setHeader("Content-Type", "application/zip");
-
-    const archive = archiver("zip");
-    archive.on("error", (err) => {
-      if (!res.headersSent) {
-        res.status(500).json({ error: "export_archive_error", details: process.env.APP_ENV === "development" ? String(err) : undefined });
-      }
-    });
-    archive.pipe(res);
-    archive.directory(artefactsDir, false);
-    archive.finalize();
-  },
   async (req, res) => {
     try {
       await ensurePythonRuntime();
@@ -1360,29 +1176,6 @@ app.get("/decision-pack/:execution_id/export",
 
 app.post("/verify/pack",
   requireRole(["admin", "standard", "customer"]),
-  (req, res, next) => {
-    const { execution_id, pack_hash } = req.body || {};
-    if (!execution_id || !localExecutions.has(execution_id)) return next();
-
-    const e = localExecutions.get(execution_id);
-    const sigmetaPath = path.join(DECISION_PACK_BASE, execution_id, "artefacts", "signed_export.sigmeta.json");
-    if (!fs.existsSync(sigmetaPath)) {
-      return res.json({ signature_valid: false, hash_valid: false, manifest_consistent: false, overall_valid: false });
-    }
-    const sigmeta = JSON.parse(fs.readFileSync(sigmetaPath, "utf8"));
-    const payload = JSON.stringify(sigmeta.signature_payload || {});
-    const signature = Buffer.from(sigmeta.signature || "", "base64");
-    const signatureValid = SIGNING_ENABLED ? crypto.verify(null, Buffer.from(payload), signingPublicKey, signature) : true;
-    const requestedPackHash = pack_hash || sigmeta.signature_payload?.pack_hash || e.pack_hash;
-    const hashValid = requestedPackHash === e.pack_hash;
-
-    return res.json({
-      signature_valid: signatureValid,
-      hash_valid: hashValid,
-      manifest_consistent: true,
-      overall_valid: Boolean(signatureValid && hashValid),
-    });
-  },
   (req, res) => proxyToPython(req, res, "/verify/pack")
 );
 
@@ -1448,11 +1241,13 @@ app.get("/admin/audit/exports", requireRole(["admin"]), (req, res) => proxyToPyt
 /* ================= AUTH STATUS ================= */
 
 app.get("/auth/status", (_req, res) => {
+  const appEnv = (process.env.APP_ENV || "production").toLowerCase();
+  const entraEnforced = isEntraEnabled() || appEnv === "production";
   res.json({
     auth_mode: getAuthMode(),
-    entra_enabled: isEntraEnabled(),
-    tenant_id: isEntraEnabled() ? (process.env.ENTRA_EXPECTED_TENANT_ID || null) : null,
-    audience: isEntraEnabled() ? (process.env.ENTRA_EXPECTED_AUDIENCE || null) : null,
+    entra_enabled: entraEnforced,
+    tenant_id: entraEnforced ? (process.env.ENTRA_EXPECTED_TENANT_ID || null) : null,
+    audience: entraEnforced ? (process.env.ENTRA_EXPECTED_AUDIENCE || null) : null,
     llm_provider_mode: LLM_PROVIDER_MODE,
   });
 });

@@ -1,0 +1,50 @@
+﻿{
+    "timestamp_utc":  "2026-03-12T01:25:10.5499074Z",
+    "runtime_image":  "acrdiiacv130vlui.azurecr.io/diiac/governance-runtime:1.3.0-persistfix1",
+    "bridge_image":  "acrdiiacv130vlui.azurecr.io/diiac/backend-ui-bridge:1.3.0-persistfix1",
+    "ui_image":  "acrdiiacv130vlui.azurecr.io/diiac/frontend:1.3.0-persistfix1",
+    "runtime_app_version_env":  "v1.3.0-ui",
+    "runtime_volume_mounts":  [
+                                  {
+                                      "mountPath":  "/app/artifacts",
+                                      "volumeName":  "runtime-artifacts-volume"
+                                  },
+                                  {
+                                      "mountPath":  "/app/exports",
+                                      "volumeName":  "runtime-exports-volume"
+                                  },
+                                  {
+                                      "mountPath":  "/app/audit_exports",
+                                      "volumeName":  "runtime-audit-volume"
+                                  },
+                                  {
+                                      "mountPath":  "/app/state",
+                                      "volumeName":  "runtime-state-volume"
+                                  }
+                              ],
+    "bridge_volume_mounts":  [
+                                 {
+                                     "mountPath":  "/workspace/artefacts/human-input",
+                                     "volumeName":  "bridge-human-input-volume"
+                                 },
+                                 {
+                                     "mountPath":  "/workspace/artefacts/decision-packs",
+                                     "volumeName":  "bridge-decision-packs-volume"
+                                 },
+                                 {
+                                     "mountPath":  "/workspace/state",
+                                     "volumeName":  "bridge-state-volume"
+                                 },
+                                 {
+                                     "mountPath":  "/workspace/ledger",
+                                     "volumeName":  "bridge-ledger-volume"
+                                 }
+                             ],
+    "ui_custom_domains":  [
+                              {
+                                  "bindingType":  "SniEnabled",
+                                  "certificateId":  "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130/managedCertificates/mc-acae-vendorlog-diiacui-vendorlo-1321",
+                                  "name":  "diiacui.vendorlogic.io"
+                              }
+                          ]
+}

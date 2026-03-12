@@ -1,0 +1,709 @@
+{
+
+  "major_recommendation": "Select Fortinet for controlled implementation",
+
+  "selected_vendor": "Fortinet",
+
+  "score": 74.6,
+
+  "alternatives": [
+
+    "Cisco"
+
+  ],
+
+  "decision_status": "recommended",
+
+  "decision_drivers": [
+
+    "Top weighted score under deterministic evaluation (74.6)",
+
+    "Solution focus: OT-specific security, ZTNA/SASE integration, cost efficiency.",
+
+    "Aligned with required controls and governance policy constraints",
+
+    "Supports measurable resilience, security and operating model outcomes",
+
+    "CONSTRAINTS-FIRST controls inferred from active business profile"
+
+  ],
+
+  "recommended_option_profile": {
+
+    "rank": 1,
+
+    "vendor": "Fortinet",
+
+    "focus": "OT-specific security, ZTNA/SASE integration, cost efficiency.",
+
+    "score": 74.6,
+
+    "security_fit": 82.45,
+
+    "delivery_fit": 62.79,
+
+    "operating_model_fit": 79.44,
+
+    "financial_fit": 68.26,
+
+    "weights": {
+
+      "security": 0.25,
+
+      "resilience": 0.2,
+
+      "interoperability": 0.2,
+
+      "operations": 0.15,
+
+      "commercial": 0.2
+
+    },
+
+    "score_dimensions": {
+
+      "security": 82.45,
+
+      "resilience": 68.48,
+
+      "interoperability": 90.39,
+
+      "operations": 57.1,
+
+      "commercial": 68.26
+
+    },
+
+    "fit_summary": [
+
+      "Regulatory alignment signals: none explicit",
+
+      "Security priorities detected: Privacy by Design",
+
+      "Financial constraints: Vendor lock-in risk detected"
+
+    ]
+
+  },
+
+  "ranked_options": [
+
+    {
+
+      "rank": 1,
+
+      "vendor": "Fortinet",
+
+      "focus": "OT-specific security, ZTNA/SASE integration, cost efficiency.",
+
+      "score": 74.6,
+
+      "security_fit": 82.45,
+
+      "delivery_fit": 62.79,
+
+      "operating_model_fit": 79.44,
+
+      "financial_fit": 68.26,
+
+      "weights": {
+
+        "security": 0.25,
+
+        "resilience": 0.2,
+
+        "interoperability": 0.2,
+
+        "operations": 0.15,
+
+        "commercial": 0.2
+
+      },
+
+      "score_dimensions": {
+
+        "security": 82.45,
+
+        "resilience": 68.48,
+
+        "interoperability": 90.39,
+
+        "operations": 57.1,
+
+        "commercial": 68.26
+
+      },
+
+      "fit_summary": [
+
+        "Regulatory alignment signals: none explicit",
+
+        "Security priorities detected: Privacy by Design",
+
+        "Financial constraints: Vendor lock-in risk detected"
+
+      ]
+
+    },
+
+    {
+
+      "rank": 2,
+
+      "vendor": "Cisco",
+
+      "focus": "Enterprise-grade scalability, advanced orchestration, interoperability.",
+
+      "score": 69.2,
+
+      "security_fit": 76.71,
+
+      "delivery_fit": 64.77,
+
+      "operating_model_fit": 57.21,
+
+      "financial_fit": 79.85,
+
+      "weights": {
+
+        "security": 0.25,
+
+        "resilience": 0.2,
+
+        "interoperability": 0.2,
+
+        "operations": 0.15,
+
+        "commercial": 0.2
+
+      },
+
+      "score_dimensions": {
+
+        "security": 76.71,
+
+        "resilience": 55.09,
+
+        "interoperability": 59.33,
+
+        "operations": 74.44,
+
+        "commercial": 79.85
+
+      },
+
+      "fit_summary": [
+
+        "Regulatory alignment signals: none explicit",
+
+        "Security priorities detected: Privacy by Design",
+
+        "Financial constraints: Vendor lock-in risk detected"
+
+      ]
+
+    }
+
+  ],
+
+  "evidence_ids": [
+
+    "claim-1",
+
+    "claim-2",
+
+    "claim-3",
+
+    "https://www.cisco.com/site/uk/en/solutions/networking/sdwan/index.html?ccid=cc006209&oid=sowetr031856&dtid=psexsp001647&utm_medium=cpc&utm_source=google&utm_campaign=pdc-sdwan&utm_id=cc006209&gclsrc=aw.ds&gad_source=1&gad_campaignid=22340642788&gbraid=0AAAAADo-qn1uBM4qt7jADNSHE9hXeJZTj&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9nvNHKqE_rTO3UnTNDCTmeILfy5WWRGp6ekhP6UOcvOnHLNWKcxWFRoCuwEQAvD_BwE",
+
+    "https://www.fortinet.com/products/sd-wan"
+
+  ],
+
+  "evidence_quality": {
+
+    "refs_total": 2,
+
+    "strong_refs": [
+
+      "https://www.cisco.com/site/uk/en/solutions/networking/sdwan/index.html?ccid=cc006209&oid=sowetr031856&dtid=psexsp001647&utm_medium=cpc&utm_source=google&utm_campaign=pdc-sdwan&utm_id=cc006209&gclsrc=aw.ds&gad_source=1&gad_campaignid=22340642788&gbraid=0AAAAADo-qn1uBM4qt7jADNSHE9hXeJZTj&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9nvNHKqE_rTO3UnTNDCTmeILfy5WWRGp6ekhP6UOcvOnHLNWKcxWFRoCuwEQAvD_BwE",
+
+      "https://www.fortinet.com/products/sd-wan"
+
+    ],
+
+    "weak_refs": [],
+
+    "placeholder_refs": [],
+
+    "details": [
+
+      {
+
+        "source_ref": "https://www.cisco.com/site/uk/en/solutions/networking/sdwan/index.html?ccid=cc006209&oid=sowetr031856&dtid=psexsp001647&utm_medium=cpc&utm_source=google&utm_campaign=pdc-sdwan&utm_id=cc006209&gclsrc=aw.ds&gad_source=1&gad_campaignid=22340642788&gbraid=0AAAAADo-qn1uBM4qt7jADNSHE9hXeJZTj&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9nvNHKqE_rTO3UnTNDCTmeILfy5WWRGp6ekhP6UOcvOnHLNWKcxWFRoCuwEQAvD_BwE",
+
+        "category": "document_or_uri",
+
+        "strength": "strong"
+
+      },
+
+      {
+
+        "source_ref": "https://www.fortinet.com/products/sd-wan",
+
+        "category": "document_or_uri",
+
+        "strength": "strong"
+
+      }
+
+    ],
+
+    "llm_audit_timestamp": "2026-03-11T23:24:54.199000+00:00",
+
+    "llm_audit_timestamp_source": "payload.llm_audit_timestamp",
+
+    "llm_provider_reported_timestamp": "2023-10-01T00:00:00Z",
+
+    "llm_freshness": "CURRENT",
+
+    "supporting_refs": [
+
+      "https://www.cisco.com/site/uk/en/solutions/networking/sdwan/index.html?ccid=cc006209&oid=sowetr031856&dtid=psexsp001647&utm_medium=cpc&utm_source=google&utm_campaign=pdc-sdwan&utm_id=cc006209&gclsrc=aw.ds&gad_source=1&gad_campaignid=22340642788&gbraid=0AAAAADo-qn1uBM4qt7jADNSHE9hXeJZTj&gclid=CjwKCAjwpcTNBhA5EiwAdO1S9nvNHKqE_rTO3UnTNDCTmeILfy5WWRGp6ekhP6UOcvOnHLNWKcxWFRoCuwEQAvD_BwE",
+
+      "https://www.fortinet.com/products/sd-wan"
+
+    ],
+
+    "claim_coverage": 1.0,
+
+    "gates": {
+
+      "min_strong_refs": 2,
+
+      "min_claim_coverage": 0.6,
+
+      "require_fresh_llm": true
+
+    }
+
+  },
+
+  "assumptions": [
+
+    "Cost model assumptions are based on provided capex/opex targets and current market benchmarks.",
+
+    "Operational baseline and incident data provided in role evidence is assumed accurate and current.",
+
+    "Supplier capability statements and migration constraints captured in assertions are assumed complete."
+
+  ],
+
+  "risk_treatment": {
+
+    "strategy": "mitigate",
+
+    "actions": [
+
+      "Contractual protections and break clauses to reduce lock-in risk",
+
+      "Phased migration with rollback controls to reduce service disruption",
+
+      "Security validation and assurance gates prior to production cutover"
+
+    ]
+
+  },
+
+  "confidence_score": 76.6,
+
+  "confidence_level": "MEDIUM",
+
+  "confidence_rationale": "Confidence is derived from deterministic scoring, control compliance, evidence quality/freshness, and governance mode checks.",
+
+  "accuracy_warnings": [],
+
+  "quality_gate_failures": [],
+
+  "signing_trust": {
+
+    "signing_key_id": "diiac-vendorlogic-prod",
+
+    "key_mode": "configured",
+
+    "active_key_registered": true,
+
+    "registered_key_count": 1,
+
+    "production_trust_ready": true,
+
+    "warnings": []
+
+  },
+
+  "control_failure_reasons": [],
+
+  "policy_pack_compliance": [
+
+    {
+
+      "pack_id": "eu_ai_act_deployer_v1",
+
+      "jurisdiction": "EU",
+
+      "version": "1.0.0",
+
+      "pack_hash": "a97aa45885f165d1e7ce4041ff790bbcbaa1abe66a37f9a9fe451937ff06ef1a",
+
+      "enforced": true,
+
+      "summary": {
+
+        "total_controls": 7,
+
+        "pass_count": 7,
+
+        "fail_count": 0
+
+      },
+
+      "controls": [
+
+        {
+
+          "control_id": "EU-AIA-ART9-RISK-MANAGEMENT",
+
+          "title": "Risk management process evidence",
+
+          "reference": "Regulation (EU) 2024/1689 Article 9",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "risk_assessment_present",
+
+            "governance_modes_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "EU-AIA-ART10-DATA-GOVERNANCE",
+
+          "title": "Data and evidence governance quality",
+
+          "reference": "Regulation (EU) 2024/1689 Article 10",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "traceability_present",
+
+            "supporting_evidence_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "EU-AIA-ART12-RECORD-KEEPING",
+
+          "title": "Automated logging and record-keeping",
+
+          "reference": "Regulation (EU) 2024/1689 Article 12",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "logging_enabled",
+
+            "traceability_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "EU-AIA-ART14-HUMAN-OVERSIGHT",
+
+          "title": "Human oversight captured in workflow",
+
+          "reference": "Regulation (EU) 2024/1689 Article 14",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "human_oversight_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "EU-AIA-ART15-ACCURACY-ROBUSTNESS",
+
+          "title": "Accuracy, robustness, and reproducibility controls",
+
+          "reference": "Regulation (EU) 2024/1689 Article 15",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "deterministic_compile",
+
+            "supporting_evidence_present",
+
+            "llm_freshness_current"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "EU-AIA-ART26-DEPLOYER-DUTIES",
+
+          "title": "Deployer obligations and control effectiveness",
+
+          "reference": "Regulation (EU) 2024/1689 Article 26",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "profile_controls_satisfied",
+
+            "signature_configured",
+
+            "governance_modes_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "EU-AIA-ART50-TRANSPARENCY",
+
+          "title": "Transparency and traceability disclosures",
+
+          "reference": "Regulation (EU) 2024/1689 Article 50",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "traceability_present",
+
+            "human_oversight_present"
+
+          ],
+
+          "missing_signals": []
+
+        }
+
+      ]
+
+    },
+
+    {
+
+      "pack_id": "uk_ai_governance_v1",
+
+      "jurisdiction": "UK",
+
+      "version": "1.0.0",
+
+      "pack_hash": "6ae3a2cdd6b464c36f1f017271876541e39f6ee80588bc4043a1e33f0ddae5dd",
+
+      "enforced": true,
+
+      "summary": {
+
+        "total_controls": 6,
+
+        "pass_count": 6,
+
+        "fail_count": 0
+
+      },
+
+      "controls": [
+
+        {
+
+          "control_id": "UK-GDPR-ART5-ACCOUNTABILITY",
+
+          "title": "Accountability and governance traceability",
+
+          "reference": "UK GDPR Article 5(2)",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "logging_enabled",
+
+            "traceability_present",
+
+            "human_oversight_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "UK-GDPR-ART22-HUMAN-INTERVENTION",
+
+          "title": "Human intervention and challenge pathway",
+
+          "reference": "UK GDPR Article 22",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "human_oversight_present",
+
+            "governance_modes_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "UK-DPA-2018-RISK-ASSESSMENT",
+
+          "title": "Risk assessment present in decision workflow",
+
+          "reference": "Data Protection Act 2018 governance obligations",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "risk_assessment_present",
+
+            "non_negotiables_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "UK-DUAA-2025-QUALITY-ASSURANCE",
+
+          "title": "Evidence quality and assurance readiness",
+
+          "reference": "Data (Use and Access) Act 2025 governance expectations",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "supporting_evidence_present",
+
+            "profile_controls_satisfied"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "UK-ICO-AI-TRANSPARENCY",
+
+          "title": "AI transparency and explainability trace",
+
+          "reference": "ICO guidance on AI and data protection",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "traceability_present",
+
+            "human_oversight_present"
+
+          ],
+
+          "missing_signals": []
+
+        },
+
+        {
+
+          "control_id": "UK-DRCF-RISK-CONTROLS",
+
+          "title": "Cross-regulator risk control coordination readiness",
+
+          "reference": "DRCF AI and algorithmic processing principles",
+
+          "status": "PASS",
+
+          "required_signals": [
+
+            "risk_assessment_present",
+
+            "deterministic_compile",
+
+            "signature_configured"
+
+          ],
+
+          "missing_signals": []
+
+        }
+
+      ]
+
+    }
+
+  ],
+
+  "claim_ids": [
+
+    "claim-1",
+
+    "claim-2",
+
+    "claim-3"
+
+  ]
+
+}

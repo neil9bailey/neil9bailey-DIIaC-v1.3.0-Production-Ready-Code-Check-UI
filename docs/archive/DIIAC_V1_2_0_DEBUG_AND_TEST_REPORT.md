@@ -1,3 +1,4 @@
+> Historical archive notice: This document is retained for audit traceability and is not the authoritative source for current v1.3.0-ui operations. Use docs/README.md and current deployment/security runbooks for active guidance.
 # DIIaC v1.2.0 — Full End-to-End Debug & Test Report
 
 **Date:** 2026-02-27
@@ -343,3 +344,4 @@ The DIIaC v1.2.0 codebase is **production-ready** with the following confidence:
 - **7 issues found and fixed** — 6 version drift fixes + 1 dead code removal, all safe and regression-free
 - **Blueprint alignment: 16/16** — zero drift between documented architecture and actual code behavior
 - **No security issues found** — input validation present on all write endpoints, admin auth enforced, no hardcoded secrets
+

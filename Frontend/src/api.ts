@@ -240,7 +240,15 @@ export function runGovernanceDecision(payload: {
   reasoning_level: string;
   policy_level: string;
 }): Promise<GovernanceDecisionResponse> {
-  return request<GovernanceDecisionResponse>("/govern/decision", { method: "POST", body: JSON.stringify(payload) });
+  return request<{ compile?: GovernanceDecisionResponse }>("/api/llm-governed-compile", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  }).then((res) => {
+    if (res.compile?.execution_state) {
+      return res.compile;
+    }
+    throw new Error("Legacy governance response is no longer available. Use /api/llm-governed-compile output.");
+  });
 }
 
 export async function listGovernedReports(executionId: string): Promise<string[]> {

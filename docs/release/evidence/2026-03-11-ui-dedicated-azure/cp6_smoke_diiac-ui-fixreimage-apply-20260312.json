@@ -1,0 +1,35 @@
+﻿{
+    "timestamp_utc":  "2026-03-12T01:18:59.9648698Z",
+    "bridge_base":  "https://br-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+    "ui_default":  "https://ui-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+    "ui_custom":  "https://diiacui.vendorlogic.io",
+    "checks":  {
+                   "bridge_health_status":  200,
+                   "bridge_readiness_status":  200,
+                   "bridge_health_attempts":  [
+                                                  {
+                                                      "attempt":  1,
+                                                      "status":  200,
+                                                      "timestamp":  "2026-03-12T01:18:59.4417539Z"
+                                                  }
+                                              ],
+                   "bridge_readiness_attempts":  [
+                                                     {
+                                                         "attempt":  1,
+                                                         "status":  200,
+                                                         "timestamp":  "2026-03-12T01:18:59.4543584Z"
+                                                     }
+                                                 ],
+                   "bridge_auth_status":  {
+                                              "auth_mode":  "entra_jwt_rs256",
+                                              "entra_enabled":  true,
+                                              "tenant_id":  "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+                                              "audience":  "api://b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+                                              "llm_provider_mode":  "copilot_only"
+                                          },
+                   "bridge_auth_me_without_token_status":  401,
+                   "bridge_admin_health_without_token_status":  401,
+                   "ui_default_status":  200,
+                   "ui_custom_status":  0
+               }
+}

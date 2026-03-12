@@ -1,0 +1,1 @@
+curl -sS -X POST https://rt-vendorlogic-ui-prod-v130.internal.blackpond-85ed120f.uksouth.azurecontainerapps.io/api/human-input/role -H Content-Type:application/json -d {"execution_context_id":"ctx-cp17-1773285900.71621","role":"CIO","domain":"network-transformation","assertions":["a1"],"non_negotiables":["n1"],"risk_flags":["r1"],"evidence_refs":["ref-1"]}

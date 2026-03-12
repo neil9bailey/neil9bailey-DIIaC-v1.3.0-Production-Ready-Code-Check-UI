@@ -1,0 +1,1024 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.41.2.15936",
+      "templateHash": "18403227969711735577"
+    }
+  },
+  "parameters": {
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Azure region for dedicated UI resources."
+      }
+    },
+    "deployApps": {
+      "type": "bool",
+      "defaultValue": true,
+      "metadata": {
+        "description": "Set false to deploy dedicated shared infra only (ACR, identity, logs, ACA env, RBAC), without container apps."
+      }
+    },
+    "containerRegistryName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the dedicated ACR for this UI deployment."
+      }
+    },
+    "managedIdentityName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the dedicated user-assigned managed identity."
+      }
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the dedicated Log Analytics workspace."
+      }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the dedicated storage account for persistent Container Apps volumes."
+      }
+    },
+    "containerAppsEnvironmentName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the dedicated Azure Container Apps environment."
+      }
+    },
+    "runtimeAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Runtime container app name."
+      }
+    },
+    "bridgeAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Bridge container app name."
+      }
+    },
+    "uiAppName": {
+      "type": "string",
+      "metadata": {
+        "description": "Frontend container app name."
+      }
+    },
+    "sharedKeyVaultName": {
+      "type": "string",
+      "metadata": {
+        "description": "Existing shared Key Vault name."
+      }
+    },
+    "sharedKeyVaultResourceGroupName": {
+      "type": "string",
+      "metadata": {
+        "description": "Resource group containing the shared Key Vault."
+      }
+    },
+    "sharedKeyVaultSubscriptionId": {
+      "type": "string",
+      "defaultValue": "[subscription().subscriptionId]",
+      "metadata": {
+        "description": "Subscription containing the shared Key Vault."
+      }
+    },
+    "uiPublicDomain": {
+      "type": "string",
+      "defaultValue": "diiacui.vendorlogic.io",
+      "metadata": {
+        "description": "Frontend custom domain."
+      }
+    },
+    "uiCustomDomainCertificateId": {
+      "type": "string",
+      "defaultValue": "",
+      "metadata": {
+        "description": "Managed certificate resource ID for UI custom domain binding. Leave empty to skip binding."
+      }
+    },
+    "uiDnsSubdomain": {
+      "type": "string",
+      "defaultValue": "diiacui",
+      "metadata": {
+        "description": "Subdomain host record for the frontend custom domain."
+      }
+    },
+    "imageRepositoryPrefix": {
+      "type": "string",
+      "defaultValue": "diiac",
+      "metadata": {
+        "description": "Container image repository prefix."
+      }
+    },
+    "runtimeImageTag": {
+      "type": "string",
+      "defaultValue": "1.3.0-adminheaderfix",
+      "metadata": {
+        "description": "Runtime image tag."
+      }
+    },
+    "bridgeImageTag": {
+      "type": "string",
+      "defaultValue": "1.3.0-ingressfix",
+      "metadata": {
+        "description": "Bridge image tag."
+      }
+    },
+    "frontendImageTag": {
+      "type": "string",
+      "defaultValue": "1.3.0-groupmapfix",
+      "metadata": {
+        "description": "Frontend image tag."
+      }
+    },
+    "runtimeAppVersion": {
+      "type": "string",
+      "defaultValue": "v1.3.0-ui",
+      "metadata": {
+        "description": "Runtime API version string reported by /admin/config."
+      }
+    },
+    "entraTenantId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra tenant ID for auth validation."
+      }
+    },
+    "entraApiAppId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra API app registration client ID."
+      }
+    },
+    "entraUiAppId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra UI app registration client ID."
+      }
+    },
+    "entraAdminGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra admin group object ID."
+      }
+    },
+    "entraStandardGroupId": {
+      "type": "string",
+      "metadata": {
+        "description": "Entra standard group object ID."
+      }
+    },
+    "entraPrincipalToRoleJson": {
+      "type": "string",
+      "defaultValue": "{}",
+      "metadata": {
+        "description": "Optional principal-to-role JSON map for app principals."
+      }
+    },
+    "copilotModel": {
+      "type": "string",
+      "defaultValue": "gpt-4o",
+      "metadata": {
+        "description": "Copilot model name."
+      }
+    },
+    "runtimeCpu": {
+      "type": "string",
+      "defaultValue": "0.25",
+      "metadata": {
+        "description": "Runtime CPU allocation."
+      }
+    },
+    "runtimeMemory": {
+      "type": "string",
+      "defaultValue": "0.5Gi",
+      "metadata": {
+        "description": "Runtime memory allocation."
+      }
+    },
+    "bridgeCpu": {
+      "type": "string",
+      "defaultValue": "0.25",
+      "metadata": {
+        "description": "Bridge CPU allocation."
+      }
+    },
+    "bridgeMemory": {
+      "type": "string",
+      "defaultValue": "0.5Gi",
+      "metadata": {
+        "description": "Bridge memory allocation."
+      }
+    },
+    "frontendCpu": {
+      "type": "string",
+      "defaultValue": "0.25",
+      "metadata": {
+        "description": "Frontend CPU allocation."
+      }
+    },
+    "frontendMemory": {
+      "type": "string",
+      "defaultValue": "0.5Gi",
+      "metadata": {
+        "description": "Frontend memory allocation."
+      }
+    },
+    "runtimeMinReplicas": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "Runtime scale min replicas."
+      }
+    },
+    "runtimeMaxReplicas": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Runtime scale max replicas."
+      }
+    },
+    "bridgeMinReplicas": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "Bridge scale min replicas."
+      }
+    },
+    "bridgeMaxReplicas": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Bridge scale max replicas."
+      }
+    },
+    "uiMinReplicas": {
+      "type": "int",
+      "defaultValue": 0,
+      "metadata": {
+        "description": "Frontend scale min replicas."
+      }
+    },
+    "uiMaxReplicas": {
+      "type": "int",
+      "defaultValue": 1,
+      "metadata": {
+        "description": "Frontend scale max replicas."
+      }
+    }
+  },
+  "variables": {
+    "persistentShareConfigs": [
+      {
+        "storageName": "runtime-artifacts-storage",
+        "shareName": "diiac-runtime-artifacts"
+      },
+      {
+        "storageName": "runtime-exports-storage",
+        "shareName": "diiac-runtime-exports"
+      },
+      {
+        "storageName": "runtime-audit-storage",
+        "shareName": "diiac-runtime-audit"
+      },
+      {
+        "storageName": "runtime-state-storage",
+        "shareName": "diiac-runtime-state"
+      },
+      {
+        "storageName": "bridge-human-input-storage",
+        "shareName": "diiac-bridge-human-input"
+      },
+      {
+        "storageName": "bridge-decision-packs-storage",
+        "shareName": "diiac-bridge-decision-packs"
+      },
+      {
+        "storageName": "bridge-state-storage",
+        "shareName": "diiac-bridge-state"
+      },
+      {
+        "storageName": "bridge-ledger-storage",
+        "shareName": "diiac-bridge-ledger"
+      }
+    ],
+    "entraExpectedAudience": "[format('api://{0}', parameters('entraApiAppId'))]",
+    "entraIssuerV2": "[format('{0}{1}/v2.0', environment().authentication.loginEndpoint, parameters('entraTenantId'))]",
+    "entraExpectedIssuers": "[variables('entraIssuerV2')]",
+    "entraGroupToRoleJson": "[format('{{\"{0}\":{{\"role\":\"admin\"}},\"{1}\":{{\"role\":\"standard\"}}}}', parameters('entraAdminGroupId'), parameters('entraStandardGroupId'))]",
+    "entraOidcUrl": "[format('{0}{1}/v2.0/.well-known/openid-configuration', environment().authentication.loginEndpoint, parameters('entraTenantId'))]",
+    "entraJwksUri": "[format('{0}{1}/discovery/v2.0/keys', environment().authentication.loginEndpoint, parameters('entraTenantId'))]",
+    "runtimeArtifactsStorageName": "runtime-artifacts-storage",
+    "runtimeExportsStorageName": "runtime-exports-storage",
+    "runtimeAuditStorageName": "runtime-audit-storage",
+    "runtimeStateStorageName": "runtime-state-storage",
+    "bridgeHumanInputStorageName": "bridge-human-input-storage",
+    "bridgeDecisionPacksStorageName": "bridge-decision-packs-storage",
+    "bridgeStateStorageName": "bridge-state-storage",
+    "bridgeLedgerStorageName": "bridge-ledger-storage"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+      "apiVersion": "2023-01-31",
+      "name": "[parameters('managedIdentityName')]",
+      "location": "[parameters('location')]"
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2023-09-01",
+      "name": "[parameters('logAnalyticsWorkspaceName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 90
+      }
+    },
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-11-01-preview",
+      "name": "[parameters('containerRegistryName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "adminUserEnabled": false
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('storageAccountName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/fileServices",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', parameters('storageAccountName'), 'default')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "persistentFileShares",
+        "count": "[length(variables('persistentShareConfigs'))]"
+      },
+      "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}/{2}', parameters('storageAccountName'), 'default', variables('persistentShareConfigs')[copyIndex()].shareName)]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts/fileServices', parameters('storageAccountName'), 'default')]"
+      ]
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('containerAppsEnvironmentName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2023-09-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName')), '2023-09-01').primarySharedKey]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('logAnalyticsWorkspaceName'))]"
+      ]
+    },
+    {
+      "copy": {
+        "name": "acaPersistentStorages",
+        "count": "[length(variables('persistentShareConfigs'))]"
+      },
+      "type": "Microsoft.App/managedEnvironments/storages",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}/{1}', parameters('containerAppsEnvironmentName'), variables('persistentShareConfigs')[copyIndex()].storageName)]",
+      "properties": {
+        "azureFile": {
+          "accountName": "[parameters('storageAccountName')]",
+          "accountKey": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-05-01').keys[0].value]",
+          "shareName": "[variables('persistentShareConfigs')[copyIndex()].shareName]",
+          "accessMode": "ReadWrite"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "persistentFileShares",
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Authorization/roleAssignments",
+      "apiVersion": "2022-04-01",
+      "scope": "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), 'acrpull')]",
+      "properties": {
+        "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2023-01-31').principalId]",
+        "principalType": "ServicePrincipal",
+        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('runtimeAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "ingress": {
+            "external": false,
+            "targetPort": 8000,
+            "allowInsecure": false,
+            "transport": "auto"
+          },
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-11-01-preview').loginServer]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "admin-api-token",
+              "keyVaultUrl": "[format('{0}/diiac-admin-api-token', format('{0}secrets', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedKeyVaultSubscriptionId'), parameters('sharedKeyVaultResourceGroupName')), 'Microsoft.KeyVault/vaults', parameters('sharedKeyVaultName')), '2023-07-01').vaultUri))]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+            },
+            {
+              "name": "signing-private-key-pem",
+              "keyVaultUrl": "[format('{0}/diiac-signing-private-key-pem', format('{0}secrets', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedKeyVaultSubscriptionId'), parameters('sharedKeyVaultResourceGroupName')), 'Microsoft.KeyVault/vaults', parameters('sharedKeyVaultName')), '2023-07-01').vaultUri))]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "governance-runtime",
+              "image": "[format('{0}/{1}/governance-runtime:{2}', reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-11-01-preview').loginServer, parameters('imageRepositoryPrefix'), parameters('runtimeImageTag'))]",
+              "env": [
+                {
+                  "name": "APP_ENV",
+                  "value": "production"
+                },
+                {
+                  "name": "ADMIN_AUTH_ENABLED",
+                  "value": "true"
+                },
+                {
+                  "name": "STRICT_DETERMINISTIC_MODE",
+                  "value": "true"
+                },
+                {
+                  "name": "SIGNING_ENABLED",
+                  "value": "true"
+                },
+                {
+                  "name": "SIGNING_KEY_ID",
+                  "value": "diiac-vendorlogic-prod"
+                },
+                {
+                  "name": "APP_VERSION",
+                  "value": "[parameters('runtimeAppVersion')]"
+                },
+                {
+                  "name": "LLM_PROVIDER_MODE",
+                  "value": "copilot_only"
+                },
+                {
+                  "name": "ADMIN_API_TOKEN",
+                  "secretRef": "admin-api-token"
+                },
+                {
+                  "name": "SIGNING_PRIVATE_KEY_PEM",
+                  "secretRef": "signing-private-key-pem"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8000
+                  },
+                  "initialDelaySeconds": 20,
+                  "periodSeconds": 20,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 3
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 8000
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 3
+                }
+              ],
+              "volumeMounts": [
+                {
+                  "volumeName": "runtime-artifacts-volume",
+                  "mountPath": "/app/artifacts"
+                },
+                {
+                  "volumeName": "runtime-exports-volume",
+                  "mountPath": "/app/exports"
+                },
+                {
+                  "volumeName": "runtime-audit-volume",
+                  "mountPath": "/app/audit_exports"
+                },
+                {
+                  "volumeName": "runtime-state-volume",
+                  "mountPath": "/app/state"
+                }
+              ],
+              "resources": {
+                "cpu": "[json(parameters('runtimeCpu'))]",
+                "memory": "[parameters('runtimeMemory')]"
+              }
+            }
+          ],
+          "volumes": [
+            {
+              "name": "runtime-artifacts-volume",
+              "storageType": "AzureFile",
+              "storageName": "[variables('runtimeArtifactsStorageName')]"
+            },
+            {
+              "name": "runtime-exports-volume",
+              "storageType": "AzureFile",
+              "storageName": "[variables('runtimeExportsStorageName')]"
+            },
+            {
+              "name": "runtime-audit-volume",
+              "storageType": "AzureFile",
+              "storageName": "[variables('runtimeAuditStorageName')]"
+            },
+            {
+              "name": "runtime-state-volume",
+              "storageType": "AzureFile",
+              "storageName": "[variables('runtimeStateStorageName')]"
+            }
+          ],
+          "scale": {
+            "minReplicas": "[parameters('runtimeMinReplicas')]",
+            "maxReplicas": "[parameters('runtimeMaxReplicas')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "acaPersistentStorages",
+        "[extensionResourceId(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), 'Microsoft.Authorization/roleAssignments', guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), 'acrpull'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('bridgeAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": 3001,
+            "allowInsecure": false,
+            "transport": "auto"
+          },
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-11-01-preview').loginServer]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+            }
+          ],
+          "secrets": [
+            {
+              "name": "admin-api-token",
+              "keyVaultUrl": "[format('{0}/diiac-admin-api-token', format('{0}secrets', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedKeyVaultSubscriptionId'), parameters('sharedKeyVaultResourceGroupName')), 'Microsoft.KeyVault/vaults', parameters('sharedKeyVaultName')), '2023-07-01').vaultUri))]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+            },
+            {
+              "name": "signing-private-key-pem",
+              "keyVaultUrl": "[format('{0}/diiac-signing-private-key-pem', format('{0}secrets', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedKeyVaultSubscriptionId'), parameters('sharedKeyVaultResourceGroupName')), 'Microsoft.KeyVault/vaults', parameters('sharedKeyVaultName')), '2023-07-01').vaultUri))]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+            },
+            {
+              "name": "github-token",
+              "keyVaultUrl": "[format('{0}/diiac-github-token', format('{0}secrets', reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedKeyVaultSubscriptionId'), parameters('sharedKeyVaultResourceGroupName')), 'Microsoft.KeyVault/vaults', parameters('sharedKeyVaultName')), '2023-07-01').vaultUri))]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "backend-ui-bridge",
+              "image": "[format('{0}/{1}/backend-ui-bridge:{2}', reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-11-01-preview').loginServer, parameters('imageRepositoryPrefix'), parameters('bridgeImageTag'))]",
+              "env": [
+                {
+                  "name": "APP_ENV",
+                  "value": "production"
+                },
+                {
+                  "name": "PYTHON_BASE_URL",
+                  "value": "[format('https://{0}.internal.{1}', parameters('runtimeAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName')), '2023-05-01').defaultDomain)]"
+                },
+                {
+                  "name": "STRICT_DETERMINISTIC_MODE",
+                  "value": "true"
+                },
+                {
+                  "name": "SIGNING_ENABLED",
+                  "value": "true"
+                },
+                {
+                  "name": "SIGNING_KEY_ID",
+                  "value": "diiac-vendorlogic-prod"
+                },
+                {
+                  "name": "SIGNING_PRIVATE_KEY_PEM",
+                  "secretRef": "signing-private-key-pem"
+                },
+                {
+                  "name": "LLM_INGESTION_ENABLED",
+                  "value": "true"
+                },
+                {
+                  "name": "LLM_STUB_ENABLED",
+                  "value": "false"
+                },
+                {
+                  "name": "LLM_PROVIDER_MODE",
+                  "value": "copilot_only"
+                },
+                {
+                  "name": "COPILOT_MODEL",
+                  "value": "[parameters('copilotModel')]"
+                },
+                {
+                  "name": "ALLOWED_ORIGINS",
+                  "value": "[format('https://{0},{1}', parameters('uiPublicDomain'), format('https://{0}.{1}', parameters('uiAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName')), '2023-05-01').defaultDomain))]"
+                },
+                {
+                  "name": "AUTH_MODE",
+                  "value": "entra_jwt_rs256"
+                },
+                {
+                  "name": "ENTRA_ROLE_CLAIM",
+                  "value": "roles"
+                },
+                {
+                  "name": "ENTRA_EXPECTED_TENANT_ID",
+                  "value": "[parameters('entraTenantId')]"
+                },
+                {
+                  "name": "ENTRA_EXPECTED_AUDIENCE",
+                  "value": "[variables('entraExpectedAudience')]"
+                },
+                {
+                  "name": "ENTRA_EXPECTED_ISSUERS",
+                  "value": "[variables('entraExpectedIssuers')]"
+                },
+                {
+                  "name": "ENTRA_GROUP_TO_ROLE_JSON",
+                  "value": "[variables('entraGroupToRoleJson')]"
+                },
+                {
+                  "name": "ENTRA_PRINCIPAL_TO_ROLE_JSON",
+                  "value": "[parameters('entraPrincipalToRoleJson')]"
+                },
+                {
+                  "name": "ENTRA_OIDC_DISCOVERY_URL",
+                  "value": "[variables('entraOidcUrl')]"
+                },
+                {
+                  "name": "ENTRA_JWKS_URI",
+                  "value": "[variables('entraJwksUri')]"
+                },
+                {
+                  "name": "ADMIN_API_TOKEN",
+                  "secretRef": "admin-api-token"
+                },
+                {
+                  "name": "GITHUB_TOKEN",
+                  "secretRef": "github-token"
+                },
+                {
+                  "name": "BRIDGE_STATE_PATH",
+                  "value": "/workspace/state/operations_state.json"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/health",
+                    "port": 3001
+                  },
+                  "initialDelaySeconds": 20,
+                  "periodSeconds": 20,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 3
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/readiness",
+                    "port": 3001
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 3
+                }
+              ],
+              "volumeMounts": [
+                {
+                  "volumeName": "bridge-human-input-volume",
+                  "mountPath": "/workspace/artefacts/human-input"
+                },
+                {
+                  "volumeName": "bridge-decision-packs-volume",
+                  "mountPath": "/workspace/artefacts/decision-packs"
+                },
+                {
+                  "volumeName": "bridge-state-volume",
+                  "mountPath": "/workspace/state"
+                },
+                {
+                  "volumeName": "bridge-ledger-volume",
+                  "mountPath": "/workspace/ledger"
+                }
+              ],
+              "resources": {
+                "cpu": "[json(parameters('bridgeCpu'))]",
+                "memory": "[parameters('bridgeMemory')]"
+              }
+            }
+          ],
+          "volumes": [
+            {
+              "name": "bridge-human-input-volume",
+              "storageType": "AzureFile",
+              "storageName": "[variables('bridgeHumanInputStorageName')]"
+            },
+            {
+              "name": "bridge-decision-packs-volume",
+              "storageType": "AzureFile",
+              "storageName": "[variables('bridgeDecisionPacksStorageName')]"
+            },
+            {
+              "name": "bridge-state-volume",
+              "storageType": "AzureFile",
+              "storageName": "[variables('bridgeStateStorageName')]"
+            },
+            {
+              "name": "bridge-ledger-volume",
+              "storageType": "AzureFile",
+              "storageName": "[variables('bridgeLedgerStorageName')]"
+            }
+          ],
+          "scale": {
+            "minReplicas": "[parameters('bridgeMinReplicas')]",
+            "maxReplicas": "[parameters('bridgeMaxReplicas')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]",
+        "[resourceId('Microsoft.App/containerApps', parameters('runtimeAppName'))]"
+      ]
+    },
+    {
+      "condition": "[parameters('deployApps')]",
+      "type": "Microsoft.App/containerApps",
+      "apiVersion": "2023-05-01",
+      "name": "[parameters('uiAppName')]",
+      "location": "[parameters('location')]",
+      "identity": {
+        "type": "UserAssigned",
+        "userAssignedIdentities": {
+          "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')))]": {}
+        }
+      },
+      "properties": {
+        "managedEnvironmentId": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "configuration": {
+          "ingress": {
+            "external": true,
+            "targetPort": 5173,
+            "allowInsecure": false,
+            "transport": "auto",
+            "customDomains": "[if(empty(parameters('uiCustomDomainCertificateId')), createArray(), createArray(createObject('name', parameters('uiPublicDomain'), 'bindingType', 'SniEnabled', 'certificateId', parameters('uiCustomDomainCertificateId'))))]"
+          },
+          "registries": [
+            {
+              "server": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-11-01-preview').loginServer]",
+              "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+            }
+          ]
+        },
+        "template": {
+          "containers": [
+            {
+              "name": "frontend",
+              "image": "[format('{0}/{1}/frontend:{2}', reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-11-01-preview').loginServer, parameters('imageRepositoryPrefix'), parameters('frontendImageTag'))]",
+              "env": [
+                {
+                  "name": "APP_ENV",
+                  "value": "production"
+                },
+                {
+                  "name": "VITE_API_BASE",
+                  "value": "[format('https://{0}.{1}', parameters('bridgeAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName')), '2023-05-01').defaultDomain)]"
+                },
+                {
+                  "name": "VITE_LLM_PROVIDER_MODE",
+                  "value": "copilot_only"
+                },
+                {
+                  "name": "VITE_ENTRA_CLIENT_ID",
+                  "value": "[parameters('entraUiAppId')]"
+                },
+                {
+                  "name": "VITE_ENTRA_TENANT_ID",
+                  "value": "[parameters('entraTenantId')]"
+                },
+                {
+                  "name": "VITE_ENTRA_REDIRECT_URI",
+                  "value": "[format('https://{0}/auth/callback', parameters('uiPublicDomain'))]"
+                },
+                {
+                  "name": "VITE_ENTRA_GROUP_MAP",
+                  "value": "[variables('entraGroupToRoleJson')]"
+                }
+              ],
+              "probes": [
+                {
+                  "type": "Liveness",
+                  "httpGet": {
+                    "path": "/",
+                    "port": 5173
+                  },
+                  "initialDelaySeconds": 20,
+                  "periodSeconds": 20,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 3
+                },
+                {
+                  "type": "Readiness",
+                  "httpGet": {
+                    "path": "/",
+                    "port": 5173
+                  },
+                  "initialDelaySeconds": 10,
+                  "periodSeconds": 10,
+                  "timeoutSeconds": 5,
+                  "failureThreshold": 3
+                }
+              ],
+              "resources": {
+                "cpu": "[json(parameters('frontendCpu'))]",
+                "memory": "[parameters('frontendMemory')]"
+              }
+            }
+          ],
+          "scale": {
+            "minReplicas": "[parameters('uiMinReplicas')]",
+            "maxReplicas": "[parameters('uiMaxReplicas')]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.App/containerApps', parameters('bridgeAppName'))]",
+        "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName'))]",
+        "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    },
+    "dedicatedAcrName": {
+      "type": "string",
+      "value": "[parameters('containerRegistryName')]"
+    },
+    "dedicatedAcrLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', parameters('containerRegistryName')), '2023-11-01-preview').loginServer]"
+    },
+    "dedicatedStorageAccountName": {
+      "type": "string",
+      "value": "[parameters('storageAccountName')]"
+    },
+    "dedicatedManagedIdentityId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName'))]"
+    },
+    "dedicatedManagedIdentityPrincipalId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', parameters('managedIdentityName')), '2023-01-31').principalId]"
+    },
+    "dedicatedManagedEnvironmentId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName'))]"
+    },
+    "dedicatedManagedEnvironmentDefaultDomain": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName')), '2023-05-01').defaultDomain]"
+    },
+    "sharedKeyVaultId": {
+      "type": "string",
+      "value": "[extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedKeyVaultSubscriptionId'), parameters('sharedKeyVaultResourceGroupName')), 'Microsoft.KeyVault/vaults', parameters('sharedKeyVaultName'))]"
+    },
+    "sharedKeyVaultUri": {
+      "type": "string",
+      "value": "[reference(extensionResourceId(format('/subscriptions/{0}/resourceGroups/{1}', parameters('sharedKeyVaultSubscriptionId'), parameters('sharedKeyVaultResourceGroupName')), 'Microsoft.KeyVault/vaults', parameters('sharedKeyVaultName')), '2023-07-01').vaultUri]"
+    },
+    "runtimeInternalBaseUrl": {
+      "type": "string",
+      "value": "[if(parameters('deployApps'), format('https://{0}.internal.{1}', parameters('runtimeAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName')), '2023-05-01').defaultDomain), '')]"
+    },
+    "bridgeExternalBaseUrl": {
+      "type": "string",
+      "value": "[if(parameters('deployApps'), format('https://{0}.{1}', parameters('bridgeAppName'), reference(resourceId('Microsoft.App/managedEnvironments', parameters('containerAppsEnvironmentName')), '2023-05-01').defaultDomain), '')]"
+    },
+    "uiAppFqdn": {
+      "type": "string",
+      "value": "[if(parameters('deployApps'), reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2023-05-01').configuration.ingress.fqdn, '')]"
+    },
+    "dnsCnameHost": {
+      "type": "string",
+      "value": "[parameters('uiDnsSubdomain')]"
+    },
+    "dnsCnameTarget": {
+      "type": "string",
+      "value": "[if(parameters('deployApps'), reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2023-05-01').configuration.ingress.fqdn, '')]"
+    },
+    "dnsTxtHost": {
+      "type": "string",
+      "value": "[format('asuid.{0}', parameters('uiDnsSubdomain'))]"
+    },
+    "dnsTxtValue": {
+      "type": "string",
+      "value": "[if(parameters('deployApps'), reference(resourceId('Microsoft.App/containerApps', parameters('uiAppName')), '2023-05-01').customDomainVerificationId, '')]"
+    },
+    "uiCustomDomain": {
+      "type": "string",
+      "value": "[parameters('uiPublicDomain')]"
+    }
+  }
+}

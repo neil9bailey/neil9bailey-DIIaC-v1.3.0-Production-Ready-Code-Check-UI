@@ -1,0 +1,6 @@
+﻿{
+    "timestamp_utc":  "2026-03-12T02:25:02Z",
+    "ui_custom_domain_status_code":  "200",
+    "bridge_health_status_code":  "200",
+    "bridge_readiness_status_code":  "200"
+}

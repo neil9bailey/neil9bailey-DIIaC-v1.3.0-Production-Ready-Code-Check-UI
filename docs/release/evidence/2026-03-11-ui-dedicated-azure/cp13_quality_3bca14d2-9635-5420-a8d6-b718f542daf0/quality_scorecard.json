@@ -1,0 +1,30 @@
+{
+    "execution_id":  "3bca14d2-9635-5420-a8d6-b718f542daf0",
+    "selected_vendor":  "Fortinet",
+    "top_score":  74.6,
+    "second_score":  69.2,
+    "score_gap":  5.4,
+    "confidence_score":  76.6,
+    "confidence_level":  "MEDIUM",
+    "checks":  {
+                   "required_sections_complete":  true,
+                   "recommendation_present":  true,
+                   "ranked_options_min_2":  true,
+                   "deterministic_score_gap_nonzero":  true,
+                   "confidence_score_ge_70":  true,
+                   "strong_evidence_refs_ge_2":  true,
+                   "policy_pack_failures_zero":  true,
+                   "quality_gate_failures_zero":  true,
+                   "control_failure_reasons_zero":  true,
+                   "signing_trust_ready":  true,
+                   "deterministic_input_hash_present":  true
+               },
+    "warnings":  [
+                     "No explicit regulatory constraints captured in intent_coverage.",
+                     "No explicit numeric success_targets captured in intent_coverage.",
+                     "Success Metrics section is minimal; add measurable KPIs (SLA/SLO, MTTR, packet loss, rollout milestones).",
+                     "Evidence URLs include tracking query parameters; store canonical source URLs for audit cleanliness.",
+                     "Provider-reported timestamp is historical (2023); freshness marked CURRENT due audit timestamp override. Confirm freshness policy intent."
+                 ],
+    "overall_quality_pass":  true
+}

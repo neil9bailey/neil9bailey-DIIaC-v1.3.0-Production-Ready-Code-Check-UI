@@ -1,0 +1,13 @@
+﻿{
+    "smoke_timestamp_utc":  "2026-03-12T11:37:57.6558823Z",
+    "smoke_dir":  "F:\\code\\diiac\\diiac_v1.3.0_ui_cust_ready\\docs\\release\\evidence\\2026-03-12-vendorlogic-azure-deploy\\cp5-smoke-20260312-113751",
+    "ui_http_200":  true,
+    "auth_mode":  "entra_jwt_rs256",
+    "auth_me_role":  "admin",
+    "compile_execution_id":  "bb4d6134-32db-574e-aa5d-aa8c4f09e05e",
+    "verify_status":  "VERIFIABLE",
+    "verify_pack_overall_valid":  true,
+    "signed_export_alg":  null,
+    "audit_export_id":  "audit-2ccd2e8bfb26",
+    "zip_export_sha256":  "939778A00DB4DACBE2AB11859E188F85BD8A597756A7F6B9D1F9492779F09F62"
+}

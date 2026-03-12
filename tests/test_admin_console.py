@@ -1,6 +1,12 @@
 import os
+import base64
+import json
+import shutil
+from pathlib import Path
 
 from app import create_app
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 
 def client(strict: bool = False, app_env: str = 'development', admin_api_token: str = 'test-admin-token'):
@@ -246,6 +252,67 @@ def test_vendor_names_from_intent_are_preserved_in_scoring_and_report():
     ranked_names = {r['vendor'] for r in ranked}
     assert 'Palo Alto Networks' in ranked_names
     assert 'Fortinet' in ranked_names
+
+
+def test_runtime_reconciles_public_key_registry_entry(monkeypatch, tmp_path):
+    source_contracts = Path(__file__).resolve().parents[1] / "contracts"
+    target_contracts = tmp_path / "contracts"
+    shutil.copytree(source_contracts, target_contracts)
+
+    # Seed the key registry with a stale key for the active key_id.
+    stale_private = Ed25519PrivateKey.generate()
+    stale_public_b64 = base64.b64encode(
+        stale_private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+    ).decode("utf-8")
+    key_registry_path = target_contracts / "keys" / "public_keys.json"
+    key_registry_path.write_text(
+        json.dumps(
+            {
+                "keys": [
+                    {
+                        "key_id": "diiac-vendorlogic-prod",
+                        "algorithm": "Ed25519",
+                        "public_key_b64": stale_public_b64,
+                    }
+                ]
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    # Configure runtime with a different active private key.
+    active_private = Ed25519PrivateKey.generate()
+    active_private_pem = active_private.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    expected_public_b64 = base64.b64encode(
+        active_private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+    ).decode("utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("ADMIN_AUTH_ENABLED", "false")
+    monkeypatch.setenv("DIIAC_STATE_DB", ":memory:")
+    monkeypatch.setenv("SIGNING_KEY_ID", "diiac-vendorlogic-prod")
+    monkeypatch.setenv("SIGNING_PRIVATE_KEY_PEM", active_private_pem)
+
+    app = create_app()
+    app.testing = True
+
+    reconciled = json.loads(key_registry_path.read_text(encoding="utf-8"))
+    active_entry = next((k for k in reconciled.get("keys", []) if k.get("key_id") == "diiac-vendorlogic-prod"), None)
+    assert active_entry is not None
+    assert active_entry.get("algorithm") == "Ed25519"
+    assert active_entry.get("public_key_b64") == expected_public_b64
 
 
 def test_llm_audit_timestamp_override_prevents_stale_freshness_failure():

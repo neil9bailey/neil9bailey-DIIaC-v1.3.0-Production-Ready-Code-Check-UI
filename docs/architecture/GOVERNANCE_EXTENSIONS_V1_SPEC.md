@@ -1,21 +1,31 @@
-# DIIaC Governance Extensions v1 Spec
+# Governance Extensions v1 Specification (v1.3.0-ui)
 
-Implemented scope in this baseline:
-1. Merkle root binding + proof APIs
-2. Signed pack exports + key registry
-3. Public verification endpoints
-4. Admin health/logs/audit export APIs
+This spec defines extension points without breaking deterministic guarantees.
 
-Key APIs:
-- `GET /executions/<execution_id>/merkle`
-- `GET /executions/<execution_id>/merkle/proof/<artefact_name>`
-- `GET /decision-pack/<execution_id>/export-signed`
-- `GET /verify/public-keys`
-- `POST /verify/pack`
-- `POST /verify/merkle-proof`
-- `POST /verify/replay`
-- `GET /verify/execution/<execution_id>`
-- `GET /admin/health`
-- `GET /admin/logs`
-- `GET /admin/executions/<execution_id>/logs`
-- `POST /admin/audit-export`
+## Extension Principles
+
+- Extensions must not bypass policy enforcement.
+- Deterministic integrity artifacts must remain reproducible.
+- Auth and RBAC controls apply uniformly.
+
+## Supported Extension Areas
+
+1. Input enrichment modules
+2. Additional policy/control packs
+3. Reporting and export adapters
+4. External evidence connectors (read-only)
+
+## Non-Negotiable Constraints
+
+- No plaintext secret storage in code or docs.
+- No production fallback to unsecured auth modes.
+- No unsigned production artifact path.
+
+## Validation Requirements
+
+Any extension must pass:
+
+- unit/integration tests
+- deterministic regression checks
+- security checklist checks
+- deployment validation runbook checks

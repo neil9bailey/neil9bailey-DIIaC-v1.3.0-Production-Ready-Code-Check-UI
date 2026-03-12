@@ -1,0 +1,14 @@
+﻿{
+  "environmentName": "AzureCloud",
+  "homeTenantId": "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+  "id": "3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7",
+  "isDefault": true,
+  "managedByTenants": [],
+  "name": "Azure subscription 1",
+  "state": "Enabled",
+  "tenantId": "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+  "user": {
+    "name": "nbailey@vendorlogic.io",
+    "type": "user"
+  }
+}

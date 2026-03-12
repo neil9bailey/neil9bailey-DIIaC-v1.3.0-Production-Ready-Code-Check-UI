@@ -1,0 +1,8 @@
+{
+    "bridge_/api/health":  "The remote server returned an error: (401) Unauthorized.",
+    "bridge_/status":  "The remote server returned an error: (401) Unauthorized.",
+    "ui_error":  "The remote server returned an error: (403) Forbidden.",
+    "bridge_/health":  "The remote server returned an error: (404) Not Found.",
+    "bridge_/healthz":  "The remote server returned an error: (401) Unauthorized.",
+    "bridge_/api/status":  "The remote server returned an error: (401) Unauthorized."
+}

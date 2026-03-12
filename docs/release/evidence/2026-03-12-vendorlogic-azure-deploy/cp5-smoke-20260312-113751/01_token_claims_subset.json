@@ -1,0 +1,10 @@
+﻿{
+    "iss":  "https://login.microsoftonline.com/1384b1c5-2bae-45a1-a4b4-e94e3315eb41/v2.0",
+    "aud":  "b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+    "ver":  "2.0",
+    "azp":  "b726558d-f1c6-48f7-8a3d-72d5db818d0f",
+    "tid":  "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+    "oid":  "8b237e25-e4bf-4e09-81b4-72a8fe1311fb",
+    "iat":  1773315174,
+    "exp":  1773319074
+}

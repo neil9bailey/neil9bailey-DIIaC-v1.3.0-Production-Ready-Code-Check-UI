@@ -1,0 +1,12 @@
+{
+    "checkpoint":  "CP6",
+    "deploymentName":  "diiac-ui-dedicated-cp6-20260311-213005",
+    "validateStatus":  "SUCCESS",
+    "whatIfStatus":  "SUCCESS",
+    "noExistingManagedEnvironmentBeforePlan":  true,
+    "plannedCreateCount":  10,
+    "plannedModifyCount":  0,
+    "plannedDeleteCount":  0,
+    "unsupportedWhatIfNoteCount":  3,
+    "decision":  "PAUSE_FOR_APPROVAL_BEFORE_APPLY"
+}

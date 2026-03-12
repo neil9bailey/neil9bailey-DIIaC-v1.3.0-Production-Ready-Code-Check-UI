@@ -1,0 +1,275 @@
+﻿{
+  "id": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/containerapps/br-vendorlogic-ui-prod-v130",
+  "identity": {
+    "type": "UserAssigned",
+    "userAssignedIdentities": {
+      "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourcegroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130": {
+        "clientId": "d6f27e27-f124-421d-8301-8932b7ee18c7",
+        "principalId": "fbc0c195-d41a-40f8-aea7-c91fad576d7b"
+      }
+    }
+  },
+  "location": "UK South",
+  "name": "br-vendorlogic-ui-prod-v130",
+  "properties": {
+    "configuration": {
+      "activeRevisionsMode": "Single",
+      "dapr": null,
+      "identitySettings": [],
+      "ingress": {
+        "additionalPortMappings": null,
+        "allowInsecure": false,
+        "clientCertificateMode": null,
+        "corsPolicy": null,
+        "customDomains": null,
+        "exposedPort": 0,
+        "external": true,
+        "fqdn": "br-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+        "ipSecurityRestrictions": null,
+        "stickySessions": null,
+        "targetPort": 3001,
+        "traffic": [
+          {
+            "latestRevision": true,
+            "weight": 100
+          }
+        ],
+        "transport": "Auto"
+      },
+      "maxInactiveRevisions": null,
+      "registries": [
+        {
+          "identity": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130",
+          "passwordSecretRef": "",
+          "server": "acrdiiacv130vlui.azurecr.io",
+          "username": ""
+        }
+      ],
+      "runtime": null,
+      "secrets": [
+        {
+          "identity": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130",
+          "keyVaultUrl": "https://kv-diiac-vendorlogic.vault.azure.net/secrets/diiac-admin-api-token",
+          "name": "admin-api-token"
+        },
+        {
+          "identity": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130",
+          "keyVaultUrl": "https://kv-diiac-vendorlogic.vault.azure.net/secrets/diiac-signing-private-key-pem",
+          "name": "signing-private-key-pem"
+        },
+        {
+          "identity": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.ManagedIdentity/userAssignedIdentities/id-vendorlogic-ui-prod-v130",
+          "keyVaultUrl": "https://kv-diiac-vendorlogic.vault.azure.net/secrets/diiac-github-token",
+          "name": "github-token"
+        }
+      ],
+      "service": null
+    },
+    "customDomainVerificationId": "B01B517DF534900404CD467B96A1A1B57E73B6E8EEDF856F26751B5C518EA101",
+    "delegatedIdentities": [],
+    "environmentId": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130",
+    "eventStreamEndpoint": "https://uksouth.azurecontainerapps.dev/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/containerApps/br-vendorlogic-ui-prod-v130/eventstream",
+    "latestReadyRevisionName": "br-vendorlogic-ui-prod-v130--0000002",
+    "latestRevisionFqdn": "br-vendorlogic-ui-prod-v130--0000002.blackpond-85ed120f.uksouth.azurecontainerapps.io",
+    "latestRevisionName": "br-vendorlogic-ui-prod-v130--0000002",
+    "managedEnvironmentId": "/subscriptions/3ed9fa77-6bf2-4ffc-bd67-f5a442d3e5e7/resourceGroups/RG_UI_VENDORLOGIC_PROD_V130/providers/Microsoft.App/managedEnvironments/acae-vendorlogic-ui-prod-v130",
+    "outboundIpAddresses": [
+      "20.108.123.244"
+    ],
+    "provisioningState": "Succeeded",
+    "runningStatus": "Running",
+    "template": {
+      "containers": [
+        {
+          "env": [
+            {
+              "name": "APP_ENV",
+              "value": "production"
+            },
+            {
+              "name": "PYTHON_BASE_URL",
+              "value": "https://rt-vendorlogic-ui-prod-v130.internal.blackpond-85ed120f.uksouth.azurecontainerapps.io"
+            },
+            {
+              "name": "STRICT_DETERMINISTIC_MODE",
+              "value": "true"
+            },
+            {
+              "name": "SIGNING_ENABLED",
+              "value": "true"
+            },
+            {
+              "name": "SIGNING_KEY_ID",
+              "value": "diiac-vendorlogic-prod"
+            },
+            {
+              "name": "SIGNING_PRIVATE_KEY_PEM",
+              "secretRef": "signing-private-key-pem"
+            },
+            {
+              "name": "LLM_INGESTION_ENABLED",
+              "value": "true"
+            },
+            {
+              "name": "LLM_STUB_ENABLED",
+              "value": "false"
+            },
+            {
+              "name": "LLM_PROVIDER_MODE",
+              "value": "copilot_only"
+            },
+            {
+              "name": "COPILOT_MODEL",
+              "value": "gpt-4o"
+            },
+            {
+              "name": "ALLOWED_ORIGINS",
+              "value": "https://diiacui.vendorlogic.io,https://ui-vendorlogic-ui-prod-v130.blackpond-85ed120f.uksouth.azurecontainerapps.io"
+            },
+            {
+              "name": "AUTH_MODE",
+              "value": "entra_jwt_rs256"
+            },
+            {
+              "name": "ENTRA_ROLE_CLAIM",
+              "value": "roles"
+            },
+            {
+              "name": "ENTRA_EXPECTED_TENANT_ID",
+              "value": "1384b1c5-2bae-45a1-a4b4-e94e3315eb41"
+            },
+            {
+              "name": "ENTRA_EXPECTED_AUDIENCE",
+              "value": "api://b726558d-f1c6-48f7-8a3d-72d5db818d0f"
+            },
+            {
+              "name": "ENTRA_EXPECTED_ISSUERS",
+              "value": "https://login.microsoftonline.com/1384b1c5-2bae-45a1-a4b4-e94e3315eb41/v2.0"
+            },
+            {
+              "name": "ENTRA_GROUP_TO_ROLE_JSON",
+              "value": "{\"81786818-de16-4115-b061-92fce74b00bd\":{\"role\":\"admin\"},\"9c7dd0d4-5b44-4811-b167-e52df21092d8\":{\"role\":\"standard\"}}"
+            },
+            {
+              "name": "ENTRA_PRINCIPAL_TO_ROLE_JSON",
+              "value": "{\"b726558d-f1c6-48f7-8a3d-72d5db818d0f\":\"admin\",\"2f1a1479-90d3-4f46-8107-f9b3f90b0cf7\":\"admin\"}"
+            },
+            {
+              "name": "ENTRA_OIDC_DISCOVERY_URL",
+              "value": "https://login.microsoftonline.com/1384b1c5-2bae-45a1-a4b4-e94e3315eb41/v2.0/.well-known/openid-configuration"
+            },
+            {
+              "name": "ENTRA_JWKS_URI",
+              "value": "https://login.microsoftonline.com/1384b1c5-2bae-45a1-a4b4-e94e3315eb41/discovery/v2.0/keys"
+            },
+            {
+              "name": "ADMIN_API_TOKEN",
+              "secretRef": "admin-api-token"
+            },
+            {
+              "name": "GITHUB_TOKEN",
+              "secretRef": "github-token"
+            },
+            {
+              "name": "BRIDGE_STATE_PATH",
+              "value": "/workspace/state/operations_state.json"
+            }
+          ],
+          "image": "acrdiiacv130vlui.azurecr.io/diiac/backend-ui-bridge:1.3.0-persistfix1",
+          "name": "backend-ui-bridge",
+          "probes": [
+            {
+              "failureThreshold": 3,
+              "httpGet": {
+                "path": "/health",
+                "port": 3001
+              },
+              "initialDelaySeconds": 20,
+              "periodSeconds": 20,
+              "timeoutSeconds": 5,
+              "type": "Liveness"
+            },
+            {
+              "failureThreshold": 3,
+              "httpGet": {
+                "path": "/readiness",
+                "port": 3001
+              },
+              "initialDelaySeconds": 10,
+              "periodSeconds": 10,
+              "timeoutSeconds": 5,
+              "type": "Readiness"
+            }
+          ],
+          "resources": {
+            "cpu": 0.25,
+            "ephemeralStorage": "1Gi",
+            "memory": "0.5Gi"
+          },
+          "volumeMounts": [
+            {
+              "mountPath": "/workspace/artefacts/human-input",
+              "volumeName": "bridge-human-input-volume"
+            },
+            {
+              "mountPath": "/workspace/artefacts/decision-packs",
+              "volumeName": "bridge-decision-packs-volume"
+            },
+            {
+              "mountPath": "/workspace/state",
+              "volumeName": "bridge-state-volume"
+            },
+            {
+              "mountPath": "/workspace/ledger",
+              "volumeName": "bridge-ledger-volume"
+            }
+          ]
+        }
+      ],
+      "initContainers": null,
+      "revisionSuffix": "",
+      "scale": {
+        "cooldownPeriod": 300,
+        "maxReplicas": 1,
+        "minReplicas": 0,
+        "pollingInterval": 30,
+        "rules": null
+      },
+      "serviceBinds": null,
+      "terminationGracePeriodSeconds": null,
+      "volumes": [
+        {
+          "name": "bridge-human-input-volume",
+          "storageName": "bridge-human-input-storage",
+          "storageType": "AzureFile"
+        },
+        {
+          "name": "bridge-decision-packs-volume",
+          "storageName": "bridge-decision-packs-storage",
+          "storageType": "AzureFile"
+        },
+        {
+          "name": "bridge-state-volume",
+          "storageName": "bridge-state-storage",
+          "storageType": "AzureFile"
+        },
+        {
+          "name": "bridge-ledger-volume",
+          "storageName": "bridge-ledger-storage",
+          "storageType": "AzureFile"
+        }
+      ]
+    },
+    "workloadProfileName": null
+  },
+  "resourceGroup": "RG_UI_VENDORLOGIC_PROD_V130",
+  "systemData": {
+    "createdAt": "2026-03-11T22:21:05.2972612",
+    "createdBy": "nbailey@vendorlogic.io",
+    "createdByType": "User",
+    "lastModifiedAt": "2026-03-12T02:23:15.0728602",
+    "lastModifiedBy": "nbailey@vendorlogic.io",
+    "lastModifiedByType": "User"
+  },
+  "type": "Microsoft.App/containerApps"
+}

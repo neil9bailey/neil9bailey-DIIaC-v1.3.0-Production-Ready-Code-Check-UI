@@ -1,3 +1,4 @@
+> Historical archive notice: This document is retained for audit traceability and is not the authoritative source for current v1.3.0-ui operations. Use docs/README.md and current deployment/security runbooks for active guidance.
 # HANDOFF
 
 ## Current status
@@ -53,3 +54,4 @@
 26. Added `DIIAC_REAL_WORLD_E2E_ASSURANCE_REPORT.md` documenting a full real-world production-path run, artefacts, hashes, and verification outcomes.
 
 27. Added explicit OPENAI key wiring guidance for bridge local/docker runs (`.env.example` + compose env passthrough) and local bridge `.env` autoload support to prevent missing API key runtime errors.
+

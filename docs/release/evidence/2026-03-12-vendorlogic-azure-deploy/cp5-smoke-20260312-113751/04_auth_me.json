@@ -1,0 +1,14 @@
+﻿{
+    "name":  "8b237e25-e4bf-4e09-81b4-72a8fe1311fb",
+    "email":  null,
+    "role":  "admin",
+    "subroles":  [
+
+                 ],
+    "groups":  [
+
+               ],
+    "tenant_id":  "1384b1c5-2bae-45a1-a4b4-e94e3315eb41",
+    "token_type":  "delegated",
+    "auth_mode":  "entra_jwt_rs256"
+}
