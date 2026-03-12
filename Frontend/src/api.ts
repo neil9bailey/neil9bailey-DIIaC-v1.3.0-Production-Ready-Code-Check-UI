@@ -75,6 +75,9 @@ export interface VerifyExecutionResponse {
   pack_hash?: string;
   merkle_root?: string;
   manifest_hash?: string;
+  signature_payload_schema_version?: string;
+  signing_key_id?: string;
+  trust_source?: string;
 }
 
 export interface AdminMetricsResponse {
@@ -327,6 +330,7 @@ export function fetchContainerStatus(): Promise<ContainerStatusResponse> { retur
 export function fetchAdminLogs(source: "backend" | "ledger"): Promise<JsonObject | JsonObject[]> { return request<JsonObject | JsonObject[]>(`/admin/logs?source=${source}`); }
 export function fetchExecutionLogs(executionId: string): Promise<JsonObject> { return request<JsonObject>(`/admin/executions/${encodeURIComponent(executionId)}/logs`); }
 export function verifyExecution(executionId: string): Promise<VerifyExecutionResponse> { return request<VerifyExecutionResponse>(`/verify/execution/${encodeURIComponent(executionId)}`); }
+export function verifyExport(executionId: string): Promise<JsonObject> { return request<JsonObject>("/verify/export", { method: "POST", body: JSON.stringify({ execution_id: executionId }) }); }
 export function generateAuditExport(executionIds: string[]): Promise<AuditExportResponse> { return request<AuditExportResponse>("/admin/audit-export", { method: "POST", body: JSON.stringify({ execution_ids: executionIds }) }); }
 export function downloadAuditExport(exportId: string): Promise<JsonObject> { return request<JsonObject>(`/admin/audit-export/${encodeURIComponent(exportId)}/download`); }
 export async function downloadAuditExportFile(exportId: string): Promise<void> {

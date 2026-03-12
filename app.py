@@ -16,7 +16,7 @@ from typing import Any
 
 from cryptography.exceptions import InvalidSignature, UnsupportedAlgorithm
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey, Ed25519PublicKey
 from flask import Flask, jsonify, request, send_file
 from persistence import StateStore
 
@@ -193,9 +193,25 @@ def create_app() -> Flask:
     strict_deterministic_mode = os.getenv("STRICT_DETERMINISTIC_MODE", "false").lower() == "true"
     signing_enabled = os.getenv("SIGNING_ENABLED", "true").lower() != "false"
     signing_key_id = os.getenv("SIGNING_KEY_ID", "ephemeral-local-ed25519")
+    signature_payload_schema_version = (
+        os.getenv("SIGNATURE_PAYLOAD_SCHEMA_VERSION", "diiac-signature-payload-v1").strip()
+        or "diiac-signature-payload-v1"
+    )
 
     admin_auth_enabled = os.getenv("ADMIN_AUTH_ENABLED", "true").lower() != "false"
     runtime_env = os.getenv("APP_ENV", "production").lower()
+    dev_runtime_envs = {"dev", "development", "local", "test"}
+    is_dev_runtime = runtime_env in dev_runtime_envs
+    allow_ephemeral_signing = is_dev_runtime
+    trust_registry_mode = (
+        os.getenv("TRUST_REGISTRY_MODE", "auto_dev" if is_dev_runtime else "external").strip().lower()
+        or ("auto_dev" if is_dev_runtime else "external")
+    )
+    allow_registry_autoregister = is_dev_runtime and trust_registry_mode != "external"
+    external_trust_registry = (
+        trust_registry_mode == "external"
+        or os.getenv("EXTERNAL_TRUST_REGISTRY", "false").lower() == "true"
+    )
     app_version = os.getenv("APP_VERSION", "v1.3.0-ui")
     admin_api_token = os.getenv("ADMIN_API_TOKEN", "")
     profile_lock_id = (os.getenv("DIIAC_PROFILE_LOCK_ID", "") or "").strip()
@@ -214,6 +230,11 @@ def create_app() -> Flask:
     )
 
     private_key, key_mode = _load_or_create_signing_key()
+    if signing_enabled and key_mode == "ephemeral" and not allow_ephemeral_signing:
+        raise RuntimeError(
+            "SIGNING_PRIVATE_KEY_PEM must be configured for non-development environments; "
+            "ephemeral signing is disabled."
+        )
     public_key = private_key.public_key()
     public_key_b64 = base64.b64encode(
         public_key.public_bytes(encoding=serialization.Encoding.Raw, format=serialization.PublicFormat.Raw)
@@ -235,72 +256,96 @@ def create_app() -> Flask:
     public_keys_file = keys_dir / "public_keys.json"
     local_dev_key_ids = {"ephemeral-local-ed25519", "diiac-local-dev", "local-dev-ed25519"}
     key_registry_file_exists = public_keys_file.exists()
-    if public_keys_file.exists():
+    if key_registry_file_exists:
         try:
             key_registry = json.loads(public_keys_file.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             key_registry = {"keys": []}
     else:
         key_registry = {"keys": []}
-    keys = key_registry.get("keys")
-    if not isinstance(keys, list):
-        keys = []
-    registry_updated = False
-    normalized_keys: list[dict[str, Any]] = []
-    active_key_index: int | None = None
-    for entry in keys:
-        if not isinstance(entry, dict):
-            registry_updated = True
-            continue
-        key_id = entry.get("key_id")
-        if not key_id:
-            registry_updated = True
-            continue
-        if key_id == signing_key_id:
-            if active_key_index is None:
-                normalized_keys.append(dict(entry))
-                active_key_index = len(normalized_keys) - 1
-            else:
-                # Remove duplicate entries for the active signing key id.
-                registry_updated = True
-            continue
-        normalized_keys.append(dict(entry))
 
-    active_key_in_registry_file = active_key_index is not None
-    if active_key_index is None:
+    raw_keys = key_registry.get("keys")
+    if not isinstance(raw_keys, list):
+        raw_keys = []
+
+    registry_structural_issues = False
+    normalized_keys: list[dict[str, Any]] = []
+    seen_key_ids: set[str] = set()
+    for entry in raw_keys:
+        if not isinstance(entry, dict):
+            registry_structural_issues = True
+            continue
+        key_id = str(entry.get("key_id", "")).strip()
+        entry_public_key = str(entry.get("public_key_b64", "")).strip()
+        if not key_id or not entry_public_key:
+            registry_structural_issues = True
+            continue
+        if key_id in seen_key_ids:
+            registry_structural_issues = True
+            continue
+        seen_key_ids.add(key_id)
         normalized_keys.append(
             {
-                "key_id": signing_key_id,
+                "key_id": key_id,
                 "algorithm": "Ed25519",
-                "public_key_b64": public_key_b64,
+                "public_key_b64": entry_public_key,
             }
         )
-        active_key_index = len(normalized_keys) - 1
-        registry_updated = True
 
-    active_entry = normalized_keys[active_key_index]
-    if active_entry.get("algorithm") != "Ed25519":
-        active_entry["algorithm"] = "Ed25519"
-        registry_updated = True
-    if active_entry.get("public_key_b64") != public_key_b64:
-        active_entry["public_key_b64"] = public_key_b64
-        registry_updated = True
+    active_key_in_registry_file = any(entry.get("key_id") == signing_key_id for entry in normalized_keys)
+    registry_updated = False
+    key_registry_update_performed = False
+    if allow_registry_autoregister:
+        if not active_key_in_registry_file:
+            normalized_keys.append(
+                {
+                    "key_id": signing_key_id,
+                    "algorithm": "Ed25519",
+                    "public_key_b64": public_key_b64,
+                }
+            )
+            registry_updated = True
+            active_key_in_registry_file = True
+        for entry in normalized_keys:
+            if entry.get("key_id") != signing_key_id:
+                continue
+            if entry.get("algorithm") != "Ed25519":
+                entry["algorithm"] = "Ed25519"
+                registry_updated = True
+            if entry.get("public_key_b64") != public_key_b64:
+                entry["public_key_b64"] = public_key_b64
+                registry_updated = True
+            break
+        key_registry["keys"] = normalized_keys
+        if (not key_registry_file_exists) or registry_updated or registry_structural_issues:
+            public_keys_file.write_text(json.dumps(key_registry, indent=2), encoding="utf-8")
+            key_registry_update_performed = True
+    else:
+        key_registry["keys"] = normalized_keys
 
-    active_key_registered = True
-    active_key_matches_public = active_entry.get("public_key_b64") == public_key_b64
-    key_registry["keys"] = normalized_keys
-    if (not key_registry_file_exists) or registry_updated:
-        public_keys_file.write_text(json.dumps(key_registry, indent=2), encoding="utf-8")
+    active_entry = next((entry for entry in normalized_keys if entry.get("key_id") == signing_key_id), None)
+    active_key_registered = active_entry is not None
+    active_key_matches_public = bool(active_entry and active_entry.get("public_key_b64") == public_key_b64)
     registered_key_count = len(
         [entry for entry in normalized_keys if isinstance(entry, dict) and entry.get("key_id")]
     )
     local_or_ephemeral_signing = (key_mode != "configured") or (signing_key_id in local_dev_key_ids)
+    if not signing_enabled:
+        trust_source = "signing_disabled"
+    elif local_or_ephemeral_signing:
+        trust_source = "dev_local_signing"
+    elif external_trust_registry:
+        trust_source = "external_trust_registry"
+    else:
+        trust_source = "managed_signing"
+
     production_trust_ready = bool(
         signing_enabled
+        and key_mode == "configured"
         and active_key_registered
         and active_key_matches_public
         and registered_key_count > 0
-        and not local_or_ephemeral_signing
+        and trust_source in {"managed_signing", "external_trust_registry"}
     )
     signing_trust_warnings: list[str] = []
     if signing_enabled and local_or_ephemeral_signing:
@@ -309,14 +354,32 @@ def create_app() -> Flask:
         )
     if signing_enabled and not active_key_registered:
         signing_trust_warnings.append("Active signing key is not present in contracts key registry.")
-    elif signing_enabled and not active_key_in_registry_file:
+    if signing_enabled and active_key_registered and not active_key_matches_public:
         signing_trust_warnings.append(
-            "Active signing key is available at runtime but not persisted in contracts/keys/public_keys.json."
+            "Active signing key entry does not match runtime key material."
         )
-    if signing_enabled and not active_key_matches_public:
+    if signing_enabled and registry_structural_issues:
         signing_trust_warnings.append(
-            "Active signing key entry did not match runtime key material and could not be reconciled."
+            "Public key registry contains invalid/duplicate entries and should be remediated."
         )
+    if signing_enabled and key_registry_update_performed and allow_registry_autoregister:
+        signing_trust_warnings.append(
+            "Signing trust registry was auto-updated in development mode; this path is disabled for non-dev environments."
+        )
+
+    if signing_enabled and not is_dev_runtime:
+        if key_mode != "configured":
+            raise RuntimeError(
+                "Non-development runtime requires SIGNING_PRIVATE_KEY_PEM. Ephemeral signing is blocked."
+            )
+        if not active_key_registered:
+            raise RuntimeError(
+                f"Signing key '{signing_key_id}' is not present in contracts/keys/public_keys.json."
+            )
+        if not active_key_matches_public:
+            raise RuntimeError(
+                f"Signing key '{signing_key_id}' does not match registered public key material."
+            )
 
     profiles = _load_profiles(profiles_dir)
     profiles_by_id = {p["profile_id"]: p for p in profiles}
@@ -328,7 +391,12 @@ def create_app() -> Flask:
             "export_storage": exports_dir.exists() and exports_dir.is_dir() and os.access(exports_dir, os.W_OK),
             "audit_storage": audit_dir.exists() and audit_dir.is_dir() and os.access(audit_dir, os.W_OK),
             "contracts_profiles": profiles_dir.exists() and profiles_dir.is_dir() and len(profiles) > 0,
-            "contracts_keys": public_keys_file.exists() and registered_key_count > 0 and active_key_registered,
+            "contracts_keys": (
+                public_keys_file.exists()
+                and registered_key_count > 0
+                and active_key_registered
+                and active_key_matches_public
+            ),
             "policy_packs_loaded": policy_pack_dir.exists() and policy_pack_dir.is_dir() and len(policy_packs) > 0,
             "signing_trust_ready": (not signing_enabled) or production_trust_ready,
         }
@@ -547,6 +615,99 @@ def create_app() -> Flask:
                 ledger_chain_valid = True
                 return record
         raise RuntimeError("Ledger append failed after retry due to record_id contention.")
+
+    def _build_signature_payload(
+        *,
+        execution_id: str,
+        pack_hash: str,
+        merkle_root: str,
+        manifest_hash: str,
+        signed_at: str,
+    ) -> dict[str, str]:
+        return {
+            "signature_payload_schema_version": signature_payload_schema_version,
+            "signature_scope": "execution_manifest",
+            "execution_id": execution_id,
+            "pack_hash": pack_hash,
+            "merkle_root": merkle_root,
+            "manifest_hash": manifest_hash,
+            "signed_at": signed_at,
+        }
+
+    def _resolve_public_key_for_key_id(key_id: str) -> tuple[Ed25519PublicKey | None, str | None]:
+        if not isinstance(key_id, str) or not key_id.strip():
+            return None, "missing_signing_key_id"
+        key_entry = next(
+            (
+                entry for entry in key_registry.get("keys", [])
+                if isinstance(entry, dict) and entry.get("key_id") == key_id
+            ),
+            None,
+        )
+        if not key_entry:
+            return None, "signing_key_not_registered"
+        public_key_b64 = key_entry.get("public_key_b64")
+        if not isinstance(public_key_b64, str) or not public_key_b64.strip():
+            return None, "invalid_registered_public_key"
+        try:
+            public_key_bytes = base64.b64decode(public_key_b64)
+        except Exception:
+            return None, "invalid_registered_public_key"
+        try:
+            return Ed25519PublicKey.from_public_bytes(public_key_bytes), None
+        except Exception:
+            return None, "invalid_registered_public_key"
+
+    def _canonical_signature_payload_bytes(signature_payload: Any) -> tuple[bytes | None, str | None, str | None]:
+        if not isinstance(signature_payload, dict):
+            return None, "invalid_signature_payload", None
+        schema_version = signature_payload.get("signature_payload_schema_version")
+        if not isinstance(schema_version, str) or not schema_version.strip():
+            return None, "missing_signature_payload_schema_version", None
+        canonical = _canonical_json(signature_payload)
+        return canonical.encode("utf-8"), None, schema_version.strip()
+
+    def _verify_signature_contract(
+        *,
+        signature_payload: Any,
+        signature_b64: str,
+        signing_key_id_value: str,
+    ) -> dict[str, Any]:
+        verification = {
+            "verified": False,
+            "verified_at": _utc_now(),
+            "error": None,
+            "signing_key_id": signing_key_id_value,
+            "payload_schema_version": None,
+            "trust_source": trust_source,
+        }
+        if not signing_enabled:
+            verification["error"] = "signing_disabled"
+            return verification
+        if not isinstance(signature_b64, str) or not signature_b64.strip():
+            verification["error"] = "missing_signature"
+            return verification
+        payload_bytes, payload_error, schema_version = _canonical_signature_payload_bytes(signature_payload)
+        verification["payload_schema_version"] = schema_version
+        if payload_error:
+            verification["error"] = payload_error
+            return verification
+        public_key_for_verify, key_error = _resolve_public_key_for_key_id(signing_key_id_value)
+        if key_error:
+            verification["error"] = key_error
+            return verification
+        try:
+            signature_bytes = base64.b64decode(signature_b64)
+        except Exception:
+            verification["error"] = "invalid_signature_encoding"
+            return verification
+        try:
+            public_key_for_verify.verify(signature_bytes, payload_bytes)
+            verification["verified"] = True
+            return verification
+        except InvalidSignature:
+            verification["error"] = "invalid_signature"
+            return verification
 
     def _deterministic_score(seed: str, label: str) -> float:
         val = int(_sha256_text(f"{seed}:{label}")[:8], 16)
@@ -926,6 +1087,43 @@ def create_app() -> Flask:
             {"vendor": "Option-Gamma Conservative Transition", "focus": "Lowest transition risk with slower benefit realization"},
         ]
 
+    def _extract_explicit_intent_targets(intent_text: str) -> list[str]:
+        cleaned = re.sub(r"\s+", " ", intent_text or "").strip()
+        if not cleaned:
+            return []
+        candidates: list[str] = []
+        sentence_chunks = re.split(r"(?<=[\.;])\s+", cleaned)
+        target_markers = (
+            "%", ">=", "<=", "gbp", "usd", "eur", "$", "£", "€",
+            "month", "months", "week", "weeks", "day", "days",
+            "q1", "q2", "q3", "q4", "sev1", "severe", "incident",
+            "uptime", "availability", "cycle-time", "cycle time",
+            "latency", "response time",
+        )
+        for chunk in sentence_chunks:
+            text = chunk.strip(" -")
+            lower = text.lower()
+            if not text:
+                continue
+            if any(marker in lower for marker in target_markers) and any(ch.isdigit() for ch in lower):
+                candidates.append(text[:220])
+
+        # Capture compact inequality or threshold fragments that may appear inline.
+        for match in re.findall(r"(?:>=|<=|>|<)\s*\d+(?:\.\d+)?\s*%?", cleaned):
+            fragment = str(match).strip()
+            if fragment:
+                candidates.append(fragment)
+
+        deduped: list[str] = []
+        seen: set[str] = set()
+        for item in candidates:
+            key = item.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(item)
+        return deduped[:12]
+
     def _extract_intent_signals(intent_text: str) -> dict[str, Any]:
         t = intent_text.lower()
         signals: dict[str, Any] = {
@@ -933,6 +1131,7 @@ def create_app() -> Flask:
             "security_constraints": [],
             "financial_constraints": [],
             "success_targets": [],
+            "explicit_targets": _extract_explicit_intent_targets(intent_text),
         }
         for token, label in [
             ("gdpr", "GDPR"), ("uk gdpr", "UK GDPR"), ("nis2", "NIS2"), ("dora", "DORA"), ("iso27001", "ISO27001"),
@@ -971,6 +1170,8 @@ def create_app() -> Flask:
                         "board-ready", "audit export"]:
             if marker in t and marker not in signals["success_targets"]:
                 signals["success_targets"].append(marker)
+        if signals["explicit_targets"] and "explicit_targets_present" not in signals["success_targets"]:
+            signals["success_targets"].append("explicit_targets_present")
         return signals
 
     def _build_option_assessment(vendor_rows: list[dict[str, Any]], intent_signals: dict[str, Any]) -> list[dict[str, Any]]:
@@ -1029,6 +1230,7 @@ def create_app() -> Flask:
         vendor_rows: list[dict[str, Any]] | None = None,
         compliance_matrix: dict[str, Any] | None = None,
         governance_modes: list[str] | None = None,
+        intent_signals: dict[str, Any] | None = None,
     ) -> list[dict[str, str]]:
         all_assertions = [a for r in role_bundle for a in r.get("assertions", []) if isinstance(a, str) and a.strip()]
         all_non_negotiables = [a for r in role_bundle for a in r.get("non_negotiables", []) if isinstance(a, str) and a.strip()]
@@ -1060,8 +1262,22 @@ def create_app() -> Flask:
         ]
         risk_register = "\n".join([f"- {line}" for line in risk_lines])
 
-        metric_candidates = sorted(set(all_non_negotiables)) or sorted(set(all_assertions[:3]))
-        metric_lines = metric_candidates or ["Deterministic pack hash + signature verification pass rate remains 100%."]
+        explicit_targets = [
+            target for target in (intent_signals or {}).get("explicit_targets", [])
+            if isinstance(target, str) and target.strip()
+        ]
+        metric_candidates = explicit_targets + sorted(set(all_non_negotiables)) + sorted(set(all_assertions[:3]))
+        deduped_metric_candidates: list[str] = []
+        seen_metric_candidates: set[str] = set()
+        for candidate in metric_candidates:
+            key = candidate.strip().lower()
+            if not key or key in seen_metric_candidates:
+                continue
+            seen_metric_candidates.add(key)
+            deduped_metric_candidates.append(candidate.strip())
+        metric_lines = deduped_metric_candidates or [
+            "Deterministic pack hash + signature verification pass rate remains 100%.",
+        ]
         success_metrics = "\n".join([f"- {line}" for line in metric_lines])
 
         ranking_lines = []
@@ -1071,9 +1287,9 @@ def create_app() -> Flask:
         compliance_note = ""
         if compliance_matrix:
             compliance_note = (
-                " All required controls satisfied."
+                " All required internal control signals were satisfied."
                 if compliance_matrix.get("all_required_satisfied")
-                else " Some required controls are missing and require remediation before approval."
+                else " Some required internal control signals are missing and require remediation before approval."
             )
 
         recommendation_rationale = (
@@ -1314,14 +1530,23 @@ def create_app() -> Flask:
 
         required_sections = profile["required_sections"]
 
-        intent_text_parts: list[str] = []
+        human_intent_text = payload.get("human_intent")
+        if not isinstance(human_intent_text, str):
+            human_intent_text = ""
+        intent_text_parts: list[str] = [human_intent_text.strip()] if human_intent_text.strip() else []
         all_assertions: list[str] = []
+        all_non_negotiables: list[str] = []
+        all_risk_flags: list[str] = []
         for role_item in role_bundle:
             role_assertions = _normalize_string_list(role_item.get("assertions"))
+            role_non_negotiables = _normalize_string_list(role_item.get("non_negotiables"))
+            role_risk_flags = _normalize_string_list(role_item.get("risk_flags"))
             all_assertions.extend(role_assertions)
+            all_non_negotiables.extend(role_non_negotiables)
+            all_risk_flags.extend(role_risk_flags)
             intent_text_parts.extend(role_assertions)
-            intent_text_parts.extend(_normalize_string_list(role_item.get("non_negotiables")))
-            intent_text_parts.extend(_normalize_string_list(role_item.get("risk_flags")))
+            intent_text_parts.extend(role_non_negotiables)
+            intent_text_parts.extend(role_risk_flags)
         intent_text = " | ".join(intent_text_parts)
 
         # When LLM analysis is present, extract options from LLM output;
@@ -1397,11 +1622,30 @@ def create_app() -> Flask:
         evidence_ref_details = [
             _classify_evidence_ref(ref) for ref in sorted(set(evidence_ref_pool))
         ]
+        evidence_objects: list[dict[str, Any]] = []
+        for detail in evidence_ref_details:
+            source_ref = detail["source_ref"]
+            evidence_id = f"evidence-{_sha256_text(source_ref)[:16]}"
+            strength = detail["strength"]
+            category = detail["category"]
+            resolvable = strength in {"strong", "moderate"} and category != "placeholder"
+            evidence_objects.append(
+                {
+                    "evidence_id": evidence_id,
+                    "source_ref": source_ref,
+                    "category": category,
+                    "strength": strength,
+                    "resolvable": resolvable,
+                    "origin": "role_input",
+                    "capture_id": f"evcap-{_sha256_text(f'{context_hash}:{source_ref}')[:16]}",
+                }
+            )
         strong_evidence_refs = [item["source_ref"] for item in evidence_ref_details if item["strength"] == "strong"]
         weak_evidence_refs = [item["source_ref"] for item in evidence_ref_details if item["strength"] == "weak"]
         placeholder_evidence_refs = [item["source_ref"] for item in evidence_ref_details if item["category"] == "placeholder"]
+        unresolved_evidence_refs = [item["source_ref"] for item in evidence_objects if not item["resolvable"]]
         evidence_ids_seed = (
-            [item["source_ref"] for item in evidence_ref_details[:5]]
+            [item["evidence_id"] for item in evidence_objects if item["resolvable"]][:5]
             if evidence_ref_details
             else [f"derived-evidence-{context_hash[:10]}-{i}" for i in range(1, min(len(required_sections), 3) + 1)]
         )
@@ -1410,6 +1654,24 @@ def create_app() -> Flask:
             "Operational baseline and incident data provided in role evidence is assumed accurate and current.",
             "Supplier capability statements and migration constraints captured in assertions are assumed complete.",
         ]
+        guardrails = sorted(set(all_non_negotiables)) or [
+            "privacy-by-design",
+            "deterministic-governance",
+        ]
+        residual_risks = sorted(set(all_risk_flags)) or [
+            "vendor-lockin",
+            "service-disruption-during-migration",
+        ]
+        success_metric_targets: list[str] = []
+        for candidate in (
+            [target for target in intent_signals.get("explicit_targets", []) if isinstance(target, str)]
+            + guardrails
+            + sorted(set(all_assertions[:3]))
+        ):
+            key = candidate.strip().lower()
+            if key and key not in {item.lower() for item in success_metric_targets}:
+                success_metric_targets.append(candidate.strip())
+        disqualifiers: list[str] = []
         risk_treatment = {
             "strategy": "mitigate",
             "actions": [
@@ -1488,6 +1750,14 @@ def create_app() -> Flask:
             quality_gate_failures.append(
                 f"strong evidence refs {len(strong_evidence_refs)} below minimum {evidence_min_strong_refs}"
             )
+        if placeholder_evidence_refs:
+            quality_gate_failures.append(
+                f"placeholder evidence refs present ({len(placeholder_evidence_refs)}); replace with concrete evidence objects"
+            )
+        if unresolved_evidence_refs:
+            quality_gate_failures.append(
+                f"unresolved evidence refs present ({len(unresolved_evidence_refs)}); all claims require concrete resolvable evidence"
+            )
         if evidence_claim_coverage < evidence_min_claim_coverage:
             quality_gate_failures.append(
                 f"evidence coverage {evidence_claim_coverage:.2f} below minimum {evidence_min_claim_coverage:.2f}"
@@ -1544,14 +1814,38 @@ def create_app() -> Flask:
                     fail_count += 1
                     if policy_pack_enforce and control_id not in policy_pack_failures:
                         policy_pack_failures.append(control_id)
+                evidence_backed_signals = {
+                    "traceability_present",
+                    "supporting_evidence_present",
+                    "strong_evidence_present",
+                    "llm_freshness_current",
+                    "profile_controls_satisfied",
+                }
+                if missing_signals:
+                    assurance_level = "asserted"
+                elif any(signal in evidence_backed_signals for signal in required_signals):
+                    assurance_level = "evidenced"
+                else:
+                    assurance_level = "asserted"
                 control_results.append(
                     {
                         "control_id": control_id,
                         "title": control.get("title"),
                         "reference": control.get("reference"),
                         "status": status,
+                        "assessment_status": status,
+                        "assessment_mode": "control_signal_assessment",
+                        "assurance_level": assurance_level,
+                        "compliance_position": "not_legal_determination",
                         "required_signals": required_signals,
                         "missing_signals": missing_signals,
+                        "evidence_basis": [
+                            {
+                                "signal": signal,
+                                "present": bool(policy_signals.get(signal, False)),
+                            }
+                            for signal in required_signals
+                        ],
                     }
                 )
             policy_pack_results.append(
@@ -1561,6 +1855,10 @@ def create_app() -> Flask:
                     "version": pack.get("version"),
                     "pack_hash": pack.get("pack_hash"),
                     "enforced": policy_pack_enforce,
+                    "assessment_mode": "control_signal_assessment",
+                    "compliance_notice": (
+                        "PASS/FAIL indicates internal control-signal assessment only and is not a legal compliance determination."
+                    ),
                     "summary": {
                         "total_controls": len(control_results),
                         "pass_count": len([c for c in control_results if c.get("status") == "PASS"]),
@@ -1579,6 +1877,10 @@ def create_app() -> Flask:
             )
         if placeholder_evidence_refs:
             accuracy_warnings.append("Placeholder evidence references detected; replace with durable references.")
+        if unresolved_evidence_refs:
+            accuracy_warnings.append(
+                "Unresolved evidence references detected; bind each claim to concrete resolvable evidence objects."
+            )
         if rejected_llm_vendors:
             accuracy_warnings.append(
                 "LLM returned generic/placeholder vendor labels that were rejected: "
@@ -1606,6 +1908,8 @@ def create_app() -> Flask:
             evidence_quality_penalty += min(6.0, len(weak_evidence_refs))
         if placeholder_evidence_refs:
             evidence_quality_penalty += 4.0
+        if unresolved_evidence_refs:
+            evidence_quality_penalty += min(8.0, len(unresolved_evidence_refs))
         if llm_freshness == "STALE":
             evidence_quality_penalty += 5.0
         elif llm_freshness == "MISSING_OR_INVALID":
@@ -1620,6 +1924,19 @@ def create_app() -> Flask:
         control_failure_reasons = base_control_failure_reasons + [
             f"policy_pack_control_failed:{control_id}" for control_id in policy_pack_failures
         ]
+        disqualifiers.extend([f"control_failure:{reason}" for reason in control_failure_reasons])
+        disqualifiers.extend([f"quality_gate:{reason}" for reason in quality_gate_failures])
+        if objective_vendor_conflict_reason:
+            disqualifiers.append("objective_vendor_preference_conflict")
+        deduped_disqualifiers: list[str] = []
+        seen_disqualifiers: set[str] = set()
+        for item in disqualifiers:
+            key = item.strip().lower()
+            if not key or key in seen_disqualifiers:
+                continue
+            seen_disqualifiers.add(key)
+            deduped_disqualifiers.append(item.strip())
+        disqualifiers = deduped_disqualifiers
         decision_allowed = len(control_failure_reasons) == 0
         evidence_ready = len(quality_gate_failures) == 0
         confidence_score = round(
@@ -1686,7 +2003,9 @@ def create_app() -> Flask:
                 "strong_refs": strong_evidence_refs,
                 "weak_refs": weak_evidence_refs,
                 "placeholder_refs": placeholder_evidence_refs,
+                "unresolved_refs": unresolved_evidence_refs,
                 "details": evidence_ref_details,
+                "evidence_objects": evidence_objects,
                 "llm_audit_timestamp": llm_audit_timestamp,
                 "llm_audit_timestamp_source": llm_audit_timestamp_source,
                 "llm_provider_reported_timestamp": llm_provider_reported_timestamp,
@@ -1699,6 +2018,10 @@ def create_app() -> Flask:
                     "require_fresh_llm": evidence_require_fresh_llm,
                 },
             },
+            "success_metrics": success_metric_targets,
+            "guardrails": guardrails,
+            "disqualifiers": disqualifiers,
+            "residual_risks": residual_risks,
             "assumptions": assumptions,
             "risk_treatment": risk_treatment,
             "confidence_score": confidence_score,
@@ -1709,6 +2032,9 @@ def create_app() -> Flask:
             "signing_trust": {
                 "signing_key_id": signing_key_id,
                 "key_mode": key_mode,
+                "trust_source": trust_source,
+                "trust_registry_mode": trust_registry_mode,
+                "allow_registry_autoregister": allow_registry_autoregister,
                 "active_key_registered": active_key_registered,
                 "registered_key_count": registered_key_count,
                 "production_trust_ready": production_trust_ready,
@@ -1716,6 +2042,9 @@ def create_app() -> Flask:
             },
             "control_failure_reasons": control_failure_reasons,
             "policy_pack_compliance": policy_pack_results,
+            "policy_assessment_notice": (
+                "Policy pack results are internal control-signal assessments and not independent legal compliance determinations."
+            ),
             "claim_ids": evidence_ids_seed,
         }
 
@@ -1725,7 +2054,7 @@ def create_app() -> Flask:
             deterministic_sections = _build_human_readable_sections(
                 execution_id, profile, schema_id, rp, role_bundle, recommendation,
                 vendor_rows=vendor_rows, compliance_matrix=compliance_matrix,
-                governance_modes=governance_modes,
+                governance_modes=governance_modes, intent_signals=intent_signals,
             )
             # Keep decision-critical sections deterministic to avoid recommendation drift.
             recommendation_locked_titles = {"Executive Summary", "Down-Select Recommendation"}
@@ -1741,7 +2070,7 @@ def create_app() -> Flask:
             draft_sections = _build_human_readable_sections(
                 execution_id, profile, schema_id, rp, role_bundle, recommendation,
                 vendor_rows=vendor_rows, compliance_matrix=compliance_matrix,
-                governance_modes=governance_modes,
+                governance_modes=governance_modes, intent_signals=intent_signals,
             )
         sections = _enforce_sections(required_sections, draft_sections)
         locked_sections = _build_recommendation_locked_sections(role_bundle, recommendation)
@@ -1753,27 +2082,136 @@ def create_app() -> Flask:
             for section in sections
         ]
 
+        success_metrics_section = next(
+            (
+                section for section in sections
+                if str(section.get("title", "")).strip().lower() == "success metrics"
+            ),
+            None,
+        )
+        success_metrics_text = str((success_metrics_section or {}).get("content", "")).strip()
+        explicit_targets = [
+            target for target in intent_signals.get("explicit_targets", [])
+            if isinstance(target, str) and target.strip()
+        ]
+        missing_intent_targets = [
+            target for target in explicit_targets
+            if target.lower() not in success_metrics_text.lower()
+        ]
+        required_report_fields = {
+            "success_metrics_present": bool(recommendation.get("success_metrics")),
+            "guardrails_present": bool(recommendation.get("guardrails")),
+            "assumptions_present": bool(recommendation.get("assumptions")),
+            "disqualifiers_present": isinstance(recommendation.get("disqualifiers"), list),
+            "residual_risks_present": bool(recommendation.get("residual_risks")),
+            "success_metrics_section_present": success_metrics_section is not None and bool(success_metrics_text),
+            "intent_targets_preserved": len(missing_intent_targets) == 0,
+        }
+        report_completeness_failures = [
+            field for field, passed in required_report_fields.items()
+            if not passed
+        ]
+        if report_completeness_failures:
+            failure_message = (
+                "board_report_completeness_failed: " + ", ".join(report_completeness_failures)
+            )
+            if failure_message not in recommendation["quality_gate_failures"]:
+                recommendation["quality_gate_failures"].append(failure_message)
+            if failure_message not in recommendation["accuracy_warnings"]:
+                recommendation["accuracy_warnings"].append(
+                    "Board report completeness validation failed for required decision fields."
+                )
+            if recommendation["decision_status"] == "recommended":
+                recommendation["decision_status"] = "needs_more_evidence"
+                recommendation["selected_vendor"] = None
+                recommendation["major_recommendation"] = (
+                    "Additional evidence is required before a final recommendation can be issued"
+                )
+        if missing_intent_targets:
+            recommendation["accuracy_warnings"].append(
+                "Some explicit intent targets were not preserved verbatim in Success Metrics."
+            )
+        report_completeness = {
+            "checks": required_report_fields,
+            "missing_intent_targets": missing_intent_targets,
+            "status": "PASS" if not report_completeness_failures else "FAIL",
+            "failure_count": len(report_completeness_failures),
+        }
+
+        evidence_by_id = {item["evidence_id"]: item for item in evidence_objects}
+        evidence_by_ref = {item["source_ref"]: item for item in evidence_objects}
+        fallback_evidence_ids = [item["evidence_id"] for item in evidence_objects if item["resolvable"]]
+        if not fallback_evidence_ids:
+            fallback_evidence_ids = [item["evidence_id"] for item in evidence_objects]
+
+        role_to_evidence_ids: dict[str, list[str]] = {}
+        for role_item in role_bundle:
+            role_name = str(role_item.get("role", "unknown"))
+            role_refs = _normalize_string_list(role_item.get("evidence_refs"))
+            role_ids = [
+                evidence_by_ref[ref]["evidence_id"]
+                for ref in role_refs
+                if ref in evidence_by_ref
+            ]
+            if role_ids:
+                role_to_evidence_ids[role_name] = role_ids
+
         evidence_entries: list[dict[str, Any]] = []
+        unresolved_claim_bindings = 0
         for idx, section in enumerate(sections, start=1):
             source_role = role_bundle[(idx - 1) % len(role_bundle)]["role"] if role_bundle else "system"
-            source_ref = f"placeholder-{idx}"
-            if role_bundle:
-                raw_refs = role_bundle[(idx - 1) % len(role_bundle)].get("evidence_refs")
-                candidate_refs = _normalize_string_list(raw_refs)
-                source_ref = candidate_refs[0] if candidate_refs else f"auto-ref-{idx}"
-            source_ref_meta = _classify_evidence_ref(source_ref)
+            candidate_evidence_ids = role_to_evidence_ids.get(source_role, fallback_evidence_ids)
+            candidate_evidence_ids = [e_id for e_id in candidate_evidence_ids if e_id in evidence_by_id][:3]
+            unresolved = len(candidate_evidence_ids) == 0
+            if unresolved:
+                unresolved_claim_bindings += 1
+                candidate_evidence_ids = [f"unresolved-evidence-{idx}"]
+            source_refs = [
+                evidence_by_id[e_id]["source_ref"]
+                for e_id in candidate_evidence_ids
+                if e_id in evidence_by_id
+            ]
+            primary_source_ref = source_refs[0] if source_refs else f"unresolved-claim-source-{idx}"
+            primary_meta = _classify_evidence_ref(primary_source_ref)
+            claim_seed = f"{execution_id}:{section['title']}:{'|'.join(candidate_evidence_ids)}"
+            claim_id = f"claim-{_sha256_text(claim_seed)[:16]}"
             evidence_entries.append(
                 {
-                    "claim_id": f"claim-{idx}",
+                    "claim_id": claim_id,
                     "report_section": section["title"],
                     "source_role": source_role,
-                    "source_ref": source_ref,
-                    "source_ref_strength": source_ref_meta["strength"],
-                    "source_ref_category": source_ref_meta["category"],
+                    "source_ref": primary_source_ref,
+                    "source_refs": source_refs,
+                    "evidence_ids": candidate_evidence_ids,
+                    "source_ref_strength": primary_meta["strength"],
+                    "source_ref_category": primary_meta["category"],
                     "policy_ref": f"{rp['reasoning_level']}/{rp['policy_level']}",
                     "confidence_reason": "Deterministic evidence linkage",
+                    "binding_status": "UNRESOLVED" if unresolved else "BOUND",
                 }
             )
+
+        if unresolved_claim_bindings > 0:
+            unresolved_issue = (
+                f"unresolved claim-to-evidence bindings ({unresolved_claim_bindings})"
+            )
+            if unresolved_issue not in recommendation["quality_gate_failures"]:
+                recommendation["quality_gate_failures"].append(unresolved_issue)
+            if unresolved_issue not in recommendation["accuracy_warnings"]:
+                recommendation["accuracy_warnings"].append(
+                    "One or more report claims are not bound to concrete evidence objects."
+                )
+            if unresolved_issue not in recommendation["disqualifiers"]:
+                recommendation["disqualifiers"].append(unresolved_issue)
+            if recommendation["decision_status"] == "recommended":
+                recommendation["decision_status"] = "needs_more_evidence"
+                recommendation["selected_vendor"] = None
+                recommendation["major_recommendation"] = (
+                    "Additional evidence is required before a final recommendation can be issued"
+                )
+                recommendation["decision_drivers"].append(
+                    "Claim-to-evidence bindings are incomplete; recommendation held pending evidence closure."
+                )
 
         recommendation["claim_ids"] = [e["claim_id"] for e in evidence_entries[:3]]
         recommendation["evidence_ids"] = sorted(set(recommendation["evidence_ids"] + recommendation["claim_ids"]))[:6]
@@ -1783,6 +2221,7 @@ def create_app() -> Flask:
             "schema_id": schema_id,
             "profile_id": profile_id,
             "sections": sections,
+            "report_completeness": report_completeness,
             "major_recommendations": [recommendation],
             "ranked_options": ranked_options,
             "intent_coverage": intent_signals,
@@ -1803,6 +2242,12 @@ def create_app() -> Flask:
                 "quality_gate_failures": recommendation["quality_gate_failures"],
                 "accuracy_warnings": recommendation["accuracy_warnings"],
                 "signing_trust": recommendation["signing_trust"],
+                "success_metrics": recommendation.get("success_metrics", []),
+                "guardrails": recommendation.get("guardrails", []),
+                "disqualifiers": recommendation.get("disqualifiers", []),
+                "residual_risks": recommendation.get("residual_risks", []),
+                "assumptions": recommendation.get("assumptions", []),
+                "policy_assessment_notice": recommendation.get("policy_assessment_notice"),
                 "policy_pack_summary": [
                     {
                         "pack_id": item.get("pack_id"),
@@ -1810,6 +2255,7 @@ def create_app() -> Flask:
                     }
                     for item in policy_pack_results
                 ],
+                "report_completeness": report_completeness,
                 "constraints_mode_controls_source": (
                     "profile_required_controls"
                     if constraints_mode_auto_controls
@@ -1837,10 +2283,15 @@ def create_app() -> Flask:
         }
         evidence_trace_map = {
             "execution_id": execution_id,
+            "evidence_objects": evidence_objects,
             "entries": evidence_entries,
             "recommendation_claim_links": [
                 {"recommendation": recommendation["major_recommendation"], "claim_ids": recommendation["claim_ids"]}
             ],
+            "binding_summary": {
+                "total_claims": len(evidence_entries),
+                "unresolved_claim_bindings": unresolved_claim_bindings,
+            },
         }
         schema_contract = {
             "schema_id": schema_id,
@@ -1883,12 +2334,14 @@ def create_app() -> Flask:
                 "snapshot": deterministic_input_snapshot,
             },
             "evidence_trace_map.json": evidence_trace_map,
+            "evidence_objects.json": evidence_objects,
             "role_input_bundle.json": {"execution_context_id": context_id, "roles": role_bundle},
             "schema_contract.json": schema_contract,
             "vendor_scoring_matrix.json": vendor_scoring_matrix,
             "business_profile_snapshot.json": profile_snapshot,
             "profile_compliance_matrix.json": compliance_matrix,
             "policy_pack_compliance.json": policy_pack_results,
+            "report_completeness.json": report_completeness,
             "profile_override_log.json": execution_profile_overrides,
             "down_select_recommendation.json": recommendation,
             "trace_map.json": evidence_trace_map,
@@ -1940,22 +2393,46 @@ def create_app() -> Flask:
         manifest_hash = _sha256_text(_canonical_json(manifest))
         manifest["manifest_hash"] = manifest_hash
 
-        signing_payload = {
-            "execution_id": execution_id,
-            "pack_hash": pack_hash,
-            "merkle_root": merkle["root"],
-            "manifest_hash": manifest_hash,
-            "signed_at": _utc_now(),
-        }
+        signed_at = _utc_now()
+        signing_payload = _build_signature_payload(
+            execution_id=execution_id,
+            pack_hash=pack_hash,
+            merkle_root=merkle["root"],
+            manifest_hash=manifest_hash,
+            signed_at=signed_at,
+        )
         signing_payload_json = _canonical_json(signing_payload)
         sig_b64 = ""
         if signing_enabled:
             sig_b64 = base64.b64encode(private_key.sign(signing_payload_json.encode("utf-8"))).decode("utf-8")
+        signature_verification = _verify_signature_contract(
+            signature_payload=signing_payload,
+            signature_b64=sig_b64,
+            signing_key_id_value=signing_key_id,
+        )
+        if signing_enabled and not signature_verification.get("verified", False):
+            _log(
+                "Signing verification failed immediately after signing; governed compile aborted.",
+                level="ERROR",
+                execution_id=execution_id,
+            )
+            return _runtime_error(
+                error_code="SIGNATURE_VERIFICATION_FAILED",
+                message=(
+                    "Signature verification failed immediately after signing. "
+                    "Compilation aborted to preserve trust guarantees."
+                ),
+                dependency="signing_trust",
+                details=signature_verification,
+            )
+        trusted_public_key_b64 = active_entry.get("public_key_b64") if isinstance(active_entry, dict) else None
 
         artifacts_payloads["governance_manifest.json"] = manifest
         artifacts_payloads["signed_export.sigmeta.json"] = {
             "signature_alg": "Ed25519",
             "signing_key_id": signing_key_id,
+            "signature_payload_schema_version": signature_payload_schema_version,
+            "signature_scope": "execution_manifest",
             "signed_at": signing_payload["signed_at"],
             "execution_id": execution_id,
             "pack_hash": pack_hash,
@@ -1963,8 +2440,40 @@ def create_app() -> Flask:
             "manifest_hash": manifest_hash,
             "signature": sig_b64,
             "signature_payload": signing_payload,
+            "trust_source": trust_source,
+            "trust_registry_mode": trust_registry_mode,
+            "public_key_b64": trusted_public_key_b64,
+            "verification": signature_verification,
         }
         artifacts_payloads["signed_export.sig"] = sig_b64
+        artifacts_payloads["verification_manifest.json"] = {
+            "verification_manifest_version": "diiac-verification-manifest-v1",
+            "execution_id": execution_id,
+            "pack_hash": pack_hash,
+            "manifest_hash": manifest_hash,
+            "merkle_root": merkle["root"],
+            "signature_alg": "Ed25519",
+            "signature": sig_b64,
+            "signature_payload_schema_version": signature_payload_schema_version,
+            "signature_payload": signing_payload,
+            "signing_key_id": signing_key_id,
+            "trust_source": trust_source,
+            "trust_registry_mode": trust_registry_mode,
+            "public_key_b64": trusted_public_key_b64,
+            "verification": signature_verification,
+            "offline_verification": {
+                "script": "scripts/verify_decision_pack.js",
+                "notes": "Use exported signed_export.sigmeta.json + verification_manifest.json for offline authenticity checks.",
+            },
+        }
+        artifacts_payloads["verification_instructions.md"] = (
+            "# Decision Pack Offline Verification\n\n"
+            "1. Open `governance_manifest.json` and `signed_export.sigmeta.json`.\n"
+            "2. Verify artifact hashes and Merkle root from the manifest.\n"
+            "3. Verify `signed_export.sig` against canonical `signature_payload` using Ed25519.\n"
+            "4. Validate `pack_hash`, `manifest_hash`, and `merkle_root` alignment.\n"
+            "5. Confirm verification status is PASS before relying on this pack.\n"
+        )
         artifacts_payloads["replay_certificate.json"] = {
             "execution_id": execution_id,
             "strict_deterministic_mode": strict_deterministic_mode,
@@ -1986,9 +2495,11 @@ def create_app() -> Flask:
         for name, content in artifacts_payloads.items():
             fpath = exec_dir / name
             if isinstance(content, str):
-                fpath.write_text(content, encoding="utf-8")
+                # Write bytes directly to avoid platform newline translation
+                # that can break deterministic hash verification for text artifacts.
+                fpath.write_bytes(content.encode("utf-8"))
             else:
-                fpath.write_text(json.dumps(content, indent=2), encoding="utf-8")
+                fpath.write_bytes(json.dumps(content, indent=2).encode("utf-8"))
 
         record = _append_ledger(
             "GOVERNED_MULTI_ROLE_COMPILE",
@@ -2012,6 +2523,9 @@ def create_app() -> Flask:
             "ledger_record_hash": record["record_hash"],
             "signature": sig_b64,
             "signing_key_id": signing_key_id,
+            "signature_payload_schema_version": signature_payload_schema_version,
+            "signature_verification": signature_verification,
+            "trust_source": trust_source,
             "profile_id": profile_id,
             "schema_id": schema_id,
             "rp_levels": rp,
@@ -2050,6 +2564,9 @@ def create_app() -> Flask:
             "execution_state": {
                 "signature_present": bool(sig_b64),
                 "signing_enabled": signing_enabled,
+                "signature_payload_schema_version": signature_payload_schema_version,
+                "signature_verified": bool(signature_verification.get("verified")),
+                "trust_source": trust_source,
             },
         }, 201
 
@@ -2089,6 +2606,11 @@ def create_app() -> Flask:
                 "signing_enabled": signing_enabled,
                 "signing_key_id": signing_key_id,
                 "key_mode": key_mode,
+                "trust_source": trust_source,
+                "trust_registry_mode": trust_registry_mode,
+                "allow_registry_autoregister": allow_registry_autoregister,
+                "key_registry_update_performed": key_registry_update_performed,
+                "signature_payload_schema_version": signature_payload_schema_version,
                 "production_trust_ready": production_trust_ready,
                 "signing_trust_warnings": signing_trust_warnings,
                 "ledger_record_count": len(ledger_logs),
@@ -2114,10 +2636,50 @@ def create_app() -> Flask:
                     "require_fresh_llm": evidence_require_fresh_llm,
                     "llm_audit_min_timestamp": llm_audit_min_timestamp.isoformat(),
                 },
+                "signing_trust": {
+                    "signing_enabled": signing_enabled,
+                    "signing_key_id": signing_key_id,
+                    "key_mode": key_mode,
+                    "trust_source": trust_source,
+                    "trust_registry_mode": trust_registry_mode,
+                    "allow_registry_autoregister": allow_registry_autoregister,
+                    "signature_payload_schema_version": signature_payload_schema_version,
+                    "production_trust_ready": production_trust_ready,
+                },
                 "admin_auth_enabled": admin_auth_enabled,
                 "runtime_env": runtime_env,
             }
         )
+
+    @app.get("/admin/config/contract")
+    def admin_config_contract() -> Any:
+        profile_ids = sorted(
+            [p.get("profile_id") for p in profiles if isinstance(p, dict) and isinstance(p.get("profile_id"), str)]
+        )
+        policy_pack_ids = sorted(
+            [p.get("pack_id") for p in policy_packs if isinstance(p, dict) and isinstance(p.get("pack_id"), str)]
+        )
+        approved_schema_list = sorted(approved_schemas)
+        contract_payload = {
+            "profiles": {
+                "count": len(profile_ids),
+                "ids": profile_ids,
+                "hash": _sha256_text(_canonical_json(profile_ids)),
+            },
+            "policy_packs": {
+                "count": len(policy_pack_ids),
+                "ids": policy_pack_ids,
+                "hash": _sha256_text(_canonical_json(policy_pack_ids)),
+            },
+            "approved_schemas": {
+                "count": len(approved_schema_list),
+                "ids": approved_schema_list,
+                "hash": _sha256_text(_canonical_json(approved_schema_list)),
+            },
+        }
+        contract_payload["contract_hash"] = _sha256_text(_canonical_json(contract_payload))
+        contract_payload["generated_at"] = _utc_now()
+        return jsonify(contract_payload)
 
     @app.post("/api/human-input/role")
     def role_input() -> Any:
@@ -2311,6 +2873,9 @@ def create_app() -> Flask:
             "ledger_chain_valid": ledger_chain_valid,
             "key_registry_ok": signing_enabled and public_keys_file.exists() and registered_key_count > 0 and active_key_registered,
             "production_trust_ready": production_trust_ready,
+            "trust_source": trust_source,
+            "trust_registry_mode": trust_registry_mode,
+            "signature_payload_schema_version": signature_payload_schema_version,
             "signing_trust_warnings": signing_trust_warnings,
         }
         db_path_str = str(db_path)
@@ -2426,6 +2991,9 @@ def create_app() -> Flask:
                 "merkle_root": execution["merkle_root"],
                 "ledger_record_hash": execution["ledger_record_hash"],
                 "signature_present": bool(execution.get("signature")),
+                "signature_payload_schema_version": execution.get("signature_payload_schema_version"),
+                "signing_key_id": execution.get("signing_key_id"),
+                "trust_source": execution.get("trust_source"),
                 "status": "VERIFIABLE" if ledger_match else "NOT_VERIFIABLE",
                 "ledger_match": ledger_match,
             }
@@ -2457,7 +3025,7 @@ def create_app() -> Flask:
                 artifacts_dir / execution["execution_id"]
                 / "signed_export.sigmeta.json"
             )
-            signed_at = json.loads(sigmeta_file.read_text())["signed_at"]
+            sigmeta = json.loads(sigmeta_file.read_text())
         except (OSError, json.JSONDecodeError, KeyError) as exc:
             _log(f"Signature metadata unavailable: {exc}", level="ERROR", execution_id=execution["execution_id"])
             response, code = _runtime_error(
@@ -2467,39 +3035,99 @@ def create_app() -> Flask:
             )
             return jsonify(response), code
 
-        sigmeta = {
-            "execution_id": execution["execution_id"],
-            "pack_hash": execution["pack_hash"],
-            "merkle_root": execution["merkle_root"],
-            "manifest_hash": execution["manifest_hash"],
-            "signed_at": signed_at,
-        }
-        signature_payload = _canonical_json(sigmeta)
-        signature_valid = False
-        try:
-            signature = base64.b64decode(execution["signature"])
-        except Exception as exc:
-            _log(f"Signature base64 decode error: {exc}",
-                 level="ERROR", execution_id=execution["execution_id"])
-            signature = b""
-
-        if signature:
+        signature_payload = sigmeta.get("signature_payload")
+        signature_b64 = sigmeta.get("signature")
+        if not isinstance(signature_b64, str) or not signature_b64.strip():
+            sig_file = artifacts_dir / execution["execution_id"] / "signed_export.sig"
             try:
-                public_key.verify(
-                    signature, signature_payload.encode("utf-8"),
-                )
-                signature_valid = True
-            except InvalidSignature:
-                signature_valid = False
+                signature_b64 = sig_file.read_text(encoding="utf-8").strip()
+            except OSError:
+                signature_b64 = ""
+        signing_key_id_value = sigmeta.get("signing_key_id", execution.get("signing_key_id", signing_key_id))
+        signature_check = _verify_signature_contract(
+            signature_payload=signature_payload,
+            signature_b64=signature_b64,
+            signing_key_id_value=str(signing_key_id_value),
+        )
+
+        payload_alignment = {
+            "execution_id": sigmeta.get("execution_id") == execution["execution_id"],
+            "pack_hash": sigmeta.get("pack_hash") == execution["pack_hash"],
+            "merkle_root": sigmeta.get("merkle_root") == execution["merkle_root"],
+            "manifest_hash": sigmeta.get("manifest_hash") == execution["manifest_hash"],
+        }
+        schema_version = sigmeta.get("signature_payload_schema_version")
+        schema_version_valid = isinstance(schema_version, str) and bool(schema_version.strip())
 
         hash_valid = payload.get("pack_hash") == execution["pack_hash"]
         manifest_consistent = payload.get("manifest_hash", execution["manifest_hash"]) == execution["manifest_hash"]
+        overall_valid = bool(
+            signature_check.get("verified")
+            and hash_valid
+            and manifest_consistent
+            and all(payload_alignment.values())
+            and schema_version_valid
+        )
         return jsonify(
             {
-                "signature_valid": signature_valid,
+                "signature_valid": bool(signature_check.get("verified")),
+                "signature_error": signature_check.get("error"),
+                "signature_payload_schema_version": schema_version,
+                "signing_key_id": signing_key_id_value,
+                "payload_alignment": payload_alignment,
                 "hash_valid": hash_valid,
                 "manifest_consistent": manifest_consistent,
-                "overall_valid": bool(signature_valid and hash_valid and manifest_consistent),
+                "overall_valid": overall_valid,
+            }
+        )
+
+    @app.post("/verify/export")
+    def verify_export_bundle() -> Any:
+        payload = request.get_json(silent=True) or {}
+        err = _validate_string_field(payload, "execution_id", CONTEXT_ID_MAX)
+        if err:
+            response, code = err
+            return jsonify(response), code
+        execution_id = payload["execution_id"]
+        execution = executions.get(execution_id)
+        if not execution:
+            return jsonify({"error": "execution_not_found", "execution_id": execution_id}), 404
+
+        sigmeta_file = exports_dir / f"decision-pack_{execution_id}.sigmeta.json"
+        sig_file = exports_dir / f"decision-pack_{execution_id}.sig"
+        zip_file = exports_dir / f"decision-pack_{execution_id}.zip"
+        try:
+            sigmeta = json.loads(sigmeta_file.read_text(encoding="utf-8"))
+            sig_b64 = sig_file.read_text(encoding="utf-8").strip()
+            zip_sha256 = _sha256_bytes(zip_file.read_bytes())
+        except (OSError, json.JSONDecodeError) as exc:
+            response, code = _runtime_error(
+                error_code="EXPORT_VERIFICATION_ARTIFACTS_UNAVAILABLE",
+                message="Signed export bundle artifacts are unavailable for verification.",
+                dependency="export_storage",
+                details={"error": str(exc)},
+            )
+            return jsonify(response), code
+
+        signature_check = _verify_signature_contract(
+            signature_payload=sigmeta.get("signature_payload"),
+            signature_b64=sig_b64,
+            signing_key_id_value=str(sigmeta.get("signing_key_id", signing_key_id)),
+        )
+        expected_zip_sha = (
+            sigmeta.get("export_bundle", {})
+            if isinstance(sigmeta.get("export_bundle"), dict)
+            else {}
+        ).get("zip_sha256")
+        zip_hash_valid = isinstance(expected_zip_sha, str) and expected_zip_sha == zip_sha256
+        return jsonify(
+            {
+                "execution_id": execution_id,
+                "signature_valid": bool(signature_check.get("verified")),
+                "signature_error": signature_check.get("error"),
+                "zip_hash_valid": zip_hash_valid,
+                "zip_sha256": zip_sha256,
+                "overall_valid": bool(signature_check.get("verified") and zip_hash_valid),
             }
         )
 
@@ -2669,20 +3297,39 @@ def create_app() -> Flask:
 
         zip_bytes = zip_path.read_bytes()
         zip_sha256 = _sha256_bytes(zip_bytes)
-        signature = private_key.sign(zip_bytes)
-        sig_b64 = base64.b64encode(signature).decode("utf-8")
+        artifact_sigmeta_path = pack_dir / "signed_export.sigmeta.json"
+        artifact_sig_path = pack_dir / "signed_export.sig"
+        if not artifact_sigmeta_path.exists():
+            raise OSError("Missing signed_export.sigmeta.json in execution artifacts.")
+        artifact_sigmeta = json.loads(artifact_sigmeta_path.read_text(encoding="utf-8"))
+        sig_b64 = str(artifact_sigmeta.get("signature", "")).strip()
+        if not sig_b64 and artifact_sig_path.exists():
+            sig_b64 = artifact_sig_path.read_text(encoding="utf-8").strip()
+        signing_key_for_verify = str(artifact_sigmeta.get("signing_key_id", signing_key_id))
+        signature_verification = _verify_signature_contract(
+            signature_payload=artifact_sigmeta.get("signature_payload"),
+            signature_b64=sig_b64,
+            signing_key_id_value=signing_key_for_verify,
+        )
+        if signing_enabled and not signature_verification.get("verified", False):
+            raise RuntimeError(
+                "Signed export verification failed before export publication: "
+                f"{signature_verification.get('error')}"
+            )
+
         sig_path.write_text(sig_b64, encoding="utf-8")
 
-        sigmeta = {
-            "signature_alg": "Ed25519",
-            "signing_key_id": signing_key_id,
-            "signed_at": _utc_now(),
+        sigmeta = dict(artifact_sigmeta)
+        sigmeta["signature"] = sig_b64
+        sigmeta["signature_payload_schema_version"] = (
+            sigmeta.get("signature_payload_schema_version") or signature_payload_schema_version
+        )
+        sigmeta["export_bundle"] = {
             "zip_sha256": zip_sha256,
-            "execution_id": execution_id,
-            "pack_hash": execution["pack_hash"],
-            "merkle_root": execution["merkle_root"],
-            "manifest_hash": execution["manifest_hash"],
+            "zip_file": zip_path.name,
+            "generated_at": _utc_now(),
         }
+        sigmeta["export_verification"] = signature_verification
         sigmeta_path.write_text(json.dumps(sigmeta, indent=2), encoding="utf-8")
         return zip_path, sig_path, sigmeta_path, sigmeta
 
@@ -2694,6 +3341,15 @@ def create_app() -> Flask:
 
         try:
             zip_path, _sig_path, _sigmeta_path, _sigmeta = _generate_signed_export_artifacts(execution_id, execution)
+        except RuntimeError as exc:
+            _log(f"Export signature verification failure: {exc}", level="ERROR", execution_id=execution_id)
+            response, code = _runtime_error(
+                error_code="SIGNED_EXPORT_VERIFICATION_FAILED",
+                message="Signed export verification failed before export release.",
+                dependency="signing_trust",
+                details={"error": str(exc)},
+            )
+            return jsonify(response), code
         except OSError as exc:
             _log(f"Export storage failure: {exc}", level="ERROR", execution_id=execution_id)
             response, code = _runtime_error(
@@ -2703,6 +3359,11 @@ def create_app() -> Flask:
             )
             return jsonify(response), code
 
+        _log(
+            "Decision-pack export generated with signature verification status "
+            f"{_sigmeta.get('export_verification', {}).get('verified')}",
+            execution_id=execution_id,
+        )
         return send_file(zip_path, as_attachment=True, mimetype="application/zip")
 
     @app.get("/decision-pack/<execution_id>/export-signed")
@@ -2713,6 +3374,15 @@ def create_app() -> Flask:
 
         try:
             zip_path, sig_path, sigmeta_path, sigmeta = _generate_signed_export_artifacts(execution_id, execution)
+        except RuntimeError as exc:
+            _log(f"Export signature verification failure: {exc}", level="ERROR", execution_id=execution_id)
+            response, code = _runtime_error(
+                error_code="SIGNED_EXPORT_VERIFICATION_FAILED",
+                message="Signed export verification failed before export release.",
+                dependency="signing_trust",
+                details={"error": str(exc)},
+            )
+            return jsonify(response), code
         except OSError as exc:
             _log(f"Export storage failure: {exc}", level="ERROR", execution_id=execution_id)
             response, code = _runtime_error(
@@ -2722,6 +3392,11 @@ def create_app() -> Flask:
             )
             return jsonify(response), code
 
+        _log(
+            "Signed export metadata generated with signature verification status "
+            f"{sigmeta.get('export_verification', {}).get('verified')}",
+            execution_id=execution_id,
+        )
         return jsonify({
             "zip_path": str(zip_path),
             "sig_path": str(sig_path),

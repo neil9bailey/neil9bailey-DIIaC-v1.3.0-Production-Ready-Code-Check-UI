@@ -301,10 +301,12 @@ At app startup (`create_app()`):
 1. Loads environment controls for deterministic mode, signing, evidence thresholds, and admin auth.
 2. Initializes key pair:
    - Uses `SIGNING_PRIVATE_KEY_PEM` if configured.
-   - Otherwise generates ephemeral Ed25519 key.
+   - Otherwise generates ephemeral Ed25519 key (development runtimes only).
 3. Initializes filesystem paths under current working directory.
 4. Initializes SQLite store (`StateStore`) at `DIIAC_STATE_DB` or `state/diiac_state.db`.
-5. Loads or updates `contracts/keys/public_keys.json`.
+5. Loads `contracts/keys/public_keys.json` and validates active signing key trust mapping.
+   - Auto-update of key registry is development-only (`TRUST_REGISTRY_MODE=auto_dev`).
+   - Non-development runtimes fail startup if active key is missing or mismatched.
 6. Loads business profiles and policy packs from contracts.
 7. Restores persisted logs, ledger, executions, role inputs, and audit export index.
 8. Validates ledger chain continuity at restore.
@@ -328,12 +330,13 @@ Pipeline stages:
 8. Evaluate evidence quality gates:
    - minimum strong refs
    - claim coverage
+   - unresolved/placeholder evidence bindings
    - LLM freshness gate
-9. Evaluate policy pack controls using required signal model.
+9. Evaluate policy pack controls using internal control-signal assessment model (not legal compliance determination).
 10. Compute confidence score and recommendation state.
-11. Generate board report and trace artifacts.
+11. Generate board report and trace artifacts with completeness checks.
 12. Build artifact hash set, Merkle tree, pack hash, governance manifest.
-13. Sign signature payload and generate signature metadata.
+13. Sign canonical signature payload (schema-versioned) and verify immediately.
 14. Write all artifacts under `artifacts/<execution_id>/`.
 15. Append ledger record and persist execution.
 
@@ -350,6 +353,8 @@ Generated artifact files include:
 - `business_profile_snapshot.json`
 - `profile_compliance_matrix.json`
 - `policy_pack_compliance.json`
+- `report_completeness.json`
+- `evidence_objects.json`
 - `profile_override_log.json`
 - `down_select_recommendation.json`
 - `trace_map.json`
@@ -357,6 +362,8 @@ Generated artifact files include:
 - `governance_manifest.json`
 - `signed_export.sigmeta.json`
 - `signed_export.sig`
+- `verification_manifest.json`
+- `verification_instructions.md`
 - `replay_certificate.json`
 - `llm_analysis_raw.json` (present when LLM analysis is provided)
 

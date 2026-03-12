@@ -22,6 +22,7 @@
 
 - Production private key material is injected from Key Vault.
 - Public keys are maintained in `contracts/keys/public_keys.json`.
+- Non-development runtimes do not auto-mutate the trust registry; active signing key must already be registered.
 - Ephemeral keys are local/dev only and not acceptable for production trust readiness.
 
 ## Verification Expectations
@@ -29,6 +30,6 @@
 A verification pass requires:
 
 - Hashes match recomputed values.
-- Signature verifies with expected key ID.
+- Signature verifies against canonical `signature_payload` with expected key ID and schema version.
 - Ledger chain integrity is intact.
 - Merkle proof/root consistency holds.

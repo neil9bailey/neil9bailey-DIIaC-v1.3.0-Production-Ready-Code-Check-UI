@@ -4,7 +4,7 @@ Note: filename retains `v1.2.0` for continuity; this document now summarizes the
 
 ## Release Summary
 
-`v1.3.0-ui` establishes the Azure production-ready UI stack baseline with:
+`v1.3.0-ui` establishes the Azure production deployment baseline with:
 
 - Dedicated ACA deployment topology
 - Entra production auth alignment

@@ -4,9 +4,16 @@ import json
 import shutil
 from pathlib import Path
 
+import pytest
 from app import create_app
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+TEST_SIGNING_PRIVATE_KEY_PEM = (
+    "-----BEGIN PRIVATE KEY-----\n"
+    "MC4CAQAwBQYDK2VwBCIEIBdMTAGU2mmT3F30y1oCkr4csd7XaiSU95TnmT87RDUH\n"
+    "-----END PRIVATE KEY-----\n"
+)
 
 
 def client(strict: bool = False, app_env: str = 'development', admin_api_token: str = 'test-admin-token'):
@@ -19,6 +26,13 @@ def client(strict: bool = False, app_env: str = 'development', admin_api_token: 
     os.environ['ADMIN_API_TOKEN'] = admin_api_token
     os.environ['ADMIN_AUTH_ENABLED'] = 'true'
     os.environ['DIIAC_STATE_DB'] = ':memory:'
+    if app_env.lower() in {'prod', 'production', 'stage', 'staging', 'uat'}:
+        os.environ['SIGNING_ENABLED'] = 'false'
+        os.environ.pop('SIGNING_PRIVATE_KEY_PEM', None)
+    else:
+        os.environ['SIGNING_ENABLED'] = 'true'
+        os.environ['SIGNING_KEY_ID'] = 'ephemeral-local-ed25519'
+        os.environ['SIGNING_PRIVATE_KEY_PEM'] = TEST_SIGNING_PRIVATE_KEY_PEM
 
     app = create_app()
     app.testing = True
@@ -49,7 +63,8 @@ def governed_compile(c, ctx):
 
 def test_core_capabilities_matrix_endpoints_operational():
     c = client(strict=True)
-    assert c.get('/api/business-profiles').get_json()['profiles_count'] == 5
+    expected_profile_count = len(list((Path(__file__).resolve().parents[1] / "contracts" / "business-profiles").glob("*_profile_v1.json")))
+    assert c.get('/api/business-profiles').get_json()['profiles_count'] == expected_profile_count
     ctx = 'ctx-cap-matrix'
     assert submit_role(c, ctx, 'cto').status_code == 201
     compile_res = governed_compile(c, ctx)
@@ -387,6 +402,20 @@ def test_health_and_admin_health_include_readiness_checks():
     assert checks['contracts_keys'] is True
 
 
+def test_admin_config_contract_exposes_dynamic_contract_hashes():
+    c = client(strict=True)
+    response = c.get('/admin/config/contract')
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload['profiles']['count'] == len(
+        list((Path(__file__).resolve().parents[1] / "contracts" / "business-profiles").glob("*_profile_v1.json"))
+    )
+    assert payload['policy_packs']['count'] == len(
+        list((Path(__file__).resolve().parents[1] / "contracts" / "policy-packs").glob("*_v1.json"))
+    )
+    assert isinstance(payload['contract_hash'], str) and len(payload['contract_hash']) == 64
+
+
 def test_governed_compile_runtime_dependency_failure_taxonomy(monkeypatch):
     c = client(strict=True)
 
@@ -395,7 +424,7 @@ def test_governed_compile_runtime_dependency_failure_taxonomy(monkeypatch):
     def raise_os_error(*_args, **_kwargs):
         raise OSError('disk unavailable')
 
-    monkeypatch.setattr(app_module.Path, 'write_text', raise_os_error)
+    monkeypatch.setattr(app_module.Path, 'write_bytes', raise_os_error)
 
     payload = {
         'execution_context_id': 'ctx-runtime-failure',
@@ -620,3 +649,59 @@ def test_structured_logs_include_stable_event_ids_and_metrics_thresholds():
     assert 'threshold_recommendations' in metrics
     assert 'signed_recent_executions_min' in metrics['threshold_recommendations']
     assert isinstance(metrics['alerts'], list)
+
+
+def test_non_dev_runtime_blocks_ephemeral_signing(monkeypatch, tmp_path):
+    source_contracts = Path(__file__).resolve().parents[1] / "contracts"
+    target_contracts = tmp_path / "contracts"
+    shutil.copytree(source_contracts, target_contracts)
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ADMIN_AUTH_ENABLED", "false")
+    monkeypatch.setenv("DIIAC_STATE_DB", ":memory:")
+    monkeypatch.setenv("SIGNING_ENABLED", "true")
+    monkeypatch.delenv("SIGNING_PRIVATE_KEY_PEM", raising=False)
+
+    with pytest.raises(RuntimeError, match="SIGNING_PRIVATE_KEY_PEM"):
+        create_app()
+
+
+def test_non_dev_runtime_requires_registered_active_signing_key(monkeypatch, tmp_path):
+    source_contracts = Path(__file__).resolve().parents[1] / "contracts"
+    target_contracts = tmp_path / "contracts"
+    shutil.copytree(source_contracts, target_contracts)
+
+    active_private = Ed25519PrivateKey.generate()
+    active_private_pem = active_private.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ADMIN_AUTH_ENABLED", "false")
+    monkeypatch.setenv("DIIAC_STATE_DB", ":memory:")
+    monkeypatch.setenv("SIGNING_ENABLED", "true")
+    monkeypatch.setenv("SIGNING_KEY_ID", "missing-prod-key")
+    monkeypatch.setenv("SIGNING_PRIVATE_KEY_PEM", active_private_pem)
+
+    with pytest.raises(RuntimeError, match="not present in contracts/keys/public_keys.json"):
+        create_app()
+
+
+def test_signed_export_includes_verification_metadata_and_schema_version():
+    c = client(strict=True, app_env='development')
+    ctx = 'ctx-signed-export-metadata'
+    submit_role(c, ctx, 'cto')
+    execution_id = governed_compile(c, ctx).get_json()['execution_id']
+
+    export_meta = c.get(f'/decision-pack/{execution_id}/export-signed')
+    assert export_meta.status_code == 200
+    payload = export_meta.get_json()
+    sigmeta = payload['sigmeta']
+    assert sigmeta['signature_payload_schema_version']
+    assert sigmeta['signature_scope'] == 'execution_manifest'
+    assert sigmeta['export_verification']['verified'] is True
+    assert sigmeta['export_bundle']['zip_sha256']

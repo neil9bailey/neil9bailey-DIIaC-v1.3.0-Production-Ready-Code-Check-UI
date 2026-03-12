@@ -4,6 +4,11 @@
       "key_id": "diiac-vendorlogic-prod",
       "algorithm": "Ed25519",
       "public_key_b64": "Nf1tHex5Z3i+XE3hjeCp0VyKq/qmFNc8hfkkgI5up/c="
+    },
+    {
+      "key_id": "ephemeral-local-ed25519",
+      "algorithm": "Ed25519",
+      "public_key_b64": "CBsUYE9HdAsDo8MKSWqMa9PbkCy9eZ0FtpWl2tSUQ6Q="
     }
   ]
 }

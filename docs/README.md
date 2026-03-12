@@ -42,7 +42,7 @@ This index is the source of truth for the current UI build and Azure production 
 ## Operations
 
 - [Admin Console User Guide](operations/ADMIN_CONSOLE_USER_GUIDE.md)
-- [UI Workflow Guide](operations/DIIAC_UI_WORKFLOW_GUIDE.md)
+- [UI Report Compilation Guide (Field Map)](operations/DIIAC_UI_WORKFLOW_GUIDE.md)
 
 ## Release
 
@@ -54,6 +54,11 @@ This index is the source of truth for the current UI build and Azure production 
 - [Baseline Status & Future Enhancements](release/BASELINE_STATUS_AND_FUTURE_ENHANCEMENTS.md)
 - [Product Roadmap](release/PRODUCT_ROADMAP_V1_3_0.md)
 - [Customer Value Overview](release/DIIAC_CUSTOMER_VALUE_OVERVIEW_2026-03-10.md)
+
+## Release Reviews
+
+- [Production Readiness Closure Note (2026-03-12)](release/reviews/PRODUCTION_READINESS_CLOSURE_NOTE_2026-03-12.md)
+- [ChatGPT Issue Response (Resolved, 2026-03-12)](release/reviews/CHATGPT_ISSUE_RESPONSE_RESOLVED_2026-03-12.md)
 
 ## Deployment Evidence And Handoffs
 

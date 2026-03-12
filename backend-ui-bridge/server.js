@@ -709,6 +709,9 @@ app.post("/api/llm-governed-compile", requireRole(["admin"]), async (req, res) =
       llm_analysis: aiReport || null,
       llm_provider: provider,
       llm_audit_timestamp: bridgeAuditTimestamp,
+      human_intent: typeof context?.raw_text === "string"
+        ? context.raw_text
+        : (typeof human_intent === "string" ? human_intent : ""),
     };
     const compile = await pythonPost("/api/governed-compile", compilePayload);
     if (!compile.ok) {
@@ -1178,6 +1181,10 @@ app.post("/verify/pack",
   requireRole(["admin", "standard", "customer"]),
   (req, res) => proxyToPython(req, res, "/verify/pack")
 );
+app.post("/verify/export",
+  requireRole(["admin", "standard", "customer"]),
+  (req, res) => proxyToPython(req, res, "/verify/export")
+);
 
 /* ================= EXTENDED GOVERNANCE ENDPOINTS ================= */
 
@@ -1216,6 +1223,7 @@ app.post("/verify/merkle-proof", requireRole(["admin", "standard", "customer"]),
 app.get("/decision-pack/:execution_id/export-signed", requireRole(["admin"]), (req, res) => proxyToPython(req, res, `/decision-pack/${sanitizeExecId(req.params.execution_id)}/export-signed`));
 app.get("/admin/health", requireRole(["admin"]), (req, res) => proxyToPython(req, res, "/admin/health"));
 app.get("/admin/metrics", requireRole(["admin"]), (req, res) => proxyToPython(req, res, "/admin/metrics"));
+app.get("/admin/config/contract", requireRole(["admin"]), (req, res) => proxyToPython(req, res, "/admin/config/contract"));
 app.get("/admin/db/status", requireRole(["admin"]), async (_req, res) => {
   const dbStatus = await resolveDbStatus();
   return res.status(dbStatus.status).json(dbStatus.body);
