@@ -149,10 +149,10 @@ $roleInputPayload = @{
     execution_context_id = $contextId
     role = "CTO"
     domain = "Cloud Infrastructure Procurement"
-    assertions = @("Multi-cloud strategy with Azure primary", "Zero-trust security", "UK data residency")
-    non_negotiables = @("Microsoft Entra ID integration", "ISO 27001", "99.9% SLA")
+    assertions = @("Multi-cloud strategy with Azure primary and >=15% cycle-time reduction within <=6 months")
+    non_negotiables = @("Budget cap GBP 1.8M/year", "Microsoft Entra ID integration", "ISO 27001", "99.9% SLA")
     risk_flags = @("Single-vendor lock-in", "Shadow IT")
-    evidence_refs = @("REF-001: Board tech mandate Q1 2026")
+    evidence_refs = @("https://www.fortinet.com/products/secure-sd-wan", "urn:independent:analyst-report:2026q1")
 }
 $roleInputResult = Invoke-Json -Method "POST" -Uri "http://localhost:$RuntimePort/api/human-input/role" -Body $roleInputPayload
 Assert-True ($roleInputResult.stored -eq $true) "Role input was not stored."

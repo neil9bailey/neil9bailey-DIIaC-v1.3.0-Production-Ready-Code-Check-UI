@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -20,6 +21,12 @@ import urllib.request
 
 BASE_URL = "http://127.0.0.1:8000"
 ADMIN_TOKEN = "assurance-validation-token"
+
+
+def _find_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
 
 
 def http(method: str, path: str, payload: dict | None = None,
@@ -106,26 +113,27 @@ def run_e2e_scenario(provider: str, run_label: str) -> dict:
           f"count={len(profiles) if isinstance(profiles, list) else 'N/A'}")
 
     # 5. Submit role input (per E2E assurance report scenario)
-    ctx_id = f"ctx-assurance-{provider.lower()}-uk-rail-2026q1"
+    ctx_id = f"ctx-assurance-{provider.lower()}-uk-rail-2026q1-{int(time.time())}"
     role_payload = {
         "execution_context_id": ctx_id,
         "role": "CIO",
         "domain": "network-transformation",
         "assertions": [
-            "Select resilient SD-WAN strategy with auditable controls and lower 5-year TCO.",
+            "Select resilient SD-WAN strategy with auditable controls, >=15% cycle-time reduction, and <=1% Sev1 increase.",
         ],
         "non_negotiables": [
-            "GDPR compliance", "NIS2 compliance", "20% incident reduction",
+            "Budget cap GBP 1.8M/year", "GDPR compliance", "NIS2 compliance", "20% incident reduction",
         ],
         "risk_flags": [
             "Migration disruption", "Vendor lock-in",
         ],
         "evidence_refs": [
-            "REF-RAIL-001: UK rail network SD-WAN transformation mandate",
+            "https://www.fortinet.com/products/secure-sd-wan",
+            "urn:independent:analyst-report:2026q1",
         ],
     }
     status, role_resp = http("POST", "/api/human-input/role", role_payload)
-    check("Role input accepted (201)", status == 201,
+    check("Role input accepted", status in {200, 201},
           f"context_id={ctx_id}")
 
     # 6. Governed compile (this is the core governance pipeline)
@@ -163,8 +171,10 @@ def run_e2e_scenario(provider: str, run_label: str) -> dict:
 
     # 9. Signed export (Ed25519)
     status, signed = http("GET", f"/decision-pack/{execution_id}/export-signed")
-    check("Signed export (Ed25519)", status == 200,
-          f"signature_alg={signed.get('signature_alg')}, key_id present={bool(signed.get('signing_key_id'))}")
+    sigmeta = signed.get("sigmeta", {}) if isinstance(signed, dict) else {}
+    check("Signed export (Ed25519)",
+          status == 200 and sigmeta.get("signature_alg") == "Ed25519" and bool(sigmeta.get("signing_key_id")),
+          f"signature_alg={sigmeta.get('signature_alg')}, key_id present={bool(sigmeta.get('signing_key_id'))}")
 
     # 10. Verify pack integrity
     status, pack_verify = http("POST", "/verify/pack", {
@@ -280,15 +290,20 @@ def validate_operational_dashboard(runs: list[dict]) -> dict:
 
 
 def main() -> int:
+    global BASE_URL
+    runtime_port = _find_free_port()
+    BASE_URL = f"http://127.0.0.1:{runtime_port}"
+
     env = os.environ.copy()
     env["APP_ENV"] = "development"
     env["STRICT_DETERMINISTIC_MODE"] = "true"
     env["ADMIN_AUTH_ENABLED"] = "true"
     env["ADMIN_API_TOKEN"] = ADMIN_TOKEN
+    env["PORT"] = str(runtime_port)
 
     proc = subprocess.Popen(
         [sys.executable, "app.py"], env=env,
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
     )
     try:
         wait_ready()

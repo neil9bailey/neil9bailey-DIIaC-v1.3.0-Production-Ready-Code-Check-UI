@@ -1,0 +1,63 @@
+{
+  "version": "v1",
+  "vendors": [
+    {
+      "vendor_id": "fortinet",
+      "canonical_name": "Fortinet",
+      "aliases": [
+        "Fortinet",
+        "Fortinet Secure SD-WAN",
+        "Fortinet SASE"
+      ],
+      "deprecated_aliases": [
+        "Fortinet Secure WAN"
+      ],
+      "approved_domains": [
+        "fortinet.com"
+      ]
+    },
+    {
+      "vendor_id": "palo_alto_networks",
+      "canonical_name": "Palo Alto Networks",
+      "aliases": [
+        "Palo Alto Networks",
+        "Palo-Alto Networks",
+        "Prisma SD-WAN",
+        "Prisma SASE"
+      ],
+      "deprecated_aliases": [
+        "Palo Alto Prisma WAN"
+      ],
+      "approved_domains": [
+        "paloaltonetworks.com"
+      ]
+    },
+    {
+      "vendor_id": "cisco",
+      "canonical_name": "Cisco",
+      "aliases": [
+        "Cisco",
+        "Cisco Secure SD-WAN",
+        "Cisco Meraki"
+      ],
+      "deprecated_aliases": [
+        "Cisco SD-WAN Legacy"
+      ],
+      "approved_domains": [
+        "cisco.com",
+        "meraki.com"
+      ]
+    },
+    {
+      "vendor_id": "zscaler",
+      "canonical_name": "Zscaler",
+      "aliases": [
+        "Zscaler"
+      ],
+      "deprecated_aliases": [],
+      "approved_domains": [
+        "zscaler.com"
+      ]
+    }
+  ]
+}

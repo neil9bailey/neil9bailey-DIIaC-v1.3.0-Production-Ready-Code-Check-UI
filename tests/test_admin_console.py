@@ -44,10 +44,15 @@ def submit_role(c, ctx, role='cto'):
         'execution_context_id': ctx,
         'role': role,
         'domain': 'network',
-        'assertions': ['a1'],
-        'non_negotiables': ['n1'],
+        'assertions': [
+            'Deliver >=15% cycle-time reduction within 6 months with <=1% Sev1 increase.'
+        ],
+        'non_negotiables': ['Budget cap GBP 1.8M/year'],
         'risk_flags': ['r1'],
-        'evidence_refs': [f'{role}-evidence-1'],
+        'evidence_refs': [
+            'https://www.fortinet.com/products/secure-sd-wan',
+            'urn:independent:analyst-report:2026q1',
+        ],
     })
 
 
@@ -97,7 +102,19 @@ def test_deterministic_same_inputs_same_scores_and_structured_sections():
 
     execution = c.get('/admin/executions').get_json()['executions'][0]
     sections = [s['title'] for s in execution['board_report']['sections']]
-    assert sections == ['Executive Summary', 'Context', 'Risk Register', 'Success Metrics', 'Down-Select Recommendation']
+    assert sections == [
+        'Executive Summary',
+        'Context',
+        'Objectives',
+        'Recommendation',
+        'Assumptions',
+        'Disqualifiers',
+        'Residual Risks',
+        'Measurable KPIs',
+        'Regulatory Constraints',
+        'Implementation Guardrails',
+        'What Would Change The Recommendation',
+    ]
 
 
 def test_evidence_trace_linking_and_required_artifacts_present():
@@ -236,10 +253,14 @@ def test_vendor_names_from_intent_are_preserved_in_scoring_and_report():
         'execution_context_id': ctx,
         'role': 'enterprise_architect',
         'domain': 'network-transformation, Secure-Edge, ZTNA',
-        'assertions': ['Assess two leading vendors, Palo-Alto Networks and Fortinet, for SD-WAN and hybrid WAN.'],
-        'non_negotiables': ['security', 'regulatory'],
+        'assertions': ['Assess Palo-Alto Networks and Fortinet for SD-WAN and hybrid WAN with >=15% cycle-time reduction in <=6 months.'],
+        'non_negotiables': ['Budget cap GBP 1.8M/year'],
         'risk_flags': ['vendor-lockin'],
-        'evidence_refs': ['ea-evidence-1'],
+        'evidence_refs': [
+            'urn:independent:analyst-report:2026q1',
+            'https://www.fortinet.com/products/secure-sd-wan',
+            'https://www.paloaltonetworks.com/sase/prisma-sd-wan',
+        ],
     })
 
     compile_res = c.post('/api/governed-compile', json={
@@ -319,6 +340,7 @@ def test_runtime_reconciles_public_key_registry_entry(monkeypatch, tmp_path):
     monkeypatch.setenv("DIIAC_STATE_DB", ":memory:")
     monkeypatch.setenv("SIGNING_KEY_ID", "diiac-vendorlogic-prod")
     monkeypatch.setenv("SIGNING_PRIVATE_KEY_PEM", active_private_pem)
+    monkeypatch.setenv("TRUST_REGISTRY_DEV_AUTOREGISTER", "true")
 
     app = create_app()
     app.testing = True
@@ -337,12 +359,13 @@ def test_llm_audit_timestamp_override_prevents_stale_freshness_failure():
         'execution_context_id': ctx,
         'role': 'cto',
         'domain': 'network-transformation',
-        'assertions': ['Evaluate Fortinet and Palo Alto Networks for SD-WAN.'],
-        'non_negotiables': ['privacy-by-design'],
+        'assertions': ['Evaluate Fortinet and Palo Alto Networks for SD-WAN with >=12% cycle-time reduction in 6 months.'],
+        'non_negotiables': ['Budget cap GBP 1.8M/year'],
         'risk_flags': ['vendor-lockin'],
         'evidence_refs': [
-            'https://example.com/reference-1.pdf',
-            'https://example.com/reference-2.pdf',
+            'https://www.fortinet.com/products/secure-sd-wan',
+            'https://www.paloaltonetworks.com/sase/prisma-sd-wan',
+            'urn:independent:analyst-report:2026q1',
         ],
     })
     assert role_input.status_code == 201
@@ -432,6 +455,15 @@ def test_governed_compile_runtime_dependency_failure_taxonomy(monkeypatch):
         'schema_id': 'GENERAL_SOLUTION_BOARD_REPORT_V1',
         'reasoning_level': 'R4',
         'policy_level': 'P4',
+        'role': 'cto',
+        'domain': 'network',
+        'assertions': ['Deliver >=15% cycle-time reduction within 6 months.'],
+        'non_negotiables': ['Budget cap GBP 1.8M/year'],
+        'risk_flags': ['vendor-lockin'],
+        'evidence_refs': [
+            'https://www.fortinet.com/products/secure-sd-wan',
+            'urn:independent:analyst-report:2026q1',
+        ],
     }
 
     response = c.post('/api/governed-compile', json=payload)
@@ -649,6 +681,108 @@ def test_structured_logs_include_stable_event_ids_and_metrics_thresholds():
     assert 'threshold_recommendations' in metrics
     assert 'signed_recent_executions_min' in metrics['threshold_recommendations']
     assert isinstance(metrics['alerts'], list)
+
+
+def test_compile_hard_gate_rejects_unresolved_evidence_and_non_measurable_metrics():
+    c = client(strict=True, app_env='development')
+    ctx = 'ctx-hard-gate-unresolved'
+    role_input = c.post('/api/human-input/role', json={
+        'execution_context_id': ctx,
+        'role': 'cto',
+        'domain': 'network',
+        'assertions': ['Improve governance outcomes.'],
+        'non_negotiables': ['privacy-by-design'],
+        'risk_flags': ['vendor-lockin'],
+        'evidence_refs': ['token-evidence-1'],
+    })
+    assert role_input.status_code == 201
+
+    compile_res = c.post('/api/governed-compile', json={
+        'execution_context_id': ctx,
+        'profile_id': 'it_enterprise_profile_v1',
+        'schema_id': 'GENERAL_SOLUTION_BOARD_REPORT_V1',
+        'reasoning_level': 'R4',
+        'policy_level': 'P4',
+    })
+    assert compile_res.status_code == 422
+    payload = compile_res.get_json()
+    codes = {item['code'] for item in payload.get('hard_gate_failures', [])}
+    assert 'UNRESOLVED_EVIDENCE' in codes
+    assert 'INVALID_SUCCESS_METRICS' in codes
+
+
+def test_inline_payload_preserves_intent_without_default_overwrite():
+    c = client(strict=True, app_env='development')
+    compile_res = c.post('/api/governed-compile', json={
+        'execution_context_id': 'ctx-inline-intent',
+        'profile_id': 'it_enterprise_profile_v1',
+        'schema_id': 'GENERAL_SOLUTION_BOARD_REPORT_V1',
+        'reasoning_level': 'R4',
+        'policy_level': 'P4',
+        'role': 'cto',
+        'domain': 'network',
+        'assertions': ['Deliver >=12% cycle-time reduction in <=6 months.'],
+        'non_negotiables': ['budget-cap-1'],
+        'risk_flags': ['vendor-lockin'],
+        'evidence_refs': [
+            'https://www.fortinet.com/products/secure-sd-wan',
+            'urn:independent:analyst-report:2026q1',
+        ],
+    })
+    assert compile_res.status_code == 201
+    execution_id = compile_res.get_json()['execution_id']
+    execution = [
+        e for e in c.get('/admin/executions').get_json()['executions']
+        if e['execution_id'] == execution_id
+    ][0]
+    role_bundle = execution['down_select_recommendation'].get('review_state')
+    assert role_bundle is not None
+    role_inputs = execution['board_report']['bridge_metadata']
+    assert isinstance(role_inputs, dict) or role_inputs is None
+
+    role_artifact = c.get(f'/executions/{execution_id}/reports/role_input_bundle.json')
+    assert role_artifact.status_code == 200
+    role_payload = role_artifact.get_json()
+    assert role_payload['roles'][0]['non_negotiables'] == ['budget-cap-1']
+    assert role_payload['roles'][0]['risk_flags'] == ['vendor-lockin']
+
+
+def test_high_assurance_requires_completed_review_state():
+    c = client(strict=True, app_env='development')
+    ctx = 'ctx-high-assurance'
+    submit_role(c, ctx, 'cto')
+    blocked = c.post('/api/governed-compile', json={
+        'execution_context_id': ctx,
+        'profile_id': 'it_enterprise_profile_v1',
+        'schema_id': 'GENERAL_SOLUTION_BOARD_REPORT_V1',
+        'reasoning_level': 'R4',
+        'policy_level': 'P4',
+        'requested_assurance_level': 'human_reviewed',
+        'review_state': {
+            'human_review_required': True,
+            'human_review_completed': False,
+        },
+    })
+    assert blocked.status_code == 422
+    blocked_codes = {item['code'] for item in blocked.get_json().get('hard_gate_failures', [])}
+    assert 'REVIEW_STATE_INCOMPLETE' in blocked_codes
+
+    allowed = c.post('/api/governed-compile', json={
+        'execution_context_id': ctx,
+        'profile_id': 'it_enterprise_profile_v1',
+        'schema_id': 'GENERAL_SOLUTION_BOARD_REPORT_V1',
+        'reasoning_level': 'R4',
+        'policy_level': 'P4',
+        'requested_assurance_level': 'human_reviewed',
+        'review_state': {
+            'human_review_required': True,
+            'human_review_completed': True,
+            'reviewed_by': 'reviewer-1',
+            'approved_by': 'approver-1',
+            'review_timestamps': {'completed_at': '2026-03-12T09:00:00Z'},
+        },
+    })
+    assert allowed.status_code == 201
 
 
 def test_non_dev_runtime_blocks_ephemeral_signing(monkeypatch, tmp_path):

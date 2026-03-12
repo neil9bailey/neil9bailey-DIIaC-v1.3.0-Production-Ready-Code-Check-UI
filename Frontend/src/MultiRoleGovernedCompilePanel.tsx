@@ -14,7 +14,12 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
   const [selectedRole, setSelectedRole] = useState("CIO");
   const [governanceModes, setGovernanceModes] = useState<string[]>(requiredGovernanceModes);
   const [domain, setDomain] = useState("network-transformation");
-  const [assertion, setAssertion] = useState("Adopt secure SD-WAN with measurable cost and resilience outcomes.");
+  const [assertion, setAssertion] = useState("Adopt secure SD-WAN with >=15% cycle-time reduction in <=6 months.");
+  const [nonNegotiablesInput, setNonNegotiablesInput] = useState("Budget cap GBP 1.8M/year");
+  const [riskFlagsInput, setRiskFlagsInput] = useState("vendor-lockin");
+  const [goalsInput, setGoalsInput] = useState("Cycle-time reduction >=15%");
+  const [regulatoryContextInput, setRegulatoryContextInput] = useState("GDPR, UK DPA 2018");
+  const [successTargetsInput, setSuccessTargetsInput] = useState(">=15% cycle-time reduction; <=1% Sev1 increase");
   const [evidenceRefsInput, setEvidenceRefsInput] = useState(
     "https://www.fortinet.com/products/secure-sd-wan\nhttps://www.paloaltonetworks.com/sase/prisma-sd-wan",
   );
@@ -112,6 +117,17 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
     );
   }
 
+  function parseList(value: string): string[] {
+    return Array.from(
+      new Set(
+        value
+          .split(/\r?\n|[,;]/)
+          .map((v) => v.trim())
+          .filter((v) => v.length > 0),
+      ),
+    );
+  }
+
   function isStrongEvidenceRef(ref: string): boolean {
     const lower = ref.toLowerCase();
     return (
@@ -167,8 +183,8 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
         role: selectedRole,
         domain,
         assertions: [assertion],
-        non_negotiables: ["privacy-by-design"],
-        risk_flags: ["vendor-lockin"],
+        non_negotiables: parseList(nonNegotiablesInput),
+        risk_flags: parseList(riskFlagsInput),
         evidence_refs: evidenceRefs,
         idempotency_key: buildRoleIdempotencyKey(),
       });
@@ -202,7 +218,12 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
         role: selectedRole,
         domain,
         assertions: [assertion],
+        non_negotiables: parseList(nonNegotiablesInput),
+        risk_flags: parseList(riskFlagsInput),
         evidence_refs: parseEvidenceRefs(evidenceRefsInput),
+        goals: parseList(goalsInput),
+        regulatory_context: parseList(regulatoryContextInput),
+        success_targets: parseList(successTargetsInput),
         governance_modes: effectiveGovernanceModes,
         provider: llmProvider,
         human_intent: humanIntent,
@@ -279,6 +300,29 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
         <label>Assertion:</label>
         <input value={assertion} onChange={(e) => setAssertion(e.target.value)} style={{ width: "100%" }} />
         <small>State the key claim or recommendation this role is asserting with evidence.</small>
+      </div>
+
+      <div style={{ display: "grid", gap: 12, marginBottom: 12 }}>
+        <div>
+          <label>Non-Negotiables:</label>
+          <input value={nonNegotiablesInput} onChange={(e) => setNonNegotiablesInput(e.target.value)} style={{ width: "100%" }} />
+        </div>
+        <div>
+          <label>Risk Flags:</label>
+          <input value={riskFlagsInput} onChange={(e) => setRiskFlagsInput(e.target.value)} style={{ width: "100%" }} />
+        </div>
+        <div>
+          <label>Goals:</label>
+          <input value={goalsInput} onChange={(e) => setGoalsInput(e.target.value)} style={{ width: "100%" }} />
+        </div>
+        <div>
+          <label>Regulatory Context:</label>
+          <input value={regulatoryContextInput} onChange={(e) => setRegulatoryContextInput(e.target.value)} style={{ width: "100%" }} />
+        </div>
+        <div>
+          <label>Success Targets:</label>
+          <input value={successTargetsInput} onChange={(e) => setSuccessTargetsInput(e.target.value)} style={{ width: "100%" }} />
+        </div>
       </div>
 
       <div style={{ marginBottom: 12 }}>

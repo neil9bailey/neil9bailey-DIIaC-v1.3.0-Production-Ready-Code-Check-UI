@@ -17,6 +17,8 @@ export interface GovernanceExecutionState {
   signing_enabled?: boolean;
   signing_key_id?: string;
   key_mode?: string;
+  signing_mode?: string;
+  trust_registry_source?: string;
 }
 
 export interface GovernanceDecisionResponse {
@@ -171,7 +173,14 @@ export interface TrendSummaryResponse {
 export interface EffectiveConfigResponse {
   timestamp: string;
   auth: { mode: string; entra_enabled: boolean; tenant_id: string | null; audience: string | null; issuer_pinning: boolean };
-  signing: { enabled: boolean; key_id: string; key_mode: string };
+  signing: {
+    enabled: boolean;
+    key_id: string;
+    key_mode: string;
+    signing_mode?: string;
+    trust_registry_source?: string;
+    trust_registry_mutable?: boolean;
+  };
   llm: { ingestion_enabled: boolean; stub_enabled: boolean; model: string; api_key_present: boolean };
   tls: { profiles_loaded: number; cert_expiry_warnings: number };
   offload: { targets: string[] };
@@ -314,7 +323,26 @@ export function runGovernedCompile(payload: {
 export function runLlmGovernedCompile(payload: {
   execution_context_id?: string; schema_id: string; profile_id: string;
   reasoning_level?: string; policy_level?: string; role?: string; domain?: string;
-  assertions?: string[]; evidence_refs?: string[]; governance_modes?: string[]; provider?: string; human_intent?: string;
+  assertions?: string[];
+  non_negotiables?: string[];
+  risk_flags?: string[];
+  evidence_refs?: string[];
+  goals?: string[];
+  regulatory_context?: string[];
+  success_targets?: string[];
+  requested_assurance_level?: "generated" | "evidence_backed" | "human_reviewed" | "externally_validated";
+  review_state?: {
+    human_review_required?: boolean;
+    human_review_completed?: boolean;
+    reviewed_by?: string;
+    approved_by?: string;
+    review_timestamps?: Record<string, string>;
+    open_exceptions?: string[];
+    waived_controls?: string[];
+  };
+  governance_modes?: string[];
+  provider?: string;
+  human_intent?: string;
 }): Promise<{ compile?: { execution_id?: string; execution_state?: { execution_id?: string }; decision_summary?: { decision_status?: string } } }> {
   return request("/api/llm-governed-compile", { method: "POST", body: JSON.stringify(payload) });
 }

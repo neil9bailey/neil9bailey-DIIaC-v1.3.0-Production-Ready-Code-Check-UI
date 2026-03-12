@@ -208,9 +208,27 @@ function buildPublicKeyFromRawEd25519(rawPublicKey) {
   return crypto.createPublicKey({ key: spki, format: "der", type: "spki" });
 }
 
-function resolvePublicKeyB64(sigmeta, registry) {
+function resolvePublicKeyB64(sigmeta, registry, trustBundle) {
   if (typeof sigmeta.public_key_b64 === "string" && sigmeta.public_key_b64.trim()) {
     return sigmeta.public_key_b64.trim();
+  }
+  if (trustBundle && typeof trustBundle === "object") {
+    const activeKey = trustBundle.active_key;
+    if (
+      activeKey &&
+      activeKey.key_id === sigmeta.signing_key_id &&
+      typeof activeKey.public_key_b64 === "string" &&
+      activeKey.public_key_b64.trim()
+    ) {
+      return activeKey.public_key_b64.trim();
+    }
+    const historical = Array.isArray(trustBundle.historical_keys) ? trustBundle.historical_keys : [];
+    const historicalEntry = historical.find(
+      (item) => item && item.key_id === sigmeta.signing_key_id && typeof item.public_key_b64 === "string",
+    );
+    if (historicalEntry && historicalEntry.public_key_b64.trim()) {
+      return historicalEntry.public_key_b64.trim();
+    }
   }
   if (!registry || !Array.isArray(registry.keys)) return null;
   const keyId = sigmeta.signing_key_id;
@@ -237,6 +255,7 @@ function main() {
   const manifestPath = path.join(packDir, "governance_manifest.json");
   const sigmetaPath = path.join(packDir, "signed_export.sigmeta.json");
   const sigPath = path.join(packDir, "signed_export.sig");
+  const trustBundlePath = path.join(packDir, "trust_bundle.json");
   const required = [manifestPath, sigmetaPath, sigPath];
   const missing = required.filter((item) => !fs.existsSync(item));
   if (missing.length > 0) {
@@ -246,6 +265,7 @@ function main() {
 
   const manifest = readJson(manifestPath);
   const sigmeta = readJson(sigmetaPath);
+  const trustBundle = fs.existsSync(trustBundlePath) ? readJson(trustBundlePath) : null;
   const signatureB64 = (sigmeta.signature || "").trim() || readText(sigPath).trim();
   const signaturePayload = sigmeta.signature_payload;
   const leaves = (manifest.merkle && Array.isArray(manifest.merkle.leaves)) ? manifest.merkle.leaves : [];
@@ -330,7 +350,7 @@ function main() {
   if (registryPath && fs.existsSync(registryPath)) {
     registry = readJson(registryPath);
   }
-  const publicKeyB64 = resolvePublicKeyB64(sigmeta, registry);
+  const publicKeyB64 = resolvePublicKeyB64(sigmeta, registry, trustBundle);
   let signatureOk = false;
   let signatureError = null;
   if (!publicKeyB64) {
@@ -383,6 +403,10 @@ function main() {
       signing_key_id: sigmeta.signing_key_id,
       payload_schema_version: sigmeta.signature_payload_schema_version || null,
       error: signatureError,
+    },
+    trust_bundle: {
+      present: Boolean(trustBundle),
+      source: trustBundle ? "pack" : "registry_or_sigmeta",
     },
     artifacts: artifactChecks,
   };

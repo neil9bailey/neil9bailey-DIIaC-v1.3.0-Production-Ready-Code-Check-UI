@@ -46,6 +46,9 @@ const MAX_INTERCEPT_EVENTS = 10000;
 
 const SIGNING_ENABLED = process.env.SIGNING_ENABLED !== "false";
 const SIGNING_KEY_ID = process.env.SIGNING_KEY_ID || "ephemeral-local-ed25519";
+const APP_ENV = (process.env.APP_ENV || "production").toLowerCase();
+const DEV_ENVS = new Set(["dev", "development", "local", "test"]);
+const IS_DEV_RUNTIME = DEV_ENVS.has(APP_ENV);
 
 
 fs.mkdirSync(HUMAN_INPUT_DIR, { recursive: true });
@@ -53,38 +56,24 @@ fs.mkdirSync(DECISION_PACK_BASE, { recursive: true });
 fs.mkdirSync(path.dirname(LEDGER_PATH), { recursive: true });
 fs.mkdirSync(KEYS_DIR, { recursive: true });
 
-function loadOrCreateSigningKeyPair() {
+function loadSigningKeyPair() {
+  if (!SIGNING_ENABLED) {
+    return { privateKey: null, publicKey: null, keyMode: "disabled" };
+  }
   const pem = process.env.SIGNING_PRIVATE_KEY_PEM;
   if (pem) {
     const privateKey = crypto.createPrivateKey(pem);
     const publicKey = crypto.createPublicKey(privateKey);
     return { privateKey, publicKey, keyMode: "configured" };
   }
+  if (!IS_DEV_RUNTIME) {
+    throw new Error("Non-development bridge runtime requires SIGNING_PRIVATE_KEY_PEM; ephemeral signing is blocked.");
+  }
   const { privateKey, publicKey } = crypto.generateKeyPairSync("ed25519");
-  return { privateKey, publicKey, keyMode: "ephemeral" };
+  return { privateKey, publicKey, keyMode: "ephemeral_dev_only" };
 }
 
-const { publicKey: signingPublicKey, keyMode: signingKeyMode } = loadOrCreateSigningKeyPair();
-
-if (!fs.existsSync(PUBLIC_KEYS_PATH)) {
-  const pubDer = signingPublicKey.export({ type: "spki", format: "der" });
-  fs.writeFileSync(
-    PUBLIC_KEYS_PATH,
-    JSON.stringify(
-      {
-        keys: [
-          {
-            key_id: SIGNING_KEY_ID,
-            algorithm: "Ed25519",
-            public_key_b64: Buffer.from(pubDer).toString("base64"),
-          },
-        ],
-      },
-      null,
-      2,
-    ),
-  );
-}
+const { publicKey: signingPublicKey, keyMode: signingKeyMode } = loadSigningKeyPair();
 
 const LLM_ENABLED = process.env.LLM_INGESTION_ENABLED === "true";
 const LLM_STUB_ENABLED = process.env.LLM_STUB_ENABLED === "true";
@@ -156,6 +145,11 @@ app.get("/health", (_req, res) => {
     status: "OK",
     service: "backend-ui-bridge",
     auth_mode: getAuthMode(),
+    signing: {
+      enabled: SIGNING_ENABLED,
+      key_id: SIGNING_KEY_ID,
+      key_mode: signingKeyMode,
+    },
     timestamp: new Date().toISOString(),
   });
 });
@@ -640,7 +634,14 @@ app.post("/api/llm-governed-compile", requireRole(["admin"]), async (req, res) =
       role = "CIO",
       domain = "enterprise-strategy",
       assertions = [],
+      non_negotiables = [],
+      risk_flags = [],
       evidence_refs = [],
+      goals = [],
+      regulatory_context = [],
+      success_targets = [],
+      requested_assurance_level = "generated",
+      review_state = {},
       governance_modes = [],
       human_intent,
       execution_context_id,
@@ -687,7 +688,25 @@ app.post("/api/llm-governed-compile", requireRole(["admin"]), async (req, res) =
     const contextId = execution_context_id || `ctx-llm-${llmOutputHash.slice(0, 20)}`;
     const assertionList = Array.isArray(assertions) && assertions.length
       ? assertions.filter((a) => typeof a === "string" && a.trim()).map((a) => a.trim())
-      : [`LLM synthesis hash ${llmOutputHash.slice(0, 12)}`, `Provider ${provider}`];
+      : [`LLM synthesis hash ${llmOutputHash.slice(0, 12)}`];
+    const goalList = Array.isArray(goals)
+      ? goals.filter((a) => typeof a === "string" && a.trim()).map((a) => a.trim())
+      : [];
+    const regulatoryContextList = Array.isArray(regulatory_context)
+      ? regulatory_context.filter((a) => typeof a === "string" && a.trim()).map((a) => a.trim())
+      : [];
+    const successTargetList = Array.isArray(success_targets)
+      ? success_targets.filter((a) => typeof a === "string" && a.trim()).map((a) => a.trim())
+      : [];
+    for (const goal of goalList) assertionList.push(`goal:${goal}`);
+    for (const reg of regulatoryContextList) assertionList.push(`regulatory:${reg}`);
+    for (const target of successTargetList) assertionList.push(`target:${target}`);
+    const nonNegotiablesList = Array.isArray(non_negotiables)
+      ? non_negotiables.filter((a) => typeof a === "string" && a.trim()).map((a) => a.trim())
+      : [];
+    const riskFlagsList = Array.isArray(risk_flags)
+      ? risk_flags.filter((a) => typeof a === "string" && a.trim()).map((a) => a.trim())
+      : [];
     const userEvidenceRefs = normalizeEvidenceRefs(evidence_refs);
     const compileEvidenceRefs = [...new Set([...userEvidenceRefs, `llm-output-${llmOutputHash.slice(0, 16)}`])];
 
@@ -701,14 +720,22 @@ app.post("/api/llm-governed-compile", requireRole(["admin"]), async (req, res) =
       role,
       domain,
       assertions: assertionList,
-      non_negotiables: ["deterministic-governance"],
-      risk_flags: ["llm-hallucination-risk"],
+      non_negotiables: nonNegotiablesList,
+      risk_flags: riskFlagsList,
       evidence_refs: compileEvidenceRefs,
       // Pass full LLM analysis to the governance pipeline so
       // board report content is driven by LLM output, not templates
       llm_analysis: aiReport || null,
       llm_provider: provider,
       llm_audit_timestamp: bridgeAuditTimestamp,
+      requested_assurance_level,
+      review_state: (review_state && typeof review_state === "object") ? review_state : {},
+      bridge_metadata: {
+        provider,
+        llm_output_hash: llmOutputHash,
+        llm_audit_timestamp: bridgeAuditTimestamp,
+        role_submission_strategy: "inline_payload_or_existing_context_role_bundle",
+      },
       human_intent: typeof context?.raw_text === "string"
         ? context.raw_text
         : (typeof human_intent === "string" ? human_intent : ""),
@@ -1049,7 +1076,12 @@ function localDbStatusSnapshot() {
     size_bytes,
     mtime,
     tables: {},
-    integrity: { ok: true, mode: "bridge_fallback", key_registry_ok: SIGNING_ENABLED && Boolean(signingPublicKey) },
+    integrity: {
+      ok: true,
+      mode: "bridge_fallback",
+      key_registry_ok: SIGNING_ENABLED ? signingKeyMode === "configured" || IS_DEV_RUNTIME : true,
+      signing_mode: signingKeyMode,
+    },
   };
 }
 
@@ -1724,7 +1756,14 @@ app.get("/admin/config/effective", requireRole(["admin"]), (_req, res) => {
   return res.json({
     timestamp: new Date().toISOString(),
     auth: { mode: getAuthMode(), entra_enabled: isEntraEnabled(), tenant_id: process.env.ENTRA_EXPECTED_TENANT_ID || null, audience: process.env.ENTRA_EXPECTED_AUDIENCE || null, issuer_pinning: Boolean(process.env.ENTRA_EXPECTED_ISSUERS) },
-    signing: { enabled: SIGNING_ENABLED, key_id: SIGNING_KEY_ID, key_mode: signingKeyMode },
+    signing: {
+      enabled: SIGNING_ENABLED,
+      key_id: SIGNING_KEY_ID,
+      key_mode: signingKeyMode,
+      signing_mode: signingKeyMode,
+      trust_registry_source: fs.existsSync(PUBLIC_KEYS_PATH) ? "local_registry_file" : "external_or_missing",
+      trust_registry_mutable: false,
+    },
     llm: {
       ingestion_enabled: LLM_ENABLED,
       stub_enabled: LLM_STUB_ENABLED,

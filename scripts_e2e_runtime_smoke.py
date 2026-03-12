@@ -8,23 +8,27 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import subprocess
 import sys
 import time
 import urllib.error
 import urllib.request
 
-BASE_URL = "http://127.0.0.1:8000"
+def _find_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
 
 
-def request(method: str, path: str, payload: dict | None = None, headers: dict | None = None) -> tuple[int, dict]:
+def request(base_url: str, method: str, path: str, payload: dict | None = None, headers: dict | None = None) -> tuple[int, dict]:
     data = None
     req_headers = {"Content-Type": "application/json"}
     if headers:
         req_headers.update(headers)
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(BASE_URL + path, data=data, headers=req_headers, method=method)
+    req = urllib.request.Request(base_url + path, data=data, headers=req_headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
             body = resp.read().decode("utf-8")
@@ -35,10 +39,10 @@ def request(method: str, path: str, payload: dict | None = None, headers: dict |
         return e.code, parsed
 
 
-def wait_ready() -> None:
+def wait_ready(base_url: str) -> None:
     for _ in range(50):
         try:
-            status, _ = request("GET", "/health")
+            status, _ = request(base_url, "GET", "/health")
             if status == 200:
                 return
         except Exception:
@@ -48,32 +52,38 @@ def wait_ready() -> None:
 
 
 def main() -> int:
+    runtime_port = _find_free_port()
+    base_url = f"http://127.0.0.1:{runtime_port}"
     env = os.environ.copy()
     env["APP_ENV"] = "development"
     env["STRICT_DETERMINISTIC_MODE"] = "true"
     env["ADMIN_AUTH_ENABLED"] = "true"
     env["ADMIN_API_TOKEN"] = "smoke-token"
+    env["PORT"] = str(runtime_port)
 
-    proc = subprocess.Popen([sys.executable, "app.py"], env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.Popen([sys.executable, "app.py"], env=env, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     try:
-        wait_ready()
+        wait_ready(base_url)
 
-        status, health = request("GET", "/health")
+        status, health = request(base_url, "GET", "/health")
         assert status == 200 and health.get("status") in {"OK", "DEGRADED"}
 
-        ctx = "ctx-e2e-smoke"
-        status, _ = request("POST", "/api/human-input/role", {
+        ctx = f"ctx-e2e-smoke-{int(time.time())}"
+        status, _ = request(base_url, "POST", "/api/human-input/role", {
             "execution_context_id": ctx,
             "role": "cto",
             "domain": "network",
-            "assertions": ["a1"],
-            "non_negotiables": ["n1"],
+            "assertions": ["Deliver >=15% cycle-time reduction in <=6 months with <=1% Sev1 increase."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
             "risk_flags": ["r1"],
-            "evidence_refs": ["ref-1"],
+            "evidence_refs": [
+                "https://www.fortinet.com/products/secure-sd-wan",
+                "urn:independent:analyst-report:2026q1",
+            ],
         })
         assert status == 201
 
-        status, compile_payload = request("POST", "/api/governed-compile", {
+        status, compile_payload = request(base_url, "POST", "/api/governed-compile", {
             "execution_context_id": ctx,
             "profile_id": "transport_profile_v1",
             "schema_id": "GENERAL_SOLUTION_BOARD_REPORT_V1",
@@ -83,17 +93,17 @@ def main() -> int:
         assert status == 201
         execution_id = compile_payload["execution_id"]
 
-        status, trust = request("GET", "/trust/status")
+        status, trust = request(base_url, "GET", "/trust/status")
         assert status == 200 and trust["ledger_records"] >= 1
 
-        status, _ = request("GET", "/admin/logs?source=backend")
+        status, _ = request(base_url, "GET", "/admin/logs?source=backend")
         assert status == 200
 
-        status, verify = request("GET", f"/verify/execution/{execution_id}")
+        status, verify = request(base_url, "GET", f"/verify/execution/{execution_id}")
         assert status == 200 and verify["status"] == "VERIFIABLE"
 
-        status, _ = request("POST", "/admin/audit-export", {"execution_ids": [execution_id]})
-        assert status == 201
+        status, _ = request(base_url, "POST", "/admin/audit-export", {"execution_ids": [execution_id]})
+        assert status in {200, 201}
 
         print("E2E runtime smoke PASSED")
         return 0

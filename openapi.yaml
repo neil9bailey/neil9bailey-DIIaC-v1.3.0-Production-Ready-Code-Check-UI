@@ -203,6 +203,61 @@ components:
             type: string
             maxLength: 128
           example: ["strict", "hitl"]
+        assertions:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+        non_negotiables:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+        risk_flags:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+        evidence_refs:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+        requested_assurance_level:
+          type: string
+          enum: [generated, evidence_backed, human_reviewed, externally_validated]
+        review_state:
+          type: object
+          properties:
+            human_review_required:
+              type: boolean
+            human_review_completed:
+              type: boolean
+            reviewed_by:
+              type: string
+              nullable: true
+            approved_by:
+              type: string
+              nullable: true
+            review_timestamps:
+              type: object
+              additionalProperties:
+                type: string
+            open_exceptions:
+              type: array
+              items:
+                type: string
+            waived_controls:
+              type: array
+              items:
+                type: string
+        bridge_metadata:
+          type: object
+          additionalProperties: true
         preferred_vendors:
           type: array
           maxItems: 50
