@@ -18,7 +18,10 @@ export interface GovernanceExecutionState {
   signing_key_id?: string;
   key_mode?: string;
   signing_mode?: string;
+  trust_source?: string;
+  trust_registry_mode?: string;
   trust_registry_source?: string;
+  production_trust_ready?: boolean;
 }
 
 export interface GovernanceDecisionResponse {
@@ -178,8 +181,16 @@ export interface EffectiveConfigResponse {
     key_id: string;
     key_mode: string;
     signing_mode?: string;
+    trust_source?: string;
+    trust_registry_mode?: string;
     trust_registry_source?: string;
     trust_registry_mutable?: boolean;
+    production_trust_ready?: boolean;
+    active_key_registered?: boolean;
+    active_key_matches_public?: boolean;
+    registered_key_count?: number;
+    signing_trust_blockers?: { code: string; message: string; blocking: boolean }[];
+    signing_trust_warnings?: string[];
   };
   llm: { ingestion_enabled: boolean; stub_enabled: boolean; model: string; api_key_present: boolean };
   tls: { profiles_loaded: number; cert_expiry_warnings: number };
@@ -316,6 +327,15 @@ export function submitRoleInput(payload: {
 export function runGovernedCompile(payload: {
   execution_context_id: string; schema_id: string; profile_id: string;
   reasoning_level?: string; policy_level?: string;
+  success_metrics?: Array<{
+    metric_name: string;
+    baseline: number;
+    target_value: number;
+    unit: string;
+    measurement_window: string;
+    owner: string;
+    tolerance?: number | null;
+  }>;
 }): Promise<{ execution_id?: string; execution_state?: { execution_id?: string; signature_present?: boolean; signing_enabled?: boolean } }> {
   return request("/api/governed-compile", { method: "POST", body: JSON.stringify(payload) });
 }
@@ -330,6 +350,15 @@ export function runLlmGovernedCompile(payload: {
   goals?: string[];
   regulatory_context?: string[];
   success_targets?: string[];
+  success_metrics?: Array<{
+    metric_name: string;
+    baseline: number;
+    target_value: number;
+    unit: string;
+    measurement_window: string;
+    owner: string;
+    tolerance?: number | null;
+  }>;
   requested_assurance_level?: "generated" | "evidence_backed" | "human_reviewed" | "externally_validated";
   review_state?: {
     human_review_required?: boolean;

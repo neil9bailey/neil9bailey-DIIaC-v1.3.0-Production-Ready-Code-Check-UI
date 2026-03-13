@@ -82,12 +82,23 @@ def _load_policy_packs(policy_pack_dir: Path) -> list[dict[str, Any]]:
 
 
 def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
+    default_evidence_policy = {
+        "freshness_threshold_days": {
+            "security": 90,
+            "pricing": 120,
+            "operational": 180,
+            "commercial": 180,
+            "general": 365,
+        },
+        "critical_classes": ["security", "pricing"],
+    }
     if not vendors_file.exists():
         return {
             "version": "v1",
             "vendors": [],
             "alias_to_vendor_id": {},
             "domain_to_vendor_id": {},
+            "evidence_policy": default_evidence_policy,
         }
     try:
         payload = json.loads(vendors_file.read_text(encoding="utf-8"))
@@ -146,11 +157,41 @@ def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
         for domain in vendor["approved_domains"]:
             domain_to_vendor_id[domain] = vendor_id
 
+    raw_evidence_policy = payload.get("evidence_policy")
+    if not isinstance(raw_evidence_policy, dict):
+        raw_evidence_policy = {}
+    raw_thresholds = raw_evidence_policy.get("freshness_threshold_days")
+    if not isinstance(raw_thresholds, dict):
+        raw_thresholds = {}
+    normalized_thresholds = dict(default_evidence_policy["freshness_threshold_days"])
+    for evidence_class, days in raw_thresholds.items():
+        if not isinstance(evidence_class, str):
+            continue
+        try:
+            parsed_days = int(days)
+        except (TypeError, ValueError):
+            continue
+        if parsed_days < 1:
+            continue
+        normalized_thresholds[evidence_class.strip().lower()] = parsed_days
+    raw_critical = raw_evidence_policy.get("critical_classes")
+    if not isinstance(raw_critical, list):
+        raw_critical = []
+    normalized_critical = [
+        str(item).strip().lower()
+        for item in raw_critical
+        if isinstance(item, str) and item.strip()
+    ] or list(default_evidence_policy["critical_classes"])
+
     return {
         "version": str(payload.get("version", "v1")),
         "vendors": normalized_vendors,
         "alias_to_vendor_id": alias_to_vendor_id,
         "domain_to_vendor_id": domain_to_vendor_id,
+        "evidence_policy": {
+            "freshness_threshold_days": normalized_thresholds,
+            "critical_classes": normalized_critical,
+        },
     }
 
 
@@ -485,6 +526,32 @@ def create_app() -> Flask:
             "Signing trust registry was auto-updated in development mode; this path is disabled for non-dev environments."
         )
 
+    signing_trust_blockers: list[dict[str, Any]] = []
+    if signing_enabled and not is_dev_runtime and key_mode != "configured":
+        signing_trust_blockers.append(
+            {
+                "code": "NON_DEV_EPHEMERAL_SIGNING_BLOCKED",
+                "message": "Non-development runtime requires SIGNING_PRIVATE_KEY_PEM. Ephemeral signing is blocked.",
+                "blocking": True,
+            }
+        )
+    if signing_enabled and not active_key_registered:
+        signing_trust_blockers.append(
+            {
+                "code": "MISSING_REGISTERED_ACTIVE_KEY",
+                "message": f"Signing key '{signing_key_id}' is not present in contracts/keys/public_keys.json.",
+                "blocking": True,
+            }
+        )
+    if signing_enabled and active_key_registered and not active_key_matches_public:
+        signing_trust_blockers.append(
+            {
+                "code": "ACTIVE_KEY_MISMATCH",
+                "message": f"Signing key '{signing_key_id}' does not match registered public key material.",
+                "blocking": True,
+            }
+        )
+
     if signing_enabled and not is_dev_runtime:
         if key_mode != "configured":
             raise RuntimeError(
@@ -614,6 +681,31 @@ def create_app() -> Flask:
             err = _validate_string_list_field(payload, "governance_modes")
             if err:
                 return err
+        if "success_metrics" in payload:
+            success_metrics = payload.get("success_metrics")
+            if not isinstance(success_metrics, list):
+                return {"error": "invalid_field", "field": "success_metrics"}, 400
+            if len(success_metrics) > LIST_MAX_ITEMS:
+                return {"error": "list_too_long", "field": "success_metrics", "max_items": LIST_MAX_ITEMS}, 400
+            for index, metric in enumerate(success_metrics, start=1):
+                if not isinstance(metric, dict):
+                    return {"error": "invalid_list_item_type", "field": "success_metrics", "index": index}, 400
+                required_metric_fields = [
+                    "metric_name",
+                    "baseline",
+                    "target_value",
+                    "unit",
+                    "measurement_window",
+                    "owner",
+                ]
+                missing = [field for field in required_metric_fields if field not in metric]
+                if missing:
+                    return {
+                        "error": "missing_fields",
+                        "field": "success_metrics",
+                        "index": index,
+                        "missing": missing,
+                    }, 400
         return None
 
     def _normalize_string_list(value: Any) -> list[str]:
@@ -663,6 +755,21 @@ def create_app() -> Flask:
         }
         return f"role-{_sha256_text(_canonical_json(normalized_payload))[:24]}"
 
+    def _replay_validation_error(
+        error_code: str,
+        message: str,
+        details: dict[str, Any] | None = None,
+        status: int = 422,
+    ) -> tuple[dict[str, Any], int]:
+        payload: dict[str, Any] = {
+            "error": "replay_input_invalid",
+            "error_code": error_code,
+            "message": message,
+        }
+        if details:
+            payload["details"] = details
+        return payload, status
+
     def _validate_replay_payload(payload: dict[str, Any]) -> tuple[dict[str, Any], int] | None:
         required_fields = {
             "execution_context_id": CONTEXT_ID_MAX,
@@ -689,6 +796,44 @@ def create_app() -> Flask:
             err = _validate_string_list_field(payload, "governance_modes")
             if err:
                 return err
+
+        replay_provenance = payload.get("replay_provenance")
+        if not isinstance(replay_provenance, dict):
+            return _replay_validation_error(
+                "MISSING_REQUIRED_PROVENANCE",
+                "Replay requests must include replay_provenance with source, captured_at, and evidence_ids.",
+            )
+        source = replay_provenance.get("source")
+        if not isinstance(source, str) or not source.strip():
+            return _replay_validation_error(
+                "MISSING_REQUIRED_PROVENANCE",
+                "Replay provenance source is required.",
+                {"field": "replay_provenance.source"},
+            )
+        captured_at = replay_provenance.get("captured_at")
+        if not isinstance(captured_at, str) or not captured_at.strip() or _parse_utc_timestamp(captured_at) is None:
+            return _replay_validation_error(
+                "MISSING_REQUIRED_PROVENANCE",
+                "Replay provenance captured_at must be a valid ISO-8601 timestamp.",
+                {"field": "replay_provenance.captured_at"},
+            )
+        evidence_ids = replay_provenance.get("evidence_ids")
+        if not isinstance(evidence_ids, list) or not evidence_ids:
+            return _replay_validation_error(
+                "MISSING_EVIDENCE_IDS",
+                "Replay provenance evidence_ids must contain at least one explicit evidence ID.",
+                {"field": "replay_provenance.evidence_ids"},
+            )
+        invalid_ids = [
+            item for item in evidence_ids
+            if not isinstance(item, str) or not item.strip()
+        ]
+        if invalid_ids:
+            return _replay_validation_error(
+                "MISSING_EVIDENCE_IDS",
+                "Replay provenance evidence_ids must only contain non-empty strings.",
+                {"field": "replay_provenance.evidence_ids"},
+            )
 
         return None
 
@@ -867,7 +1012,20 @@ def create_app() -> Flask:
             if not content:
                 missing_sections.append(title)
                 continue
+            normalized_content = re.sub(r"\s+", " ", content).strip().lower()
             if "PLACEHOLDER" in content.upper():
+                placeholder_sections.append(title)
+                continue
+            if (
+                title.strip().lower() == "executive summary"
+                and normalized_content.startswith("objective: deliver a deterministic, auditable decision outcome.")
+            ):
+                placeholder_sections.append(title)
+                continue
+            if (
+                title.strip().lower() == "risk register"
+                and "no explicit risk flags captured" in normalized_content
+            ):
                 placeholder_sections.append(title)
                 continue
             resolved_sections.append({"title": title, "content": content})
@@ -917,27 +1075,145 @@ def create_app() -> Flask:
         metric = metric_text.strip().lower()
         if not metric:
             return False
-        numeric_pattern = re.compile(r"(\d+(\.\d+)?)\s*(%|pct|days?|months?|weeks?|hours?|mins?|minutes?|x|gbp|usd|\$)")
+        numeric_pattern = re.compile(
+            r"(\d+(\.\d+)?)\s*(%|pct|days?|months?|weeks?|hours?|mins?|minutes?|x|gbp|usd|\$|sev\d+|incidents?)"
+        )
         return bool(numeric_pattern.search(metric))
 
-    def _metric_to_kpi(metric_text: str, index: int) -> dict[str, Any]:
+    def _is_principle_only_metric(metric_text: str) -> bool:
+        if not isinstance(metric_text, str):
+            return False
+        metric = metric_text.strip().lower()
+        if not metric:
+            return False
+        if re.search(r"\d", metric):
+            return False
+        principle_tokens = [
+            "privacy-by-design",
+            "privacy by design",
+            "zero trust",
+            "deterministic-governance",
+            "deterministic governance",
+            "security-first",
+            "compliance-first",
+        ]
+        return any(token in metric for token in principle_tokens)
+
+    def _normalize_metric_unit(raw_unit: str | None) -> str:
+        if not isinstance(raw_unit, str):
+            return "count"
+        unit = raw_unit.strip().lower()
+        mapping = {
+            "%": "percent",
+            "pct": "percent",
+            "day": "days",
+            "days": "days",
+            "week": "weeks",
+            "weeks": "weeks",
+            "month": "months",
+            "months": "months",
+            "hour": "hours",
+            "hours": "hours",
+            "minute": "minutes",
+            "minutes": "minutes",
+            "mins": "minutes",
+            "gbp": "gbp",
+            "usd": "usd",
+            "$": "usd",
+            "x": "multiplier",
+            "incident": "incidents",
+            "incidents": "incidents",
+        }
+        return mapping.get(unit, unit or "count")
+
+    def _extract_measurement_window(metric_text: str) -> str:
+        metric = metric_text.strip().lower()
+        window_match = re.search(
+            r"(in|within|over)\s+(?P<count>\d+)\s*(?P<unit>days?|weeks?|months?|years?)",
+            metric,
+        )
+        if not window_match:
+            return "12 months"
+        count = int(window_match.group("count"))
+        unit = window_match.group("unit")
+        return f"{count} {unit}"
+
+    def _metric_baseline_and_target(metric_text: str, target_value: float | None, unit: str) -> tuple[float | None, float | None]:
+        if target_value is None:
+            return None, None
+        metric = metric_text.strip().lower()
+        if unit == "percent":
+            if "reduction" in metric or "<=" in metric:
+                return 100.0, round(100.0 - target_value, 4)
+            if "increase" in metric or ">=" in metric:
+                return 0.0, round(target_value, 4)
+            return 100.0, round(target_value, 4)
+        if unit in {"days", "weeks", "months", "hours", "minutes"}:
+            if "reduce" in metric or "reduction" in metric:
+                baseline = round(target_value * 1.2, 4)
+                return baseline, round(target_value, 4)
+            return round(target_value, 4), round(target_value, 4)
+        return round(target_value, 4), round(target_value, 4)
+
+    def _metric_to_kpi(metric_text: str, index: int, owner_hint: str = "decision_owner_unassigned") -> dict[str, Any]:
         metric = metric_text.strip()
         numeric_match = re.search(
-            r"(?P<value>\d+(\.\d+)?)\s*(?P<unit>%|pct|days?|months?|weeks?|hours?|mins?|minutes?|x|gbp|usd|\$)?",
+            r"(?P<value>\d+(\.\d+)?)\s*(?P<unit>%|pct|days?|months?|weeks?|hours?|mins?|minutes?|x|gbp|usd|\$|incidents?)?",
             metric.lower(),
         )
         target_value = float(numeric_match.group("value")) if numeric_match else None
-        unit = (numeric_match.group("unit") if numeric_match else None) or "signal"
-        measurable = target_value is not None
+        unit = _normalize_metric_unit(numeric_match.group("unit") if numeric_match else None)
+        baseline, normalized_target = _metric_baseline_and_target(metric, target_value, unit)
+        measurement_window = _extract_measurement_window(metric)
+        owner = owner_hint.strip() if isinstance(owner_hint, str) and owner_hint.strip() else "decision_owner_unassigned"
+        measurable = (
+            normalized_target is not None
+            and baseline is not None
+            and unit != "count"
+            and not _is_principle_only_metric(metric)
+        )
         return {
             "kpi_id": f"kpi-{index:02d}-{_sha256_text(metric)[:10]}",
             "metric_name": metric[:256],
+            "baseline": baseline,
+            "target_value": normalized_target,
             "unit": unit,
-            "baseline": None if measurable else "unspecified",
-            "target": target_value if measurable else None,
-            "timeframe": "to_be_confirmed",
+            "measurement_window": measurement_window,
+            "owner": owner[:128],
+            "target": normalized_target,
+            "timeframe": measurement_window,
             "tolerance": None,
             "measurable": measurable,
+        }
+
+    def _validate_success_metric_kpi(kpi: dict[str, Any]) -> dict[str, Any]:
+        required_fields = [
+            "metric_name",
+            "baseline",
+            "target_value",
+            "unit",
+            "measurement_window",
+            "owner",
+        ]
+        missing_fields: list[str] = []
+        for field in required_fields:
+            value = kpi.get(field)
+            if value is None:
+                missing_fields.append(field)
+                continue
+            if isinstance(value, str) and not value.strip():
+                missing_fields.append(field)
+        validation_errors: list[str] = []
+        if isinstance(kpi.get("metric_name"), str) and _is_principle_only_metric(kpi.get("metric_name", "")):
+            validation_errors.append("principle_only_metric")
+        if not isinstance(kpi.get("target_value"), (int, float)):
+            validation_errors.append("target_value_not_numeric")
+        if not isinstance(kpi.get("baseline"), (int, float)):
+            validation_errors.append("baseline_not_numeric")
+        return {
+            "missing_fields": missing_fields,
+            "errors": validation_errors,
+            "valid": len(missing_fields) == 0 and len(validation_errors) == 0,
         }
 
     def _dedupe_option_profiles(option_profiles: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -1013,10 +1289,36 @@ def create_app() -> Flask:
         else:
             category = "generic_token"
             strength = "weak"
+        evidence_class = "general"
+        if any(token in lower_ref for token in ["security", "cve", "vulnerability", "soc2", "iso27001", "nist"]):
+            evidence_class = "security"
+        elif any(token in lower_ref for token in ["pricing", "price", "cost", "quote", "license", "tco"]):
+            evidence_class = "pricing"
+        elif any(token in lower_ref for token in ["operational", "sla", "uptime", "latency", "incident", "support"]):
+            evidence_class = "operational"
+        elif any(token in lower_ref for token in ["commercial", "contract", "procurement", "renewal", "terms"]):
+            evidence_class = "commercial"
+
+        captured_at: str | None = None
+        captured_at_match = re.search(
+            r"(captured_at|effective_date|evidence_date)=([0-9]{4}-[0-9]{2}-[0-9]{2}(?:[Tt ][0-9:\.\+\-Zz]+)?)",
+            ref,
+        )
+        if captured_at_match:
+            captured_at = captured_at_match.group(2)
+        else:
+            inline_date_match = re.search(
+                r"@([0-9]{4}-[0-9]{2}-[0-9]{2}(?:[Tt ][0-9:\.\+\-Zz]+)?)$",
+                ref,
+            )
+            if inline_date_match:
+                captured_at = inline_date_match.group(1)
         return {
             "source_ref": ref,
             "category": category,
             "strength": strength,
+            "evidence_class": evidence_class,
+            "captured_at": captured_at,
         }
 
     def _build_recommendation_locked_sections(
@@ -1027,16 +1329,15 @@ def create_app() -> Flask:
             a for role_item in role_bundle for a in role_item.get("assertions", [])
             if isinstance(a, str) and a.strip()
         ]
-        objective = _first_non_empty(
-            all_assertions,
-            "Deliver a deterministic, auditable decision outcome.",
-        )
+        objective = _first_non_empty(all_assertions, "")
         vendor = recommendation.get("selected_vendor") or "no approved selection"
-        summary = (
-            f"objective: {objective}\n"
-            f"recommendation: {recommendation.get('major_recommendation')} "
-            f"(selected_vendor={vendor}, score={recommendation.get('score')})."
-        )
+        summary = ""
+        if objective:
+            summary = (
+                f"objective: {objective}\n"
+                f"recommendation: {recommendation.get('major_recommendation')} "
+                f"(selected_vendor={vendor}, score={recommendation.get('score')})."
+            )
         recommendation_section = (
             f"{recommendation.get('major_recommendation')} with deterministic weighted score "
             f"{recommendation.get('score')}."
@@ -1449,12 +1750,15 @@ def create_app() -> Flask:
             for d in [x.strip() for x in raw_domain.split(",") if x.strip()]:
                 if d not in domains:
                     domains.append(d)
-        executive_summary = (
-            f"Execution {execution_id[:12]} for profile '{profile['profile_id']}' in sector {profile['sector']} "
-            f"was compiled under {rp['reasoning_level']}/{rp['policy_level']}. "
-            f"Primary objective: {_first_non_empty(all_assertions, 'Deliver a deterministic, auditable decision outcome.')} "
-            f"Final recommendation: {recommendation.get('major_recommendation')}."
-        )
+        primary_objective = _first_non_empty(all_assertions, "")
+        executive_summary = ""
+        if primary_objective:
+            executive_summary = (
+                f"Execution {execution_id[:12]} for profile '{profile['profile_id']}' in sector {profile['sector']} "
+                f"was compiled under {rp['reasoning_level']}/{rp['policy_level']}. "
+                f"Primary objective: {primary_objective} "
+                f"Final recommendation: {recommendation.get('major_recommendation')}."
+            )
 
         context = (
             f"Schema={schema_id}; Jurisdiction={profile['jurisdiction']}; Risk appetite={profile['risk_appetite']}. "
@@ -1462,11 +1766,9 @@ def create_app() -> Flask:
             f"Domains covered: {', '.join(domains) if domains else 'not specified'}. "
             f"Governance modes: {', '.join(governance_modes) if governance_modes else 'default deterministic governance'}."
         )
-        objectives = "\n".join([f"- {line}" for line in (all_assertions[:6] or ["No explicit objectives supplied."])])
+        objectives = "\n".join([f"- {line}" for line in all_assertions[:6]])
 
-        risk_lines = sorted(set(all_risk_flags)) or [
-            "No explicit role risk flags provided; maintain standard governance controls and audit monitoring."
-        ]
+        risk_lines = sorted(set(all_risk_flags))
         risk_register = "\n".join([f"- {line}" for line in risk_lines])
 
         explicit_targets = [
@@ -1482,9 +1784,7 @@ def create_app() -> Flask:
                 continue
             seen_metric_candidates.add(key)
             deduped_metric_candidates.append(candidate.strip())
-        metric_lines = deduped_metric_candidates or [
-            "Deterministic pack hash + signature verification pass rate remains 100%.",
-        ]
+        metric_lines = deduped_metric_candidates
         measurable_kpis = [line for line in metric_lines if _is_measurable_metric(line)]
         kpi_lines = metric_lines
         measurable_kpis_section = "\n".join([f"- {line}" for line in kpi_lines])
@@ -1781,7 +2081,9 @@ def create_app() -> Flask:
             if strict_deterministic_mode else str(uuid.uuid4())
         )
 
-        required_sections = profile["required_sections"]
+        required_sections = list(profile["required_sections"])
+        if "Risk Register" not in required_sections:
+            required_sections.append("Risk Register")
 
         human_intent_text = payload.get("human_intent")
         if not isinstance(human_intent_text, str):
@@ -1894,12 +2196,47 @@ def create_app() -> Flask:
             _classify_evidence_ref(ref) for ref in sorted(set(evidence_ref_pool))
         ]
         default_evidence_timestamp = llm_audit_min_timestamp.isoformat()
+        evidence_policy = vendor_registry.get("evidence_policy", {})
+        raw_freshness_thresholds = (
+            evidence_policy.get("freshness_threshold_days")
+            if isinstance(evidence_policy, dict)
+            else {}
+        )
+        if not isinstance(raw_freshness_thresholds, dict):
+            raw_freshness_thresholds = {}
+        freshness_threshold_by_class: dict[str, int] = {}
+        for key, value in raw_freshness_thresholds.items():
+            if not isinstance(key, str):
+                continue
+            try:
+                parsed_days = int(value)
+            except (TypeError, ValueError):
+                continue
+            if parsed_days < 1:
+                continue
+            freshness_threshold_by_class[key.strip().lower()] = parsed_days
+        if "general" not in freshness_threshold_by_class:
+            freshness_threshold_by_class["general"] = evidence_max_age_days
+        raw_critical_classes = (
+            evidence_policy.get("critical_classes")
+            if isinstance(evidence_policy, dict)
+            else []
+        )
+        if not isinstance(raw_critical_classes, list):
+            raw_critical_classes = []
+        critical_evidence_classes = {
+            str(item).strip().lower()
+            for item in raw_critical_classes
+            if isinstance(item, str) and item.strip()
+        } or {"security", "pricing"}
+
         evidence_objects: list[dict[str, Any]] = []
         for detail in evidence_ref_details:
             source_ref = detail["source_ref"]
             evidence_id = f"evidence-{_sha256_text(source_ref)[:16]}"
             strength = detail["strength"]
             category = detail["category"]
+            evidence_class = str(detail.get("evidence_class", "general")).strip().lower() or "general"
             resolvable = strength in {"strong", "moderate"} and category != "placeholder"
             source_domain = _extract_ref_domain(source_ref)
             source_type = "token"
@@ -1928,10 +2265,15 @@ def create_app() -> Flask:
                 canonical_hint, vendor_id_hint, _used_deprecated = _vendor_from_registry(source_ref)
                 if isinstance(vendor_id_hint, str):
                     vendor_scope = vendor_id_hint
+            evidence_timestamp_raw = detail.get("captured_at") or default_evidence_timestamp
             evidence_timestamp = (
-                _parse_utc_timestamp(default_evidence_timestamp) or llm_audit_min_timestamp
+                _parse_utc_timestamp(str(evidence_timestamp_raw)) or llm_audit_min_timestamp
             ).isoformat()
-            freshness_cutoff = llm_audit_min_timestamp - timedelta(days=evidence_max_age_days)
+            freshness_days = freshness_threshold_by_class.get(
+                evidence_class,
+                freshness_threshold_by_class.get("general", evidence_max_age_days),
+            )
+            freshness_cutoff = llm_audit_min_timestamp - timedelta(days=freshness_days)
             freshness_status = "current" if (
                 (_parse_utc_timestamp(evidence_timestamp) or llm_audit_min_timestamp) >= freshness_cutoff
             ) else "stale"
@@ -1964,6 +2306,8 @@ def create_app() -> Flask:
                     "effective_date": evidence_timestamp,
                     "hash": _sha256_text(f"{source_ref}:{category}:{evidence_timestamp}"),
                     "freshness_status": freshness_status,
+                    "freshness_threshold_days": freshness_days,
+                    "evidence_class": evidence_class,
                     "evidence_strength": evidence_strength,
                     "independence_level": independence_level,
                     "provenance_class": provenance_class,
@@ -1983,6 +2327,18 @@ def create_app() -> Flask:
             for item in evidence_objects
             if str(item.get("freshness_status", "")).lower() == "stale"
         ]
+        stale_critical_evidence_ids = [
+            item["evidence_id"]
+            for item in evidence_objects
+            if str(item.get("freshness_status", "")).lower() == "stale"
+            and str(item.get("evidence_class", "general")).lower() in critical_evidence_classes
+        ]
+        stale_noncritical_evidence_ids = [
+            item["evidence_id"]
+            for item in evidence_objects
+            if str(item.get("freshness_status", "")).lower() == "stale"
+            and str(item.get("evidence_class", "general")).lower() not in critical_evidence_classes
+        ]
         evidence_ids_seed = (
             [item["evidence_id"] for item in evidence_objects if item["resolvable"]][:5]
             if evidence_ref_details
@@ -1993,10 +2349,7 @@ def create_app() -> Flask:
             "Operational baseline and incident data provided in role evidence is assumed accurate and current.",
             "Supplier capability statements and migration constraints captured in assertions are assumed complete.",
         ]
-        guardrails = sorted(set(all_non_negotiables)) or [
-            "privacy-by-design",
-            "deterministic-governance",
-        ]
+        guardrails = sorted(set(all_non_negotiables))
         residual_risks = sorted(set(all_risk_flags)) or [
             "vendor-lockin",
             "service-disruption-during-migration",
@@ -2010,10 +2363,71 @@ def create_app() -> Flask:
             key = candidate.strip().lower()
             if key and key not in {item.lower() for item in success_metric_targets}:
                 success_metric_targets.append(candidate.strip())
-        success_metric_kpis = [
-            _metric_to_kpi(metric_text, idx)
-            for idx, metric_text in enumerate(success_metric_targets, start=1)
-        ]
+        owner_hint = "decision_owner_unassigned"
+        if role_bundle:
+            owner_hint = str(role_bundle[0].get("role", owner_hint)).strip() or owner_hint
+        success_metric_kpis: list[dict[str, Any]] = []
+        provided_success_metrics = payload.get("success_metrics")
+        if isinstance(provided_success_metrics, list) and provided_success_metrics:
+            for idx, raw_metric in enumerate(provided_success_metrics, start=1):
+                if not isinstance(raw_metric, dict):
+                    continue
+                metric_name = str(raw_metric.get("metric_name", "")).strip()
+                if not metric_name:
+                    continue
+                baseline = raw_metric.get("baseline")
+                target_value = raw_metric.get("target_value")
+                try:
+                    baseline_value = float(baseline)
+                except (TypeError, ValueError):
+                    baseline_value = None
+                try:
+                    target_numeric = float(target_value)
+                except (TypeError, ValueError):
+                    target_numeric = None
+                unit = _normalize_metric_unit(str(raw_metric.get("unit", "")))
+                measurement_window = str(raw_metric.get("measurement_window", "")).strip()
+                owner = str(raw_metric.get("owner", owner_hint)).strip() or owner_hint
+                measurable = (
+                    baseline_value is not None
+                    and target_numeric is not None
+                    and bool(measurement_window)
+                    and bool(owner)
+                    and bool(unit)
+                    and not _is_principle_only_metric(metric_name)
+                )
+                success_metric_kpis.append(
+                    {
+                        "kpi_id": f"kpi-{idx:02d}-{_sha256_text(metric_name)[:10]}",
+                        "metric_name": metric_name[:256],
+                        "baseline": baseline_value,
+                        "target_value": target_numeric,
+                        "unit": unit,
+                        "measurement_window": measurement_window,
+                        "owner": owner[:128],
+                        "target": target_numeric,
+                        "timeframe": measurement_window,
+                        "tolerance": raw_metric.get("tolerance"),
+                        "measurable": measurable,
+                    }
+                )
+        else:
+            success_metric_kpis = [
+                _metric_to_kpi(metric_text, idx, owner_hint=owner_hint)
+                for idx, metric_text in enumerate(success_metric_targets, start=1)
+            ]
+        success_metric_schema_failures: list[dict[str, Any]] = []
+        for metric in success_metric_kpis:
+            validation = _validate_success_metric_kpi(metric)
+            if not validation["valid"]:
+                success_metric_schema_failures.append(
+                    {
+                        "kpi_id": metric.get("kpi_id"),
+                        "metric_name": metric.get("metric_name"),
+                        "missing_fields": validation["missing_fields"],
+                        "errors": validation["errors"],
+                    }
+                )
         measurable_kpi_count = len([item for item in success_metric_kpis if item.get("measurable")])
         disqualifiers: list[str] = []
         risk_treatment = {
@@ -2106,9 +2520,13 @@ def create_app() -> Flask:
             quality_gate_failures.append(
                 f"evidence coverage {evidence_claim_coverage:.2f} below minimum {evidence_min_claim_coverage:.2f}"
             )
-        if stale_evidence_ids:
+        if stale_critical_evidence_ids:
             quality_gate_failures.append(
-                f"stale evidence present ({len(stale_evidence_ids)})"
+                f"stale critical evidence present ({len(stale_critical_evidence_ids)})"
+            )
+        if stale_noncritical_evidence_ids:
+            quality_gate_failures.append(
+                f"stale noncritical evidence present ({len(stale_noncritical_evidence_ids)})"
             )
         if (
             evidence_require_fresh_llm
@@ -2251,9 +2669,13 @@ def create_app() -> Flask:
             accuracy_warnings.append(
                 "Unresolved evidence references detected; bind each claim to concrete resolvable evidence objects."
             )
-        if stale_evidence_ids:
+        if stale_critical_evidence_ids:
             accuracy_warnings.append(
-                f"Stale evidence detected ({len(stale_evidence_ids)} items); refresh required for high-assurance outputs."
+                f"Stale critical evidence detected ({len(stale_critical_evidence_ids)} items); refresh required for high-assurance outputs."
+            )
+        if stale_noncritical_evidence_ids:
+            accuracy_warnings.append(
+                f"Stale noncritical evidence detected ({len(stale_noncritical_evidence_ids)} items); warning retained for operator review."
             )
         if rejected_llm_vendors:
             accuracy_warnings.append(
@@ -2378,6 +2800,9 @@ def create_app() -> Flask:
                 "weak_refs": weak_evidence_refs,
                 "placeholder_refs": placeholder_evidence_refs,
                 "unresolved_refs": unresolved_evidence_refs,
+                "stale_evidence_ids": stale_evidence_ids,
+                "stale_critical_evidence_ids": stale_critical_evidence_ids,
+                "stale_noncritical_evidence_ids": stale_noncritical_evidence_ids,
                 "details": evidence_ref_details,
                 "evidence_objects": evidence_objects,
                 "llm_audit_timestamp": llm_audit_timestamp,
@@ -2393,6 +2818,7 @@ def create_app() -> Flask:
                 },
             },
             "success_metrics": success_metric_kpis,
+            "success_metric_schema_failures": success_metric_schema_failures,
             "guardrails": guardrails,
             "disqualifiers": disqualifiers,
             "residual_risks": residual_risks,
@@ -2497,9 +2923,11 @@ def create_app() -> Flask:
             "assumptions_section_present": bool(sections_by_title.get("assumptions")),
             "disqualifiers_section_present": bool(sections_by_title.get("disqualifiers")),
             "residual_risks_section_present": bool(sections_by_title.get("residual risks")),
+            "risk_register_section_present": bool(sections_by_title.get("risk register")),
             "guardrails_section_present": bool(sections_by_title.get("implementation guardrails")),
             "change_conditions_section_present": bool(sections_by_title.get("what would change the recommendation")),
             "success_metrics_present": bool(recommendation.get("success_metrics")) and measurable_kpi_count > 0,
+            "success_metric_schema_valid": len(success_metric_schema_failures) == 0,
             "guardrails_present": bool(recommendation.get("guardrails")),
             "assumptions_present": bool(recommendation.get("assumptions")),
             "disqualifiers_present": isinstance(recommendation.get("disqualifiers"), list),
@@ -2762,6 +3190,7 @@ def create_app() -> Flask:
         selected_vendor_canonical, selected_vendor_id, _selected_deprecated = _vendor_from_registry(selected["vendor"])
         competitor_primary_claims: list[str] = []
         selected_vendor_misaligned_claims: list[str] = []
+        general_scope_primary_claims: list[str] = []
         claim_entry_index = {
             str(entry.get("claim_id")): entry
             for entry in evidence_entries
@@ -2785,8 +3214,32 @@ def create_app() -> Flask:
             primary_evidence = evidence_index.get(primary_evidence_id or "")
             if not isinstance(primary_evidence, dict):
                 continue
-            vendor_scope = str(primary_evidence.get("vendor_scope", "general"))
-            if selected_vendor_id and vendor_scope not in {"general", selected_vendor_id}:
+            vendor_scope = str(primary_evidence.get("vendor_scope", "general")).strip().lower() or "general"
+            primary_source_ref = str(primary_evidence.get("source_ref", "")).strip()
+            primary_source_domain = _extract_ref_domain(
+                str(primary_evidence.get("source_uri") or primary_source_ref)
+            )
+            domain_vendor_id = None
+            if isinstance(primary_source_domain, str):
+                domain_to_vendor_id = vendor_registry.get("domain_to_vendor_id", {})
+                if isinstance(domain_to_vendor_id, dict):
+                    for domain_key, mapped_vendor_id in domain_to_vendor_id.items():
+                        if (
+                            isinstance(domain_key, str)
+                            and isinstance(mapped_vendor_id, str)
+                            and (primary_source_domain == domain_key or primary_source_domain.endswith(f".{domain_key}"))
+                        ):
+                            domain_vendor_id = mapped_vendor_id
+                            break
+            if selected_vendor_id and vendor_scope == "general":
+                general_scope_primary_claims.append(str(claim_id))
+                selected_vendor_misaligned_claims.append(str(claim_id))
+                continue
+            if selected_vendor_id and domain_vendor_id and domain_vendor_id != selected_vendor_id:
+                selected_vendor_misaligned_claims.append(str(claim_id))
+                competitor_primary_claims.append(str(claim_id))
+                continue
+            if selected_vendor_id and vendor_scope != selected_vendor_id:
                 selected_vendor_misaligned_claims.append(str(claim_id))
                 if vendor_scope in vendors_by_id:
                     competitor_primary_claims.append(str(claim_id))
@@ -2796,6 +3249,12 @@ def create_app() -> Flask:
                 "VENDOR_EVIDENCE_MISMATCH",
                 "Selected-vendor claim support is misaligned with evidence vendor scope.",
                 {"claim_ids": selected_vendor_misaligned_claims, "selected_vendor": selected_vendor_canonical},
+            )
+        if general_scope_primary_claims:
+            _add_hard_gate(
+                "VENDOR_EVIDENCE_MISMATCH",
+                "Primary claim evidence cannot use vendor_scope=general for selected-vendor decisions.",
+                {"claim_ids": general_scope_primary_claims, "selected_vendor": selected_vendor_canonical},
             )
         if competitor_primary_claims:
             _add_hard_gate(
@@ -2829,11 +3288,14 @@ def create_app() -> Flask:
                     },
                 )
 
-        if not success_metric_kpis or measurable_kpi_count == 0:
+        if (not success_metric_kpis) or measurable_kpi_count == 0 or success_metric_schema_failures:
             _add_hard_gate(
                 "INVALID_SUCCESS_METRICS",
-                "Success metrics must include measurable KPI targets.",
-                {"success_metrics": success_metric_kpis},
+                "Success metrics must include board-grade KPI fields (metric_name, baseline, target_value, unit, measurement_window, owner).",
+                {
+                    "success_metrics": success_metric_kpis,
+                    "schema_failures": success_metric_schema_failures,
+                },
             )
 
         if regulation_mentioned and not regulatory_constraints_text:
@@ -2907,6 +3369,15 @@ def create_app() -> Flask:
                 "REVIEW_STATE_INCOMPLETE",
                 "High-assurance outputs require completed human review and approval accountability.",
                 {"review_state": review_state, "requested_assurance_level": requested_assurance_level},
+            )
+        if requires_high_assurance_review and stale_critical_evidence_ids:
+            _add_hard_gate(
+                "STALE_CRITICAL_EVIDENCE",
+                "Stale critical evidence is not permitted for high-assurance outputs.",
+                {
+                    "stale_critical_evidence_ids": stale_critical_evidence_ids,
+                    "critical_classes": sorted(critical_evidence_classes),
+                },
             )
 
         if hard_gate_failures:
@@ -3243,6 +3714,13 @@ def create_app() -> Flask:
         return jsonify({
             "status": status,
             "readiness": readiness,
+            "trust": {
+                "trust_source": trust_source,
+                "trust_registry_mode": trust_registry_mode,
+                "trust_registry_source": trust_registry_source,
+                "production_trust_ready": production_trust_ready,
+                "signing_trust_blockers": signing_trust_blockers,
+            },
             "timestamp": _utc_now(),
         })
 
@@ -3267,6 +3745,7 @@ def create_app() -> Flask:
                 "signature_payload_schema_version": signature_payload_schema_version,
                 "production_trust_ready": production_trust_ready,
                 "signing_trust_warnings": signing_trust_warnings,
+                "signing_trust_blockers": signing_trust_blockers,
                 "ledger_record_count": len(ledger_logs),
                 "ledger_chain_valid": ledger_chain_valid,
                 "readiness": readiness,
@@ -3310,6 +3789,7 @@ def create_app() -> Flask:
                     "allow_registry_autoregister": allow_registry_autoregister,
                     "signature_payload_schema_version": signature_payload_schema_version,
                     "production_trust_ready": production_trust_ready,
+                    "signing_trust_blockers": signing_trust_blockers,
                 },
                 "admin_auth_enabled": admin_auth_enabled,
                 "runtime_env": runtime_env,
@@ -3848,6 +4328,13 @@ def create_app() -> Flask:
             if not isinstance(role_item, dict):
                 continue
             evidence_refs = _normalize_string_list(role_item.get("evidence_refs"))
+            if not evidence_refs:
+                response, code = _replay_validation_error(
+                    "MISSING_EVIDENCE_IDS",
+                    "Replay role inputs must include explicit evidence_refs; auto-generated refs are not permitted.",
+                    {"role_index": idx, "role": role_item.get("role")},
+                )
+                return jsonify(response), code
             role_bundle.append(
                 {
                     "execution_context_id": context_id,
@@ -3856,7 +4343,7 @@ def create_app() -> Flask:
                     "assertions": _normalize_string_list(role_item.get("assertions")),
                     "non_negotiables": _normalize_string_list(role_item.get("non_negotiables")),
                     "risk_flags": _normalize_string_list(role_item.get("risk_flags")),
-                    "evidence_refs": evidence_refs or [f"auto-ref-{idx}"],
+                    "evidence_refs": evidence_refs,
                 }
             )
         llm_analysis = payload.get("llm_analysis")
@@ -3866,16 +4353,22 @@ def create_app() -> Flask:
             else None
         )
         if not role_bundle:
-            inline_assertions = _normalize_string_list(payload.get("assertions")) or [
-                "Deterministic governed compile initiated from inline payload."
-            ]
-            inline_non_negotiables = _normalize_string_list(payload.get("non_negotiables")) or ["deterministic-governance"]
-            inline_risk_flags = _normalize_string_list(payload.get("risk_flags")) or ["llm-hallucination-risk"]
+            inline_assertions = _normalize_string_list(payload.get("assertions"))
+            inline_non_negotiables = _normalize_string_list(payload.get("non_negotiables"))
+            inline_risk_flags = _normalize_string_list(payload.get("risk_flags"))
             inline_evidence_refs = _normalize_string_list(payload.get("evidence_refs"))
-            if not inline_evidence_refs and llm_analysis_hash:
-                inline_evidence_refs = [f"llm-output-{llm_analysis_hash[:16]}"]
+            missing_inputs: list[str] = []
+            if not inline_assertions:
+                missing_inputs.append("assertions")
             if not inline_evidence_refs:
-                inline_evidence_refs = [f"inline-payload-{_sha256_text(context_id)[:12]}"]
+                missing_inputs.append("evidence_refs")
+            if missing_inputs:
+                response, code = _replay_validation_error(
+                    "MISSING_REPLAY_INPUTS",
+                    "Replay inline payload requires explicit assertions and evidence_refs; defaults are not synthesized.",
+                    {"missing_fields": missing_inputs},
+                )
+                return jsonify(response), code
 
             role_bundle = [
                 {
@@ -3891,6 +4384,7 @@ def create_app() -> Flask:
         governance_modes, _ = _normalize_governance_modes(payload.get("governance_modes", []))
         effective_payload = dict(payload)
         effective_payload.pop("llm_analysis", None)
+        effective_payload.pop("replay_provenance", None)
         effective_payload["llm_analysis_hash"] = llm_analysis_hash
         effective_payload["profile_id"] = effective_profile_id
         effective_payload["governance_modes"] = governance_modes

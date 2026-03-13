@@ -143,6 +143,24 @@ def run_e2e_scenario(provider: str, run_label: str) -> dict:
         "schema_id": "GENERAL_SOLUTION_BOARD_REPORT_V1",
         "reasoning_level": "R5",
         "policy_level": "P3",
+        "success_metrics": [
+            {
+                "metric_name": "Cycle-time reduction percent",
+                "baseline": 20,
+                "target_value": 15,
+                "unit": "percent",
+                "measurement_window": "6 months",
+                "owner": "cio-owner",
+            },
+            {
+                "metric_name": "Sev1 incidents per month",
+                "baseline": 3,
+                "target_value": 1,
+                "unit": "incidents",
+                "measurement_window": "3 months",
+                "owner": "sre-owner",
+            },
+        ],
     }
     status, compile_resp = http("POST", "/api/governed-compile", compile_payload)
     check("Governed compile (201)", status == 201,

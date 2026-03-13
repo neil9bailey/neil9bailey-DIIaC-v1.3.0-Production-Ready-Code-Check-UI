@@ -264,6 +264,45 @@ components:
           items:
             type: string
             maxLength: 256
+        success_metrics:
+          type: array
+          maxItems: 50
+          items:
+            $ref: "#/components/schemas/SuccessMetricInput"
+
+    SuccessMetricInput:
+      type: object
+      required:
+        - metric_name
+        - baseline
+        - target_value
+        - unit
+        - measurement_window
+        - owner
+      properties:
+        metric_name:
+          type: string
+          minLength: 1
+          maxLength: 256
+        baseline:
+          type: number
+        target_value:
+          type: number
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 64
+        measurement_window:
+          type: string
+          minLength: 1
+          maxLength: 128
+        owner:
+          type: string
+          minLength: 1
+          maxLength: 128
+        tolerance:
+          type: number
+          nullable: true
 
     ExecutionSummary:
       type: object
@@ -312,6 +351,7 @@ components:
         - profile_id
         - reasoning_level
         - policy_level
+        - replay_provenance
       properties:
         execution_context_id:
           type: string
@@ -337,6 +377,52 @@ components:
           items:
             type: string
             maxLength: 128
+        assertions:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+        non_negotiables:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+        risk_flags:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+        evidence_refs:
+          type: array
+          maxItems: 50
+          items:
+            type: string
+            maxLength: 1024
+        replay_provenance:
+          type: object
+          required:
+            - source
+            - captured_at
+            - evidence_ids
+          properties:
+            source:
+              type: string
+              minLength: 1
+              maxLength: 256
+            captured_at:
+              type: string
+              format: date-time
+            evidence_ids:
+              type: array
+              minItems: 1
+              maxItems: 50
+              items:
+                type: string
+                minLength: 1
+                maxLength: 256
 
     MerkleProofRequest:
       type: object

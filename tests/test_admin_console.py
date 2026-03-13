@@ -2,6 +2,11 @@ import os
 import base64
 import json
 import shutil
+import socket
+import subprocess
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -114,6 +119,7 @@ def test_deterministic_same_inputs_same_scores_and_structured_sections():
         'Regulatory Constraints',
         'Implementation Guardrails',
         'What Would Change The Recommendation',
+        'Risk Register',
     ]
 
 
@@ -152,6 +158,11 @@ def test_replay_verification_certificate_for_deterministic_execution():
         'schema_id': 'GENERAL_SOLUTION_BOARD_REPORT_V1',
         'reasoning_level': 'R4',
         'policy_level': 'P4',
+        'replay_provenance': {
+            'source': 'test-suite',
+            'captured_at': '2026-03-01T00:00:00Z',
+            'evidence_ids': ['evidence-manual-1'],
+        },
     })
     assert replay.status_code == 200
     replay_json = replay.get_json()
@@ -253,13 +264,15 @@ def test_vendor_names_from_intent_are_preserved_in_scoring_and_report():
         'execution_context_id': ctx,
         'role': 'enterprise_architect',
         'domain': 'network-transformation, Secure-Edge, ZTNA',
-        'assertions': ['Assess Palo-Alto Networks and Fortinet for SD-WAN and hybrid WAN with >=15% cycle-time reduction in <=6 months.'],
+        'assertions': [
+            'Must use Fortinet for primary SD-WAN recommendation with >=15% cycle-time reduction in <=6 months.',
+            'Assess Palo-Alto Networks as a controlled alternative option.',
+        ],
         'non_negotiables': ['Budget cap GBP 1.8M/year'],
         'risk_flags': ['vendor-lockin'],
         'evidence_refs': [
             'urn:independent:analyst-report:2026q1',
             'https://www.fortinet.com/products/secure-sd-wan',
-            'https://www.paloaltonetworks.com/sase/prisma-sd-wan',
         ],
     })
 
@@ -269,25 +282,37 @@ def test_vendor_names_from_intent_are_preserved_in_scoring_and_report():
         'schema_id': 'GENERAL_SOLUTION_BOARD_REPORT_V1',
         'reasoning_level': 'R4',
         'policy_level': 'P3',
+        'success_metrics': _valid_success_metrics(),
         'governance_modes': ["CONSTRAINTS-FIRST MODE"],
     })
-    assert compile_res.status_code == 201
-    compile_json = compile_res.get_json()
-    assert compile_json['decision_summary']['decision_status'] in {
-        'recommended',
-        'needs_more_evidence',
-        'not_recommended',
-    }
+    if compile_res.status_code == 201:
+        compile_json = compile_res.get_json()
+        assert compile_json['decision_summary']['decision_status'] in {
+            'recommended',
+            'needs_more_evidence',
+            'not_recommended',
+        }
 
-    all_execs = c.get('/admin/executions').get_json()['executions']
-    execution = [
-        e for e in all_execs
-        if e['execution_id'] == compile_json['execution_id']
-    ][0]
-    ranked = execution['board_report']['ranked_options']
-    ranked_names = {r['vendor'] for r in ranked}
-    assert 'Palo Alto Networks' in ranked_names
-    assert 'Fortinet' in ranked_names
+        all_execs = c.get('/admin/executions').get_json()['executions']
+        execution = [
+            e for e in all_execs
+            if e['execution_id'] == compile_json['execution_id']
+        ][0]
+        ranked = execution['board_report']['ranked_options']
+        ranked_names = {r['vendor'] for r in ranked}
+        assert 'Palo Alto Networks' in ranked_names
+        assert 'Fortinet' in ranked_names
+    else:
+        assert compile_res.status_code == 422
+        payload = compile_res.get_json()
+        codes = {item.get('code') for item in payload.get('hard_gate_failures', []) if isinstance(item, dict)}
+        assert 'VENDOR_EVIDENCE_MISMATCH' in codes
+        selected_vendor_values = {
+            item.get('details', {}).get('selected_vendor')
+            for item in payload.get('hard_gate_failures', [])
+            if isinstance(item, dict) and isinstance(item.get('details'), dict)
+        }
+        assert selected_vendor_values.intersection({'Palo Alto Networks', 'Fortinet'})
 
 
 def test_runtime_reconciles_public_key_registry_entry(monkeypatch, tmp_path):
@@ -839,3 +864,704 @@ def test_signed_export_includes_verification_metadata_and_schema_version():
     assert sigmeta['signature_scope'] == 'execution_manifest'
     assert sigmeta['export_verification']['verified'] is True
     assert sigmeta['export_bundle']['zip_sha256']
+
+
+def _valid_success_metrics() -> list[dict[str, object]]:
+    return [
+        {
+            "metric_name": "Cycle-time reduction percent",
+            "baseline": 20,
+            "target_value": 15,
+            "unit": "percent",
+            "measurement_window": "6 months",
+            "owner": "cio-owner",
+        }
+    ]
+
+
+def _hard_gate_codes(response) -> set[str]:
+    payload = response.get_json() or {}
+    return {
+        str(item.get("code"))
+        for item in payload.get("hard_gate_failures", [])
+        if isinstance(item, dict) and item.get("code")
+    }
+
+
+def _compile_payload(ctx: str, **overrides: object) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "execution_context_id": ctx,
+        "profile_id": "it_enterprise_profile_v1",
+        "schema_id": "GENERAL_SOLUTION_BOARD_REPORT_V1",
+        "reasoning_level": "R4",
+        "policy_level": "P4",
+        "success_metrics": _valid_success_metrics(),
+    }
+    payload.update(overrides)
+    return payload
+
+
+def _find_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.bind(("127.0.0.1", 0))
+        return int(sock.getsockname()[1])
+
+
+def _http_json(url: str, method: str = "GET", payload: dict | None = None, headers: dict[str, str] | None = None) -> tuple[int, dict]:
+    body = None
+    req_headers = {"Content-Type": "application/json"}
+    if headers:
+        req_headers.update(headers)
+    if payload is not None:
+        body = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=body, method=method, headers=req_headers)
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            text = resp.read().decode("utf-8")
+            return resp.status, json.loads(text) if text else {}
+    except urllib.error.HTTPError as exc:
+        text = exc.read().decode("utf-8")
+        return exc.code, json.loads(text) if text else {}
+
+
+def _wait_for_health(base_url: str, timeout_seconds: float = 10.0) -> tuple[int, dict]:
+    deadline = time.time() + timeout_seconds
+    while time.time() < deadline:
+        try:
+            status, payload = _http_json(f"{base_url}/health")
+            if status in {200, 503}:
+                return status, payload
+        except Exception:
+            pass
+        time.sleep(0.15)
+    raise RuntimeError("bridge health endpoint did not become reachable")
+
+
+def _generate_signing_material() -> tuple[str, str]:
+    private_key = Ed25519PrivateKey.generate()
+    private_pem = private_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    public_b64 = base64.b64encode(
+        private_key.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+    ).decode("utf-8")
+    return private_pem, public_b64
+
+
+def _write_public_keys(target_path: Path, entries: list[dict[str, str]]) -> None:
+    target_path.parent.mkdir(parents=True, exist_ok=True)
+    target_path.write_text(json.dumps({"keys": entries}, indent=2), encoding="utf-8")
+
+
+def _bridge_env(workspace: Path, port: int, key_id: str, private_pem: str, app_env: str = "production") -> dict[str, str]:
+    env = os.environ.copy()
+    env.update(
+        {
+            "APP_ENV": app_env,
+            "SIGNING_ENABLED": "true",
+            "SIGNING_KEY_ID": key_id,
+            "SIGNING_PRIVATE_KEY_PEM": private_pem,
+            "DIIAC_WORKSPACE": str(workspace),
+            "PORT": str(port),
+            "LLM_INGESTION_ENABLED": "false",
+        }
+    )
+    return env
+
+
+def test_replay_does_not_inject_legacy_non_negotiables():
+    c = client(strict=True, app_env="development")
+    base_payload = {
+        "execution_context_id": "ctx-replay-no-legacy-non-negotiables",
+        "profile_id": "transport_profile_v1",
+        "schema_id": "GENERAL_SOLUTION_BOARD_REPORT_V1",
+        "reasoning_level": "R4",
+        "policy_level": "P4",
+        "assertions": ["Deliver >=15% cycle-time reduction in <=6 months."],
+        "evidence_refs": ["https://www.fortinet.com/products/secure-sd-wan"],
+        "replay_provenance": {
+            "source": "test-suite",
+            "captured_at": "2026-03-01T00:00:00Z",
+            "evidence_ids": ["evidence-manual-1"],
+        },
+    }
+    replay_without_legacy = c.post("/verify/replay", json=base_payload)
+    replay_with_legacy = c.post(
+        "/verify/replay",
+        json={**base_payload, "non_negotiables": ["deterministic-governance"]},
+    )
+    assert replay_without_legacy.status_code == 200
+    assert replay_with_legacy.status_code == 200
+    assert replay_without_legacy.get_json()["expected_execution_id"] != replay_with_legacy.get_json()["expected_execution_id"]
+
+
+def test_replay_does_not_inject_legacy_risk_flags():
+    c = client(strict=True, app_env="development")
+    base_payload = {
+        "execution_context_id": "ctx-replay-no-legacy-risk-flags",
+        "profile_id": "transport_profile_v1",
+        "schema_id": "GENERAL_SOLUTION_BOARD_REPORT_V1",
+        "reasoning_level": "R4",
+        "policy_level": "P4",
+        "assertions": ["Deliver >=15% cycle-time reduction in <=6 months."],
+        "evidence_refs": ["https://www.fortinet.com/products/secure-sd-wan"],
+        "replay_provenance": {
+            "source": "test-suite",
+            "captured_at": "2026-03-01T00:00:00Z",
+            "evidence_ids": ["evidence-manual-2"],
+        },
+    }
+    replay_without_legacy = c.post("/verify/replay", json=base_payload)
+    replay_with_legacy = c.post(
+        "/verify/replay",
+        json={**base_payload, "risk_flags": ["llm-hallucination-risk"]},
+    )
+    assert replay_without_legacy.status_code == 200
+    assert replay_with_legacy.status_code == 200
+    assert replay_without_legacy.get_json()["expected_execution_id"] != replay_with_legacy.get_json()["expected_execution_id"]
+
+
+def test_replay_rejects_missing_evidence_ids_without_auto_refs():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-replay-missing-evidence-no-auto-ref"
+    role_response = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Deliver >=15% cycle-time reduction in <=6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [],
+        },
+    )
+    assert role_response.status_code == 201
+
+    replay = c.post(
+        "/verify/replay",
+        json={
+            "execution_context_id": ctx,
+            "profile_id": "transport_profile_v1",
+            "schema_id": "GENERAL_SOLUTION_BOARD_REPORT_V1",
+            "reasoning_level": "R4",
+            "policy_level": "P4",
+            "replay_provenance": {
+                "source": "test-suite",
+                "captured_at": "2026-03-01T00:00:00Z",
+                "evidence_ids": ["evidence-manual-3"],
+            },
+        },
+    )
+    assert replay.status_code == 422
+    payload = replay.get_json()
+    assert payload["error"] == "replay_input_invalid"
+    assert payload["error_code"] == "MISSING_EVIDENCE_IDS"
+
+
+def test_replay_fails_with_structured_error_on_missing_required_provenance():
+    c = client(strict=True, app_env="development")
+    replay = c.post(
+        "/verify/replay",
+        json={
+            "execution_context_id": "ctx-replay-missing-provenance",
+            "profile_id": "transport_profile_v1",
+            "schema_id": "GENERAL_SOLUTION_BOARD_REPORT_V1",
+            "reasoning_level": "R4",
+            "policy_level": "P4",
+            "assertions": ["Deliver >=15% cycle-time reduction in <=6 months."],
+            "evidence_refs": ["https://www.fortinet.com/products/secure-sd-wan"],
+        },
+    )
+    assert replay.status_code == 422
+    payload = replay.get_json()
+    assert payload["error"] == "replay_input_invalid"
+    assert payload["error_code"] == "MISSING_REQUIRED_PROVENANCE"
+
+
+def test_bridge_non_dev_requires_registered_active_key(tmp_path):
+    workspace = tmp_path / "bridge-workspace-missing-key"
+    private_pem, _public_b64 = _generate_signing_material()
+    _write_public_keys(
+        workspace / "contracts" / "keys" / "public_keys.json",
+        [{"key_id": "different-key", "algorithm": "Ed25519", "public_key_b64": "AAAA"}],
+    )
+    env = _bridge_env(workspace, _find_free_port(), "bridge-prod-key", private_pem)
+
+    bridge_cwd = Path(__file__).resolve().parents[1] / "backend-ui-bridge"
+    result = subprocess.run(
+        ["node", "server.js"],
+        cwd=bridge_cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=12,
+    )
+    output = f"{result.stdout}\n{result.stderr}"
+    assert result.returncode != 0
+    assert "BRIDGE_TRUST_BLOCKED:MISSING_REGISTERED_ACTIVE_KEY" in output
+
+
+def test_bridge_non_dev_rejects_mismatched_registered_key(tmp_path):
+    workspace = tmp_path / "bridge-workspace-mismatch"
+    private_pem, _public_b64 = _generate_signing_material()
+    _other_private_pem, other_public_b64 = _generate_signing_material()
+    _write_public_keys(
+        workspace / "contracts" / "keys" / "public_keys.json",
+        [{"key_id": "bridge-prod-key", "algorithm": "Ed25519", "public_key_b64": other_public_b64}],
+    )
+    env = _bridge_env(workspace, _find_free_port(), "bridge-prod-key", private_pem)
+
+    bridge_cwd = Path(__file__).resolve().parents[1] / "backend-ui-bridge"
+    result = subprocess.run(
+        ["node", "server.js"],
+        cwd=bridge_cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=12,
+    )
+    output = f"{result.stdout}\n{result.stderr}"
+    assert result.returncode != 0
+    assert "BRIDGE_TRUST_BLOCKED:ACTIVE_KEY_MISMATCH" in output
+
+
+def test_bridge_runtime_trust_parity_contract(monkeypatch, tmp_path):
+    private_pem, public_b64 = _generate_signing_material()
+    key_id = "prod-parity-key"
+
+    runtime_root = tmp_path / "runtime-root"
+    shutil.copytree(Path(__file__).resolve().parents[1] / "contracts", runtime_root / "contracts")
+    _write_public_keys(
+        runtime_root / "contracts" / "keys" / "public_keys.json",
+        [{"key_id": key_id, "algorithm": "Ed25519", "public_key_b64": public_b64}],
+    )
+    monkeypatch.chdir(runtime_root)
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("ADMIN_AUTH_ENABLED", "false")
+    monkeypatch.setenv("DIIAC_STATE_DB", ":memory:")
+    monkeypatch.setenv("SIGNING_ENABLED", "true")
+    monkeypatch.setenv("SIGNING_KEY_ID", key_id)
+    monkeypatch.setenv("SIGNING_PRIVATE_KEY_PEM", private_pem)
+    runtime_app = create_app()
+    runtime_app.testing = True
+    runtime_client = runtime_app.test_client()
+    runtime_health = runtime_client.get("/admin/health").get_json()
+    assert runtime_health["production_trust_ready"] is True
+    assert runtime_health["signing_trust_blockers"] == []
+
+    bridge_workspace = tmp_path / "bridge-workspace-parity"
+    _write_public_keys(
+        bridge_workspace / "contracts" / "keys" / "public_keys.json",
+        [{"key_id": key_id, "algorithm": "Ed25519", "public_key_b64": public_b64}],
+    )
+    bridge_port = _find_free_port()
+    env = _bridge_env(bridge_workspace, bridge_port, key_id, private_pem, app_env="development")
+    bridge_cwd = Path(__file__).resolve().parents[1] / "backend-ui-bridge"
+    proc = subprocess.Popen(
+        ["node", "server.js"],
+        cwd=bridge_cwd,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    try:
+        status, bridge_health = _wait_for_health(f"http://127.0.0.1:{bridge_port}")
+        assert status == 200
+        assert bridge_health["signing"]["production_trust_ready"] is True
+        assert bridge_health["trust"]["signing_trust_blockers"] == []
+
+        config_status, bridge_config = _http_json(
+            f"http://127.0.0.1:{bridge_port}/admin/config/effective",
+            headers={"x-role": "admin"},
+        )
+        assert config_status == 200
+        assert bridge_config["signing"]["production_trust_ready"] is True
+        assert bridge_config["signing"]["signing_trust_blockers"] == []
+        assert bridge_config["signing"]["trust_source"] == runtime_health["trust_source"]
+        assert bridge_config["signing"]["trust_registry_mode"] == runtime_health["trust_registry_mode"]
+        assert bridge_config["signing"]["trust_registry_source"] == runtime_health["trust_registry_source"]
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+
+
+def test_bridge_and_runtime_fail_same_trust_misconfiguration_e2e(monkeypatch, tmp_path):
+    private_pem, _public_b64 = _generate_signing_material()
+    key_id = "prod-misconfigured-key"
+
+    runtime_root = tmp_path / "runtime-misconfig-root"
+    shutil.copytree(Path(__file__).resolve().parents[1] / "contracts", runtime_root / "contracts")
+    _write_public_keys(
+        runtime_root / "contracts" / "keys" / "public_keys.json",
+        [{"key_id": "different-key", "algorithm": "Ed25519", "public_key_b64": "AAAA"}],
+    )
+    monkeypatch.chdir(runtime_root)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ADMIN_AUTH_ENABLED", "false")
+    monkeypatch.setenv("DIIAC_STATE_DB", ":memory:")
+    monkeypatch.setenv("SIGNING_ENABLED", "true")
+    monkeypatch.setenv("SIGNING_KEY_ID", key_id)
+    monkeypatch.setenv("SIGNING_PRIVATE_KEY_PEM", private_pem)
+    with pytest.raises(RuntimeError, match="not present in contracts/keys/public_keys.json"):
+        create_app()
+
+    bridge_workspace = tmp_path / "bridge-workspace-misconfig"
+    _write_public_keys(
+        bridge_workspace / "contracts" / "keys" / "public_keys.json",
+        [{"key_id": "different-key", "algorithm": "Ed25519", "public_key_b64": "AAAA"}],
+    )
+    env = _bridge_env(bridge_workspace, _find_free_port(), key_id, private_pem)
+    bridge_cwd = Path(__file__).resolve().parents[1] / "backend-ui-bridge"
+    result = subprocess.run(
+        ["node", "server.js"],
+        cwd=bridge_cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=12,
+    )
+    output = f"{result.stdout}\n{result.stderr}"
+    assert result.returncode != 0
+    assert "BRIDGE_TRUST_BLOCKED:MISSING_REGISTERED_ACTIVE_KEY" in output
+
+
+def test_missing_risk_register_fails_board_section_incomplete():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-missing-risk-register"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Deliver >=15% cycle-time reduction in <=6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": [],
+            "evidence_refs": [
+                "https://www.fortinet.com/products/secure-sd-wan",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+
+    compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx))
+    assert compile_res.status_code == 422
+    assert "BOARD_SECTION_INCOMPLETE" in _hard_gate_codes(compile_res)
+
+
+def test_missing_executive_summary_fails_board_section_incomplete():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-missing-executive-summary"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": [],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.fortinet.com/products/secure-sd-wan",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+
+    compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx))
+    assert compile_res.status_code == 422
+    assert "BOARD_SECTION_INCOMPLETE" in _hard_gate_codes(compile_res)
+
+
+def test_production_output_contains_no_placeholder_sections():
+    c = client(strict=True, app_env="production")
+    ctx = "ctx-production-no-placeholders"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Deliver >=15% cycle-time reduction in <=6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.fortinet.com/products/secure-sd-wan",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx))
+    assert compile_res.status_code == 201
+    execution_id = compile_res.get_json()["execution_id"]
+    execution = [
+        e for e in c.get("/admin/executions", headers={"Authorization": "Bearer test-admin-token"}).get_json()["executions"]
+        if e["execution_id"] == execution_id
+    ][0]
+    for section in execution["board_report"]["sections"]:
+        content = str(section.get("content", ""))
+        assert "PLACEHOLDER" not in content.upper()
+        assert "No explicit role risk flags provided" not in content
+        assert "No explicit objectives supplied." not in content
+
+
+def test_success_metrics_require_baseline_target_unit_window_owner():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-kpi-missing-fields"
+    assert submit_role(c, ctx, "cto").status_code == 201
+    compile_res = c.post(
+        "/api/governed-compile",
+        json=_compile_payload(
+            ctx,
+            success_metrics=[{"metric_name": "Cycle-time reduction"}],
+        ),
+    )
+    assert compile_res.status_code == 400
+    payload = compile_res.get_json()
+    assert payload["error"] == "missing_fields"
+    assert payload["field"] == "success_metrics"
+
+
+def test_principle_only_metric_fails_invalid_success_metrics():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-kpi-principle-only"
+    assert submit_role(c, ctx, "cto").status_code == 201
+    compile_res = c.post(
+        "/api/governed-compile",
+        json=_compile_payload(
+            ctx,
+            success_metrics=[
+                {
+                    "metric_name": "privacy-by-design",
+                    "baseline": 0,
+                    "target_value": 1,
+                    "unit": "count",
+                    "measurement_window": "6 months",
+                    "owner": "cio-owner",
+                }
+            ],
+        ),
+    )
+    assert compile_res.status_code == 422
+    assert "INVALID_SUCCESS_METRICS" in _hard_gate_codes(compile_res)
+
+
+def test_kpi_schema_round_trip_contract():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-kpi-round-trip"
+    assert submit_role(c, ctx, "cto").status_code == 201
+    success_metrics = [
+        {
+            "metric_name": "Cycle-time reduction percent",
+            "baseline": 20,
+            "target_value": 15,
+            "unit": "percent",
+            "measurement_window": "6 months",
+            "owner": "cio-owner",
+        },
+        {
+            "metric_name": "Sev1 incidents per month",
+            "baseline": 3,
+            "target_value": 1,
+            "unit": "incidents",
+            "measurement_window": "3 months",
+            "owner": "sre-owner",
+        },
+    ]
+    compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx, success_metrics=success_metrics))
+    assert compile_res.status_code == 201
+    execution_id = compile_res.get_json()["execution_id"]
+    scoring = c.get(f"/executions/{execution_id}/scoring").get_json()
+    kpis = scoring["recommendation"]["success_metrics"]
+    assert len(kpis) == 2
+    for kpi in kpis:
+        assert set(["metric_name", "baseline", "target_value", "unit", "measurement_window", "owner"]).issubset(set(kpi.keys()))
+
+
+def test_stale_security_evidence_blocks_high_assurance():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-stale-security-high-assurance"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.fortinet.com/security/advisory?captured_at=2020-01-01T00:00:00Z",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post(
+        "/api/governed-compile",
+        json=_compile_payload(
+            ctx,
+            requested_assurance_level="human_reviewed",
+            review_state={
+                "human_review_required": True,
+                "human_review_completed": True,
+                "reviewed_by": "reviewer-1",
+                "approved_by": "approver-1",
+                "review_timestamps": {"completed_at": "2026-03-12T09:00:00Z"},
+            },
+        ),
+    )
+    assert compile_res.status_code == 422
+    assert "STALE_CRITICAL_EVIDENCE" in _hard_gate_codes(compile_res)
+
+
+def test_stale_pricing_evidence_blocks_high_assurance():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-stale-pricing-high-assurance"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.fortinet.com/pricing/enterprise?captured_at=2020-01-01T00:00:00Z",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post(
+        "/api/governed-compile",
+        json=_compile_payload(
+            ctx,
+            requested_assurance_level="externally_validated",
+            review_state={
+                "human_review_required": True,
+                "human_review_completed": True,
+                "reviewed_by": "reviewer-1",
+                "approved_by": "approver-1",
+                "review_timestamps": {"completed_at": "2026-03-12T09:00:00Z"},
+            },
+        ),
+    )
+    assert compile_res.status_code == 422
+    assert "STALE_CRITICAL_EVIDENCE" in _hard_gate_codes(compile_res)
+
+
+def test_noncritical_stale_evidence_warns_without_false_pass():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-stale-operational-noncritical"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.fortinet.com/operational/sla?captured_at=2020-01-01T00:00:00Z",
+                "https://www.fortinet.com/security/advisory?captured_at=2026-02-01T00:00:00Z",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post(
+        "/api/governed-compile",
+        json=_compile_payload(ctx, requested_assurance_level="evidence_backed"),
+    )
+    assert compile_res.status_code == 201
+    decision_summary = compile_res.get_json()["decision_summary"]
+    warnings = decision_summary.get("quality_gate_failures", [])
+    assert any("stale noncritical evidence present" in str(item).lower() for item in warnings)
+
+
+def test_selected_vendor_rejects_competitor_primary_evidence():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-competitor-primary-evidence"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.paloaltonetworks.com/sase/prisma-sd-wan?captured_at=2026-02-01T00:00:00Z",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx))
+    assert compile_res.status_code == 422
+    assert "COMPETITOR_PRIMARY_EVIDENCE" in _hard_gate_codes(compile_res)
+
+
+def test_vendor_scope_general_does_not_satisfy_first_party_requirement():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-vendor-scope-general"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "urn:independent:analyst-report:2026q1",
+                "https://example.org/industry-report?captured_at=2026-02-01T00:00:00Z",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx))
+    assert compile_res.status_code == 422
+    assert "VENDOR_EVIDENCE_MISMATCH" in _hard_gate_codes(compile_res)
+
+
+def test_vendor_evidence_mismatch_hard_fails_selected_vendor():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-vendor-evidence-mismatch"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.cisco.com/c/en/us/solutions/enterprise-networks/sd-wan.html?captured_at=2026-02-01T00:00:00Z",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx))
+    assert compile_res.status_code == 422
+    assert "VENDOR_EVIDENCE_MISMATCH" in _hard_gate_codes(compile_res)

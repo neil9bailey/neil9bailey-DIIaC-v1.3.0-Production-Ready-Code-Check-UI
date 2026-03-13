@@ -1,946 +1,263 @@
 {
-  "generated_at_utc": "2026-03-12T23:24:57.245048+00:00",
+  "generated_at_utc": "2026-03-13T01:08:00Z",
   "repository_root": "F:/code/diiac/diiac_v1.3.0_ui",
-  "commit": "612e654",
+  "commit": "bfe6ea2",
   "items": [
     {
-      "epic_id": "E1",
-      "ticket_id": "E1-T01",
-      "claim": "Remove runtime trust-registry mutation from operational paths",
-      "status": "partial",
+      "epic_id": "E6",
+      "ticket_id": "R1",
+      "claim": "Replay/runtime paths no longer inject legacy deterministic-governance, llm-hallucination-risk, or auto-ref fallbacks; explicit replay provenance is required with structured errors.",
+      "status": "implemented",
       "code_refs": [
-        "app.py",
-        "tests/test_admin_console.py"
+        "app.py:758",
+        "app.py:773",
+        "app.py:4310"
       ],
-      "symbol_refs": [],
+      "symbol_refs": [
+        "_replay_validation_error",
+        "_validate_replay_payload",
+        "verify_replay"
+      ],
       "test_refs": [
-        "tests/test_admin_console.py:test_runtime_reconciles_public_key_registry_entry",
+        "tests/test_admin_console.py:test_replay_does_not_inject_legacy_non_negotiables",
+        "tests/test_admin_console.py:test_replay_does_not_inject_legacy_risk_flags",
+        "tests/test_admin_console.py:test_replay_rejects_missing_evidence_ids_without_auto_refs",
+        "tests/test_admin_console.py:test_replay_fails_with_structured_error_on_missing_required_provenance",
+        "tests/test_admin_console.py:test_replay_verification_certificate_for_deterministic_execution"
+      ],
+      "verification_commands": [
+        "python -m pytest -q --basetemp .pytest_tmp",
+        "rg -n \"llm-hallucination-risk|auto-ref-|MISSING_REPLAY_INPUTS|MISSING_REQUIRED_PROVENANCE|MISSING_EVIDENCE_IDS\" app.py"
+      ],
+      "verification_result": "PASS",
+      "generated_artifacts": [
+        "artifacts/replay-* / replay_certificate.json"
+      ],
+      "artifact_hashes": {
+        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
+        "tests/test_admin_console.py": "BA4A1BCA5DB34CC132D3B3009BF9FCF1CE52A073C6AADCC4B0DC1337341CBA24"
+      },
+      "remaining_risks": [
+        "No additional R1 runtime gaps observed on production-relevant replay path."
+      ],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E1",
+      "ticket_id": "R2",
+      "claim": "Bridge enforces non-dev trust parity with runtime for key-registry presence and active-key match, and exposes structured trust blocker state.",
+      "status": "implemented",
+      "code_refs": [
+        "backend-ui-bridge/server.js:99",
+        "backend-ui-bridge/server.js:209",
+        "backend-ui-bridge/server.js:282",
+        "backend-ui-bridge/server.js:1911",
+        "app.py:553",
+        "app.py:3706",
+        "Frontend/src/api.ts:180"
+      ],
+      "symbol_refs": [
+        "loadBridgeTrustState",
+        "BRIDGE_TRUST_BLOCKED",
+        "bridgeTrustState.signing_trust_blockers",
+        "admin_health",
+        "health"
+      ],
+      "test_refs": [
+        "tests/test_admin_console.py:test_bridge_non_dev_requires_registered_active_key",
+        "tests/test_admin_console.py:test_bridge_non_dev_rejects_mismatched_registered_key",
+        "tests/test_admin_console.py:test_bridge_runtime_trust_parity_contract",
+        "tests/test_admin_console.py:test_bridge_and_runtime_fail_same_trust_misconfiguration_e2e",
+        "tests/test_admin_console.py:test_non_dev_runtime_blocks_ephemeral_signing",
         "tests/test_admin_console.py:test_non_dev_runtime_requires_registered_active_signing_key"
       ],
       "verification_commands": [
         "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"TRUST_REGISTRY_DEV_AUTOREGISTER|allow_registry_autoregister|Non-development runtime requires SIGNING_PRIVATE_KEY_PEM|not present in contracts/keys/public_keys.json|does not match registered public key material\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "tests/test_admin_console.py": "bb5a9630f6eb866cdcaf97cab3de378a2afe72db1ea26cfbe64d0d5c75c72109"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E1",
-      "ticket_id": "E1-T02",
-      "claim": "Enforce identical signing mode policy in Python runtime and Node bridge",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "backend-ui-bridge/server.js",
-        "Frontend/src/api.ts"
-      ],
-      "symbol_refs": [],
-      "test_refs": [
-        "tests/test_admin_console.py:test_non_dev_runtime_blocks_ephemeral_signing"
-      ],
-      "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
         "node --check backend-ui-bridge/server.js",
-        "rg -n \"TRUST_REGISTRY_DEV_AUTOREGISTER|allow_registry_autoregister|Non-development runtime requires SIGNING_PRIVATE_KEY_PEM|not present in contracts/keys/public_keys.json|does not match registered public key material\" app.py",
-        "rg -n \"ephemeral_dev_only|Non-development bridge runtime requires SIGNING_PRIVATE_KEY_PEM|key_registry_ok|trust_registry_source\" backend-ui-bridge/server.js"
+        "rg -n \"loadBridgeTrustState|BRIDGE_TRUST_BLOCKED|signing_trust_blockers|production_trust_ready\" backend-ui-bridge/server.js"
       ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "backend-ui-bridge/server.js": "b6dc2a8be0debdcb682de2bbca2049c47abf4f7cfb396fec49d9070e45fc32ba",
-        "Frontend/src/api.ts": "8da0529ab0e9634aa23030fbd8c24271b40bf38667174844398f4abd011ed9bf"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E1",
-      "ticket_id": "E1-T03",
-      "claim": "Add production sign-then-verify gate with explicit export blocker",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "scripts/verify_decision_pack.js",
-        "tests/test_admin_console.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [
-        "tests/test_admin_console.py:test_signed_export_includes_verification_metadata_and_schema_version"
-      ],
-      "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "node scripts/verify_decision_pack.js artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5 contracts/keys/public_keys.json",
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
+      "verification_result": "PASS",
       "generated_artifacts": [
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/trust_bundle.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/signed_export.sigmeta.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/evidence_objects.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/review_state.json"
+        "backend-ui-bridge /health JSON",
+        "backend-ui-bridge /admin/config/effective JSON"
       ],
       "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "scripts/verify_decision_pack.js": "c86f0aca31b7181d69369886f677c86ecbc8b4ca63cedff955db76b7992fe70c",
-        "tests/test_admin_console.py": "bb5a9630f6eb866cdcaf97cab3de378a2afe72db1ea26cfbe64d0d5c75c72109",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/trust_bundle.json": "0b8508837798678837c4baa2450a48f56c21f49aff54eeaa885d382e3aafa1d2",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/signed_export.sigmeta.json": "a3ebf58d7e2441d040cd31daf933faecbf0fafac7cf6f4ad980156731fdfc113",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/evidence_objects.json": "36ad1fbb86b281121191d55c4a97738a7d8ae0b0b1185b6c0da80d875b2baac5",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/review_state.json": "23f79dff9c1a8c32f7befa2f6f097e7094b053a7d127271b42dedc734bf563e4"
+        "backend-ui-bridge/server.js": "59A25A3F3BAF2ABC7DB4E870540FCAF02A67F9003A05CAE9FDC194115E8474E5",
+        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
+        "Frontend/src/api.ts": "3F7216522B50F60430BEE51D7B97E2684D73F13E45CF095A4FE2575C16F867A6",
+        "tests/test_admin_console.py": "BA4A1BCA5DB34CC132D3B3009BF9FCF1CE52A073C6AADCC4B0DC1337341CBA24"
       },
       "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
+        "Production admin endpoint parity checks require Entra auth mode; startup parity in non-dev is directly tested and enforced."
       ],
-      "confidence": "partial"
+      "confidence": "verified"
     },
     {
-      "epic_id": "E1",
-      "ticket_id": "E1-T04",
-      "claim": "Include offline trust bundle and key-history support in decision pack",
-      "status": "partial",
+      "epic_id": "E3",
+      "ticket_id": "R3",
+      "claim": "Board required-section completeness now hard-fails for missing Executive Summary/Risk Register with no production placeholder synthesis.",
+      "status": "implemented",
       "code_refs": [
-        "app.py",
-        "scripts/verify_decision_pack.js"
+        "app.py:993",
+        "app.py:1746",
+        "app.py:3342"
       ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "node scripts/verify_decision_pack.js artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5 contracts/keys/public_keys.json"
+      "symbol_refs": [
+        "_enforce_sections",
+        "_build_human_readable_sections",
+        "BOARD_SECTION_INCOMPLETE"
       ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/trust_bundle.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/signed_export.sigmeta.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/evidence_objects.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/review_state.json"
-      ],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "scripts/verify_decision_pack.js": "c86f0aca31b7181d69369886f677c86ecbc8b4ca63cedff955db76b7992fe70c",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/trust_bundle.json": "0b8508837798678837c4baa2450a48f56c21f49aff54eeaa885d382e3aafa1d2",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/signed_export.sigmeta.json": "a3ebf58d7e2441d040cd31daf933faecbf0fafac7cf6f4ad980156731fdfc113",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/evidence_objects.json": "36ad1fbb86b281121191d55c4a97738a7d8ae0b0b1185b6c0da80d875b2baac5",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/review_state.json": "23f79dff9c1a8c32f7befa2f6f097e7094b053a7d127271b42dedc734bf563e4"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E1",
-      "ticket_id": "E1-T05",
-      "claim": "Trust readiness contract uplift",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "backend-ui-bridge/server.js",
-        "openapi.yaml",
-        "Frontend/src/api.ts"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"ephemeral_dev_only|Non-development bridge runtime requires SIGNING_PRIVATE_KEY_PEM|key_registry_ok|trust_registry_source\" backend-ui-bridge/server.js",
-        "rg -n \"requested_assurance_level|review_state|bridge_metadata|assessment_mode|assurance_level|compliance_position\" openapi.yaml Frontend/src/api.ts"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "backend-ui-bridge/server.js": "b6dc2a8be0debdcb682de2bbca2049c47abf4f7cfb396fec49d9070e45fc32ba",
-        "openapi.yaml": "43c1d2092239bf97192cbf9ef5a7e6e5ca79c54bdcdfaad8965abc1bbcfa13c8",
-        "Frontend/src/api.ts": "8da0529ab0e9634aa23030fbd8c24271b40bf38667174844398f4abd011ed9bf"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E2",
-      "ticket_id": "E2-T01",
-      "claim": "Semantic claim ID generator",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "tests/test_admin_console.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "tests/test_admin_console.py": "bb5a9630f6eb866cdcaf97cab3de378a2afe72db1ea26cfbe64d0d5c75c72109"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E2",
-      "ticket_id": "E2-T02",
-      "claim": "Evidence object schema v2 implementation",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "openapi.yaml",
-        "Frontend/src/api.ts"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "node scripts/verify_decision_pack.js artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5 contracts/keys/public_keys.json"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/trust_bundle.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/signed_export.sigmeta.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/evidence_objects.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/review_state.json"
-      ],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "openapi.yaml": "43c1d2092239bf97192cbf9ef5a7e6e5ca79c54bdcdfaad8965abc1bbcfa13c8",
-        "Frontend/src/api.ts": "8da0529ab0e9634aa23030fbd8c24271b40bf38667174844398f4abd011ed9bf",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/trust_bundle.json": "0b8508837798678837c4baa2450a48f56c21f49aff54eeaa885d382e3aafa1d2",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/signed_export.sigmeta.json": "a3ebf58d7e2441d040cd31daf933faecbf0fafac7cf6f4ad980156731fdfc113",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/evidence_objects.json": "36ad1fbb86b281121191d55c4a97738a7d8ae0b0b1185b6c0da80d875b2baac5",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/review_state.json": "23f79dff9c1a8c32f7befa2f6f097e7094b053a7d127271b42dedc734bf563e4"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E2",
-      "ticket_id": "E2-T03",
-      "claim": "Claim to evidence to source validation gate",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "tests/test_admin_console.py",
-        "scripts_e2e_runtime_smoke.py"
-      ],
-      "symbol_refs": [],
       "test_refs": [
-        "tests/test_admin_console.py:test_compile_hard_gate_rejects_unresolved_evidence_and_non_measurable_metrics"
+        "tests/test_admin_console.py:test_missing_risk_register_fails_board_section_incomplete",
+        "tests/test_admin_console.py:test_missing_executive_summary_fails_board_section_incomplete",
+        "tests/test_admin_console.py:test_production_output_contains_no_placeholder_sections"
       ],
       "verification_commands": [
         "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
+        "rg -n \"BOARD_SECTION_INCOMPLETE|_enforce_sections|Risk Register|Executive Summary\" app.py"
       ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
+      "verification_result": "PASS",
+      "generated_artifacts": [
+        "artifacts/*/board_report.json",
+        "artifacts/*/report_completeness.json"
+      ],
       "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "tests/test_admin_console.py": "bb5a9630f6eb866cdcaf97cab3de378a2afe72db1ea26cfbe64d0d5c75c72109",
-        "scripts_e2e_runtime_smoke.py": "ca369356e8733b11bd09caa286178c5494a4a33b12b7ccadefe0db8711135a08"
+        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
+        "tests/test_admin_console.py": "BA4A1BCA5DB34CC132D3B3009BF9FCF1CE52A073C6AADCC4B0DC1337341CBA24"
       },
       "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
+        "No additional R3 hard-fail contradiction observed in tested paths."
       ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E2",
-      "ticket_id": "E2-T04",
-      "claim": "Vendor-evidence alignment gate",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "contracts/vendors/canonical_vendors.json"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py",
-        "rg -n \"deterministic-governance|llm-hallucination-risk|auto-ref-|INLINE_ROLE_PAYLOAD_USED|fallback_evidence_ids|unresolved-evidence|intent_coverage|review_state|bridge_metadata\" app.py backend-ui-bridge/server.js"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "contracts/vendors/canonical_vendors.json": "a708f61d4e25fb8b6bb23456506058ec5c693cc61f32fa9d107e3106db3c9de4"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E2",
-      "ticket_id": "E2-T05",
-      "claim": "Evidence provenance typing",
-      "status": "partial",
-      "code_refs": [
-        "app.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"assessment_mode|assurance_level|compliance_position|legal_confirmation_required|residual_uncertainty\" app.py Frontend/src openapi.yaml"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
+      "confidence": "verified"
     },
     {
       "epic_id": "E3",
-      "ticket_id": "E3-T01",
-      "claim": "Replace placeholder section enforcement with hard-fail policy",
-      "status": "partial",
+      "ticket_id": "R4",
+      "claim": "KPI schema is board-grade strict (metric_name, baseline, target_value, unit, measurement_window, owner) and principle-only values fail validation.",
+      "status": "implemented",
       "code_refs": [
-        "app.py",
-        "tests/test_admin_console.py"
+        "app.py:684",
+        "app.py:1189",
+        "app.py:3293",
+        "openapi.yaml:273",
+        "Frontend/src/MultiRoleGovernedCompilePanel.tsx:176"
       ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
+      "symbol_refs": [
+        "_validate_compile_payload",
+        "_validate_success_metric_kpi",
+        "INVALID_SUCCESS_METRICS",
+        "SuccessMetricInput"
       ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "tests/test_admin_console.py": "bb5a9630f6eb866cdcaf97cab3de378a2afe72db1ea26cfbe64d0d5c75c72109"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E3",
-      "ticket_id": "E3-T02",
-      "claim": "Board-grade required section schema expansion",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "contracts/business-profiles/transport_profile_v1.json",
-        "contracts/business-profiles/finance_profile_v1.json",
-        "contracts/business-profiles/healthcare_profile_v1.json",
-        "contracts/business-profiles/it_enterprise_profile_v1.json",
-        "contracts/business-profiles/it_service_provider_profile_v1.json"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "contracts/business-profiles/transport_profile_v1.json": "f2dcc45d8c255fa4a18e9c798bab179d55f453fd5b0de80188a7ac7053086610",
-        "contracts/business-profiles/finance_profile_v1.json": "e2cc22ea8716ce01f7e5ed788471b0b83d6d6468b9472425a961ca1dde29a8f1",
-        "contracts/business-profiles/healthcare_profile_v1.json": "6cb3f668914375b508ae4ede00a5bdc69b380e643aaad423d169c5bcf8ff4a9d",
-        "contracts/business-profiles/it_enterprise_profile_v1.json": "c3132eeb57cd37812fc97e8028e0c307d6cb1f473a9929310fa6cdf56d46fac0",
-        "contracts/business-profiles/it_service_provider_profile_v1.json": "5c81548f6d667885566a619adaaf62177b2d0282e49f962d5e85e7d630e253e7"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E3",
-      "ticket_id": "E3-T03",
-      "claim": "Measurable KPI schema and validation",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "openapi.yaml"
-      ],
-      "symbol_refs": [],
       "test_refs": [
-        "tests/test_admin_console.py:test_compile_hard_gate_rejects_unresolved_evidence_and_non_measurable_metrics"
+        "tests/test_admin_console.py:test_success_metrics_require_baseline_target_unit_window_owner",
+        "tests/test_admin_console.py:test_principle_only_metric_fails_invalid_success_metrics",
+        "tests/test_admin_console.py:test_kpi_schema_round_trip_contract"
       ],
       "verification_commands": [
         "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "openapi.yaml": "43c1d2092239bf97192cbf9ef5a7e6e5ca79c54bdcdfaad8965abc1bbcfa13c8"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E3",
-      "ticket_id": "E3-T04",
-      "claim": "Intent coverage preservation gate",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "backend-ui-bridge/server.js"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"deterministic-governance|llm-hallucination-risk|auto-ref-|INLINE_ROLE_PAYLOAD_USED|fallback_evidence_ids|unresolved-evidence|intent_coverage|review_state|bridge_metadata\" app.py backend-ui-bridge/server.js"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "backend-ui-bridge/server.js": "b6dc2a8be0debdcb682de2bbca2049c47abf4f7cfb396fec49d9070e45fc32ba"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E3",
-      "ticket_id": "E3-T05",
-      "claim": "Decision basis and provenance consistency validation",
-      "status": "partial",
-      "code_refs": [
-        "app.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E4",
-      "ticket_id": "E4-T01",
-      "claim": "Assessment semantics model v2",
-      "status": "partial",
-      "code_refs": [
-        "app.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"assessment_mode|assurance_level|compliance_position|legal_confirmation_required|residual_uncertainty\" app.py Frontend/src openapi.yaml"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E4",
-      "ticket_id": "E4-T02",
-      "claim": "Backend and frontend contract migration",
-      "status": "partial",
-      "code_refs": [
-        "openapi.yaml",
-        "Frontend/src/api.ts",
-        "backend-ui-bridge/server.js"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
         "npm --prefix Frontend run build",
-        "rg -n \"requested_assurance_level|review_state|bridge_metadata|assessment_mode|assurance_level|compliance_position\" openapi.yaml Frontend/src/api.ts"
+        "rg -n \"success_metrics|SuccessMetricInput|INVALID_SUCCESS_METRICS\" app.py openapi.yaml Frontend/src/api.ts Frontend/src/MultiRoleGovernedCompilePanel.tsx"
       ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
+      "verification_result": "PASS",
+      "generated_artifacts": [
+        "Frontend/dist/*",
+        "artifacts/*/down_select_recommendation.json"
+      ],
       "artifact_hashes": {
-        "openapi.yaml": "43c1d2092239bf97192cbf9ef5a7e6e5ca79c54bdcdfaad8965abc1bbcfa13c8",
-        "Frontend/src/api.ts": "8da0529ab0e9634aa23030fbd8c24271b40bf38667174844398f4abd011ed9bf",
-        "backend-ui-bridge/server.js": "b6dc2a8be0debdcb682de2bbca2049c47abf4f7cfb396fec49d9070e45fc32ba"
+        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
+        "openapi.yaml": "2D36AEC573718552CA8A49AF98F9F53DDE0E16B1041016B88D2ACEF43B8618A8",
+        "Frontend/src/api.ts": "3F7216522B50F60430BEE51D7B97E2684D73F13E45CF095A4FE2575C16F867A6",
+        "Frontend/src/MultiRoleGovernedCompilePanel.tsx": "D9F7C6265577251D045877FC4880717C22C096DE4D5417528CCA8846BC215BEF"
       },
       "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
+        "Legacy e2e script required update to emit strict KPI objects; runtime enforcement is active."
       ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E4",
-      "ticket_id": "E4-T03",
-      "claim": "Policy UI semantics rendering",
-      "status": "not_implemented",
-      "code_refs": [],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"assessment_mode|assurance_level|compliance_position|legal_confirmation_required|residual_uncertainty\" app.py Frontend/src openapi.yaml"
-      ],
-      "verification_result": "no implementation evidence",
-      "generated_artifacts": [],
-      "artifact_hashes": {},
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "unverified"
+      "confidence": "verified"
     },
     {
       "epic_id": "E5",
-      "ticket_id": "E5-T01",
-      "claim": "Canonical vendor registry",
-      "status": "partial",
+      "ticket_id": "R5",
+      "claim": "Class-aware evidence freshness thresholds are enforced; stale critical (security/pricing) evidence blocks high-assurance compile, noncritical stale remains warning-only.",
+      "status": "implemented",
       "code_refs": [
-        "contracts/vendors/canonical_vendors.json",
-        "app.py"
+        "contracts/vendors/canonical_vendors.json:64",
+        "app.py:2201",
+        "app.py:3375"
       ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"deterministic-governance|llm-hallucination-risk|auto-ref-|INLINE_ROLE_PAYLOAD_USED|fallback_evidence_ids|unresolved-evidence|intent_coverage|review_state|bridge_metadata\" app.py backend-ui-bridge/server.js"
+      "symbol_refs": [
+        "_load_vendor_registry",
+        "critical_evidence_classes",
+        "STALE_CRITICAL_EVIDENCE"
       ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "contracts/vendors/canonical_vendors.json": "a708f61d4e25fb8b6bb23456506058ec5c693cc61f32fa9d107e3106db3c9de4",
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E5",
-      "ticket_id": "E5-T02",
-      "claim": "Vendor/product alias normalization gate",
-      "status": "partial",
-      "code_refs": [
-        "app.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E5",
-      "ticket_id": "E5-T03",
-      "claim": "Evidence freshness evaluator",
-      "status": "partial",
-      "code_refs": [
-        "app.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"deterministic-governance|llm-hallucination-risk|auto-ref-|INLINE_ROLE_PAYLOAD_USED|fallback_evidence_ids|unresolved-evidence|intent_coverage|review_state|bridge_metadata\" app.py backend-ui-bridge/server.js"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E5",
-      "ticket_id": "E5-T04",
-      "claim": "Selected-vendor dossier validation",
-      "status": "partial",
-      "code_refs": [
-        "app.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E6",
-      "ticket_id": "E6-T01",
-      "claim": "Remove bridge default overwrite behavior",
-      "status": "partial",
-      "code_refs": [
-        "backend-ui-bridge/server.js",
-        "app.py",
-        "Frontend/src/api.ts",
-        "Frontend/src/MultiRoleGovernedCompilePanel.tsx"
-      ],
-      "symbol_refs": [],
       "test_refs": [
-        "tests/test_admin_console.py:test_inline_payload_preserves_intent_without_default_overwrite"
+        "tests/test_admin_console.py:test_stale_security_evidence_blocks_high_assurance",
+        "tests/test_admin_console.py:test_stale_pricing_evidence_blocks_high_assurance",
+        "tests/test_admin_console.py:test_noncritical_stale_evidence_warns_without_false_pass"
       ],
-      "verification_commands": [
-        "rg -n \"deterministic-governance|llm-hallucination-risk|auto-ref-|INLINE_ROLE_PAYLOAD_USED|fallback_evidence_ids|unresolved-evidence|intent_coverage|review_state|bridge_metadata\" app.py backend-ui-bridge/server.js"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "backend-ui-bridge/server.js": "b6dc2a8be0debdcb682de2bbca2049c47abf4f7cfb396fec49d9070e45fc32ba",
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "Frontend/src/api.ts": "8da0529ab0e9634aa23030fbd8c24271b40bf38667174844398f4abd011ed9bf",
-        "Frontend/src/MultiRoleGovernedCompilePanel.tsx": "1ab47856d7d75d4abd0a90f72c571623e68e87e43766bbfbc550408e52fa543c"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E6",
-      "ticket_id": "E6-T02",
-      "claim": "Add bridge_metadata namespace and provenance separation",
-      "status": "partial",
-      "code_refs": [
-        "backend-ui-bridge/server.js",
-        "app.py",
-        "openapi.yaml",
-        "Frontend/src/api.ts"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"deterministic-governance|llm-hallucination-risk|auto-ref-|INLINE_ROLE_PAYLOAD_USED|fallback_evidence_ids|unresolved-evidence|intent_coverage|review_state|bridge_metadata\" app.py backend-ui-bridge/server.js",
-        "rg -n \"requested_assurance_level|review_state|bridge_metadata|assessment_mode|assurance_level|compliance_position\" openapi.yaml Frontend/src/api.ts"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "backend-ui-bridge/server.js": "b6dc2a8be0debdcb682de2bbca2049c47abf4f7cfb396fec49d9070e45fc32ba",
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "openapi.yaml": "43c1d2092239bf97192cbf9ef5a7e6e5ca79c54bdcdfaad8965abc1bbcfa13c8",
-        "Frontend/src/api.ts": "8da0529ab0e9634aa23030fbd8c24271b40bf38667174844398f4abd011ed9bf"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E6",
-      "ticket_id": "E6-T03",
-      "claim": "Intent-to-structured-output coverage validator",
-      "status": "partial",
-      "code_refs": [
-        "app.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E6",
-      "ticket_id": "E6-T04",
-      "claim": "Provider-vendor rationale isolation tests",
-      "status": "not_implemented",
-      "code_refs": [],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"^def test_\" tests/test_admin_console.py"
-      ],
-      "verification_result": "no implementation evidence",
-      "generated_artifacts": [],
-      "artifact_hashes": {},
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "unverified"
-    },
-    {
-      "epic_id": "E7",
-      "ticket_id": "E7-T01",
-      "claim": "Golden export fixture suite",
-      "status": "not_implemented",
-      "code_refs": [],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "if (Test-Path tests/golden) { Write-Output tests/golden:present } else { Write-Output tests/golden:absent }; if (Test-Path tests/negative) { Write-Output tests/negative:present } else { Write-Output tests/negative:absent }; if (Test-Path .github/workflows) { Get-ChildItem .github/workflows -File | Select-Object -ExpandProperty Name } else { Write-Output .github/workflows:absent }"
-      ],
-      "verification_result": "no implementation evidence",
-      "generated_artifacts": [],
-      "artifact_hashes": {},
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "unverified"
-    },
-    {
-      "epic_id": "E7",
-      "ticket_id": "E7-T02",
-      "claim": "Negative artifact quality suite",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "tests/test_admin_console.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
       "verification_commands": [
         "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "tests/test_admin_console.py": "bb5a9630f6eb866cdcaf97cab3de378a2afe72db1ea26cfbe64d0d5c75c72109"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E7",
-      "ticket_id": "E7-T03",
-      "claim": "Replay regression suite",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "tests/test_admin_console.py",
-        "scripts_e2e_assurance_validation.py",
-        "scripts_e2e_runtime_smoke.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "python scripts_e2e_runtime_smoke.py",
-        "python scripts_e2e_assurance_validation.py"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "tests/test_admin_console.py": "bb5a9630f6eb866cdcaf97cab3de378a2afe72db1ea26cfbe64d0d5c75c72109",
-        "scripts_e2e_assurance_validation.py": "c832eff868758681a0d4bc523a904a5f31babcfad92d533bdeb247c16e636be5",
-        "scripts_e2e_runtime_smoke.py": "ca369356e8733b11bd09caa286178c5494a4a33b12b7ccadefe0db8711135a08"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E7",
-      "ticket_id": "E7-T04",
-      "claim": "Trust-mode and sign/verify CI gates",
-      "status": "partial",
-      "code_refs": [
-        ".github/workflows/ci.yml",
-        "scripts_production_readiness_check.py",
-        "scripts/verify_decision_pack.js"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
         "python scripts_e2e_runtime_smoke.py",
         "python scripts_e2e_assurance_validation.py",
-        "python scripts_production_readiness_check.py",
-        "node scripts/verify_decision_pack.js artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5 contracts/keys/public_keys.json",
-        "if (Test-Path tests/golden) { Write-Output tests/golden:present } else { Write-Output tests/golden:absent }; if (Test-Path tests/negative) { Write-Output tests/negative:present } else { Write-Output tests/negative:absent }; if (Test-Path .github/workflows) { Get-ChildItem .github/workflows -File | Select-Object -ExpandProperty Name } else { Write-Output .github/workflows:absent }"
+        "rg -n \"STALE_CRITICAL_EVIDENCE|stale_noncritical|freshness_threshold_days|critical_classes\" app.py contracts/vendors/canonical_vendors.json"
       ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        ".github/workflows/ci.yml": "a4720a3c41ef389e6128410345a9a3bc4a8ead37c6d94f9d9ea49be31551553d",
-        "scripts_production_readiness_check.py": "e0f32165d56db7723eb9a123acd7d4b04c39c99e9e2ca32d5835b9c70ff198a0",
-        "scripts/verify_decision_pack.js": "c86f0aca31b7181d69369886f677c86ecbc8b4ca63cedff955db76b7992fe70c"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E7",
-      "ticket_id": "E7-T05",
-      "claim": "Bridge/runtime parity contract tests",
-      "status": "not_implemented",
-      "code_refs": [],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"^def test_\" tests/test_admin_console.py"
-      ],
-      "verification_result": "no implementation evidence",
-      "generated_artifacts": [],
-      "artifact_hashes": {},
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "unverified"
-    },
-    {
-      "epic_id": "E8",
-      "ticket_id": "E8-T01",
-      "claim": "Review-state schema extension",
-      "status": "partial",
-      "code_refs": [
-        "app.py",
-        "openapi.yaml",
-        "Frontend/src/api.ts"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"requested_assurance_level|review_state|bridge_metadata|assessment_mode|assurance_level|compliance_position\" openapi.yaml Frontend/src/api.ts"
-      ],
-      "verification_result": "code and tests partially support claim",
+      "verification_result": "PASS",
       "generated_artifacts": [
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/trust_bundle.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/signed_export.sigmeta.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/evidence_objects.json",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/review_state.json"
+        "e2e_assurance_validation_export.json",
+        "artifacts/3cb94e0d-2455-5a20-8dd8-0cef52523142/trust_bundle.json"
       ],
       "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "openapi.yaml": "43c1d2092239bf97192cbf9ef5a7e6e5ca79c54bdcdfaad8965abc1bbcfa13c8",
-        "Frontend/src/api.ts": "8da0529ab0e9634aa23030fbd8c24271b40bf38667174844398f4abd011ed9bf",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/trust_bundle.json": "0b8508837798678837c4baa2450a48f56c21f49aff54eeaa885d382e3aafa1d2",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/signed_export.sigmeta.json": "a3ebf58d7e2441d040cd31daf933faecbf0fafac7cf6f4ad980156731fdfc113",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/evidence_objects.json": "36ad1fbb86b281121191d55c4a97738a7d8ae0b0b1185b6c0da80d875b2baac5",
-        "artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5/review_state.json": "23f79dff9c1a8c32f7befa2f6f097e7094b053a7d127271b42dedc734bf563e4"
+        "contracts/vendors/canonical_vendors.json": "3A4AFF77FE79FB6A3A617BDDBD80FCB3CDE7251731A7FA09B7F5C235D27E1AC3",
+        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
+        "scripts_e2e_assurance_validation.py": "25591705EF9A49D6A9DAC16DC468520D24372506C63DADBF4A4B76D65303CE35",
+        "e2e_assurance_validation_export.json": "6124E3A25B573196BBE5780C4D070E1F3506A125B58652D3CECD67266308B94F",
+        "artifacts/3cb94e0d-2455-5a20-8dd8-0cef52523142/trust_bundle.json": "770AE8E65E83405B5BCAEF02A0D7F2A79ED5A5C7FF0B7777BD6B19739084776C"
       },
       "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
+        "No additional R5 blocker observed in tested high-assurance path."
       ],
-      "confidence": "partial"
+      "confidence": "verified"
     },
     {
-      "epic_id": "E8",
-      "ticket_id": "E8-T02",
-      "claim": "Assurance gating by review completion",
-      "status": "partial",
+      "epic_id": "E2",
+      "ticket_id": "R6",
+      "claim": "Selected-vendor mismatch, competitor-primary evidence, and vendor_scope=general primary support are explicitly blocked with hard-fail gates.",
+      "status": "implemented",
       "code_refs": [
-        "app.py",
-        "tests/test_admin_console.py"
+        "app.py:3249",
+        "app.py:3256",
+        "app.py:3261",
+        "app.py:3282"
       ],
-      "symbol_refs": [],
+      "symbol_refs": [
+        "selected_vendor_misaligned_claims",
+        "general_scope_primary_claims",
+        "competitor_primary_claims",
+        "VENDOR_EVIDENCE_MISMATCH",
+        "COMPETITOR_PRIMARY_EVIDENCE"
+      ],
       "test_refs": [
-        "tests/test_admin_console.py:test_high_assurance_requires_completed_review_state"
+        "tests/test_admin_console.py:test_selected_vendor_rejects_competitor_primary_evidence",
+        "tests/test_admin_console.py:test_vendor_scope_general_does_not_satisfy_first_party_requirement",
+        "tests/test_admin_console.py:test_vendor_evidence_mismatch_hard_fails_selected_vendor"
       ],
       "verification_commands": [
         "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT\" app.py"
+        "rg -n \"VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|vendor_scope=general\" app.py"
       ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
+      "verification_result": "PASS",
+      "generated_artifacts": [
+        "artifacts/*/evidence_objects.json",
+        "artifacts/*/evidence_trace_map.json"
+      ],
       "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b",
-        "tests/test_admin_console.py": "bb5a9630f6eb866cdcaf97cab3de378a2afe72db1ea26cfbe64d0d5c75c72109"
+        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
+        "contracts/vendors/canonical_vendors.json": "3A4AFF77FE79FB6A3A617BDDBD80FCB3CDE7251731A7FA09B7F5C235D27E1AC3",
+        "tests/test_admin_console.py": "BA4A1BCA5DB34CC132D3B3009BF9FCF1CE52A073C6AADCC4B0DC1337341CBA24"
       },
       "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
+        "No additional R6 blocker observed in tested selected-vendor path."
       ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E8",
-      "ticket_id": "E8-T03",
-      "claim": "Board rendering of exceptions and waivers",
-      "status": "partial",
-      "code_refs": [
-        "app.py"
-      ],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"deterministic-governance|llm-hallucination-risk|auto-ref-|INLINE_ROLE_PAYLOAD_USED|fallback_evidence_ids|unresolved-evidence|intent_coverage|review_state|bridge_metadata\" app.py backend-ui-bridge/server.js"
-      ],
-      "verification_result": "code and tests partially support claim",
-      "generated_artifacts": [],
-      "artifact_hashes": {
-        "app.py": "f2df8a6a09923ad8e8c0b3fa60407693c59b5796d79be4423ae526cd27a8cf7b"
-      },
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "partial"
-    },
-    {
-      "epic_id": "E8",
-      "ticket_id": "E8-T04",
-      "claim": "Approval event logging to trust ledger",
-      "status": "not_implemented",
-      "code_refs": [],
-      "symbol_refs": [],
-      "test_refs": [],
-      "verification_commands": [
-        "rg -n \"^def test_\" tests/test_admin_console.py"
-      ],
-      "verification_result": "no implementation evidence",
-      "generated_artifacts": [],
-      "artifact_hashes": {},
-      "remaining_risks": [
-        "See IMPLEMENTATION_CLOSURE_MATRIX.md row for ticket-specific gaps."
-      ],
-      "confidence": "unverified"
+      "confidence": "verified"
     }
   ]
 }

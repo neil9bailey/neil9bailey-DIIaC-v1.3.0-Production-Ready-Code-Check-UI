@@ -59,5 +59,18 @@
         "zscaler.com"
       ]
     }
-  ]
+  ],
+  "evidence_policy": {
+    "freshness_threshold_days": {
+      "security": 90,
+      "pricing": 120,
+      "operational": 180,
+      "commercial": 180,
+      "general": 365
+    },
+    "critical_classes": [
+      "security",
+      "pricing"
+    ]
+  }
 }

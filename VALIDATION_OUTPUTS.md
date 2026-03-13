@@ -1,7 +1,8 @@
 # VALIDATION_OUTPUTS
 
-Generated_at_utc: 2026-03-13T00:00:40Z
-Commit: 612e654
+Generated_at_utc: 2026-03-13T01:15:00Z
+Commit: bfe6ea2
+Repository_root: F:/code/diiac/diiac_v1.3.0_ui
 
 ## Command Log
 
@@ -10,7 +11,7 @@ Commit: 612e654
 - pass_fail: PASS
 - output:
 ```text
-612e654
+bfe6ea2
 ```
 
 ### CMD-02
@@ -18,10 +19,8 @@ Commit: 612e654
 - pass_fail: PASS
 - output:
 ```text
-collected 33 items
-tests\test_admin_console.py ..............................
-tests\test_persistence.py ...
-33 passed
+collected 53 items
+53 passed in 8.53s
 ```
 
 ### CMD-03
@@ -37,8 +36,9 @@ tests\test_persistence.py ...
 - pass_fail: PASS
 - output:
 ```text
+> tsc --noEmit && vite build
 vite v7.3.1 building client environment for production...
-âœ“ built in 4.04s
+? built in 4.40s
 (!) Some chunks are larger than 500 kB after minification.
 ```
 
@@ -50,7 +50,19 @@ vite v7.3.1 building client environment for production...
 E2E runtime smoke PASSED
 ```
 
-### CMD-06
+### CMD-06 (first run)
+- command: `python scripts_e2e_assurance_validation.py`
+- pass_fail: FAIL
+- output:
+```text
+[FAIL] Governed compile (201) — execution_id=MISSING
+error: compile_quality_gate_failed
+code: INVALID_SUCCESS_METRICS
+OVERALL: FAIL
+```
+- action_taken: Script updated to send strict `success_metrics` in compile payload.
+
+### CMD-07 (rerun after fix)
 - command: `python scripts_e2e_assurance_validation.py`
 - pass_fail: PASS
 - output:
@@ -61,7 +73,7 @@ dashboard_validation: PASS (6/6)
 OVERALL: PASS
 ```
 
-### CMD-07
+### CMD-08
 - command: `python scripts_production_readiness_check.py`
 - pass_fail: PASS
 - output:
@@ -69,8 +81,8 @@ OVERALL: PASS
 Production readiness check PASSED
 ```
 
-### CMD-08
-- command: `node scripts/verify_decision_pack.js artifacts/bc5ea544-7c75-5943-a840-3562fd7fa4a5 contracts/keys/public_keys.json`
+### CMD-09
+- command: `node scripts/verify_decision_pack.js artifacts/3cb94e0d-2455-5a20-8dd8-0cef52523142 contracts/keys/public_keys.json`
 - pass_fail: PASS
 - output:
 ```text
@@ -79,105 +91,47 @@ Production readiness check PASSED
 "trust_bundle": { "present": true, "source": "pack" }
 ```
 
-### CMD-09
-- command: `rg -n "hard_gate_failures|compile_quality_gate_failed|PLACEHOLDER_CLAIM_ID_PRESENT|UNRESOLVED_EVIDENCE|VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|INVALID_SUCCESS_METRICS|MISSING_REGULATORY_CONSTRAINTS|MISSING_SUCCESS_TARGETS|DECISION_PROVENANCE_INCONSISTENT|POLICY_EVIDENCE_BASIS_MISSING|BOARD_SECTION_INCOMPLETE|REVIEW_STATE_INCOMPLETE|STALE_VENDOR_ALIAS_PRESENT" app.py`
-- pass_fail: PASS
-- output:
-```text
-... PLACEHOLDER_CLAIM_ID_PRESENT
-... UNRESOLVED_EVIDENCE
-... VENDOR_EVIDENCE_MISMATCH
-... COMPETITOR_PRIMARY_EVIDENCE
-... INVALID_SUCCESS_METRICS
-... MISSING_REGULATORY_CONSTRAINTS
-... MISSING_SUCCESS_TARGETS
-... DECISION_PROVENANCE_INCONSISTENT
-... POLICY_EVIDENCE_BASIS_MISSING
-... BOARD_SECTION_INCOMPLETE
-... REVIEW_STATE_INCOMPLETE
-```
-
 ### CMD-10
-- command: `rg -n "TRUST_REGISTRY_DEV_AUTOREGISTER|allow_registry_autoregister|Non-development runtime requires SIGNING_PRIVATE_KEY_PEM|not present in contracts/keys/public_keys.json|does not match registered public key material" app.py`
+- command: `python -m pytest -q --basetemp .pytest_tmp tests/test_admin_console.py -k "bridge_non_dev_requires_registered_active_key or bridge_non_dev_rejects_mismatched_registered_key or bridge_runtime_trust_parity_contract or bridge_and_runtime_fail_same_trust_misconfiguration_e2e"`
 - pass_fail: PASS
 - output:
 ```text
-allow_registry_autoregister ...
-Non-development runtime requires SIGNING_PRIVATE_KEY_PEM ...
-... not present in contracts/keys/public_keys.json
-... does not match registered public key material
+4 passed, 46 deselected
 ```
 
 ### CMD-11
-- command: `rg -n "ephemeral_dev_only|Non-development bridge runtime requires SIGNING_PRIVATE_KEY_PEM|key_registry_ok|trust_registry_source" backend-ui-bridge/server.js`
+- command: `python -m pytest -q --basetemp .pytest_tmp tests/test_admin_console.py -k "missing_risk_register_fails_board_section_incomplete or missing_executive_summary_fails_board_section_incomplete or production_output_contains_no_placeholder_sections or success_metrics_require_baseline_target_unit_window_owner or principle_only_metric_fails_invalid_success_metrics or kpi_schema_round_trip_contract or stale_security_evidence_blocks_high_assurance or stale_pricing_evidence_blocks_high_assurance or noncritical_stale_evidence_warns_without_false_pass or selected_vendor_rejects_competitor_primary_evidence or vendor_scope_general_does_not_satisfy_first_party_requirement or vendor_evidence_mismatch_hard_fails_selected_vendor"`
 - pass_fail: PASS
 - output:
 ```text
-Non-development bridge runtime requires SIGNING_PRIVATE_KEY_PEM; ephemeral signing is blocked.
-keyMode: "ephemeral_dev_only"
-key_registry_ok: SIGNING_ENABLED ? signingKeyMode === "configured" || IS_DEV_RUNTIME : true
-trust_registry_source: fs.existsSync(PUBLIC_KEYS_PATH) ? "local_registry_file" : "external_or_missing"
+12 passed, 38 deselected
 ```
 
 ### CMD-12
-- command: `rg -n "deterministic-governance|llm-hallucination-risk|auto-ref-|INLINE_ROLE_PAYLOAD_USED|fallback_evidence_ids|unresolved-evidence|intent_coverage|review_state|bridge_metadata" app.py backend-ui-bridge/server.js`
+- command: `python -m py_compile app.py tests/test_admin_console.py`
 - pass_fail: PASS
 - output:
 ```text
-app.py:3859: evidence_refs ... auto-ref-{idx}
-app.py:3872: ... or ["deterministic-governance"]
-app.py:3873: ... or ["llm-hallucination-risk"]
-app.py:2657: "intent_coverage": intent_signals
+(no output)
 ```
 
 ### CMD-13
-- command: `rg -n "assessment_mode|assurance_level|compliance_position|legal_confirmation_required|residual_uncertainty" app.py Frontend/src openapi.yaml`
+- command: `npm --prefix backend-ui-bridge install`
 - pass_fail: PASS
 - output:
 ```text
-app.py: emits semantics fields
-Frontend/src: no component rendering references
-openapi.yaml: no full response schema for these fields
-```
-
-### CMD-14
-- command: `if (Test-Path tests/golden) ...; if (Test-Path tests/negative) ...; workflows listing`
-- pass_fail: PASS
-- output:
-```text
-tests/golden:absent
-tests/negative:absent
-ci.yml
-docker-build.yml
-security.yml
-```
-
-### CMD-15
-- command: `rg -n "requested_assurance_level|review_state|bridge_metadata|assessment_mode|assurance_level|compliance_position" openapi.yaml Frontend/src/api.ts`
-- pass_fail: PASS
-- output:
-```text
-openapi.yaml: requested_assurance_level/review_state/bridge_metadata present on request schema
-Frontend/src/api.ts: requested_assurance_level/review_state present in payload typing
-```
-
-### CMD-16
-- command: `rg -n "^def test_" tests/test_admin_console.py`
-- pass_fail: PASS
-- output:
-```text
-33 tests listed
-(no golden fixture/parity/provider differential tests)
+added 130 packages, and audited 131 packages in 11s
+1 high severity vulnerability (reported by npm audit)
 ```
 
 ## Commands That Could Not Be Run
 
-- none in this closure pass.
+- `Remove-Item -Recurse -Force .pytest_tmp,tmp_bridge_ws -ErrorAction SilentlyContinue`
+- reason: blocked by command policy in this environment.
 
 ## Files That Could Not Be Found
 
-- `tests/golden`
-- `tests/negative`
+- none relevant to mandatory verification command list.
 
 ## Branch/Scope/Path Ambiguity
 

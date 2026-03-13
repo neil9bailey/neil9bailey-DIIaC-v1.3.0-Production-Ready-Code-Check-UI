@@ -33,9 +33,9 @@ function loadLocalEnvFile() {
 loadLocalEnvFile();
 
 const app = express();
-const PORT = 3001;
+const PORT = Number(process.env.PORT || 3001);
 
-const WORKSPACE = "/workspace";
+const WORKSPACE = process.env.DIIAC_WORKSPACE || "/workspace";
 const HUMAN_INPUT_DIR = `${WORKSPACE}/artefacts/human-input`;
 const DECISION_PACK_BASE = `${WORKSPACE}/artefacts/decision-packs`;
 const LEDGER_PATH = `${WORKSPACE}/ledger/ledger.jsonl`;
@@ -49,6 +49,10 @@ const SIGNING_KEY_ID = process.env.SIGNING_KEY_ID || "ephemeral-local-ed25519";
 const APP_ENV = (process.env.APP_ENV || "production").toLowerCase();
 const DEV_ENVS = new Set(["dev", "development", "local", "test"]);
 const IS_DEV_RUNTIME = DEV_ENVS.has(APP_ENV);
+const TRUST_REGISTRY_MODE = (process.env.TRUST_REGISTRY_MODE || (IS_DEV_RUNTIME ? "auto_dev" : "external")).trim().toLowerCase()
+  || (IS_DEV_RUNTIME ? "auto_dev" : "external");
+const EXTERNAL_TRUST_REGISTRY = TRUST_REGISTRY_MODE === "external" || process.env.EXTERNAL_TRUST_REGISTRY === "true";
+const LOCAL_DEV_KEY_IDS = new Set(["ephemeral-local-ed25519", "diiac-local-dev", "local-dev-ed25519"]);
 
 
 fs.mkdirSync(HUMAN_INPUT_DIR, { recursive: true });
@@ -73,7 +77,141 @@ function loadSigningKeyPair() {
   return { privateKey, publicKey, keyMode: "ephemeral_dev_only" };
 }
 
+function base64UrlToBase64(input) {
+  const raw = String(input || "").replace(/-/g, "+").replace(/_/g, "/");
+  const mod = raw.length % 4;
+  if (mod === 0) return raw;
+  return raw + "=".repeat(4 - mod);
+}
+
+function resolvePublicKeyB64(publicKey) {
+  if (!publicKey) return null;
+  try {
+    const exported = publicKey.export({ format: "jwk" });
+    if (exported && typeof exported.x === "string" && exported.x.trim()) {
+      return base64UrlToBase64(exported.x.trim());
+    }
+  } catch (_err) {
+  }
+  return null;
+}
+
+function loadBridgeTrustState({ publicKey, keyMode }) {
+  const runtimePublicKeyB64 = resolvePublicKeyB64(publicKey);
+  const keyRegistryFileExists = fs.existsSync(PUBLIC_KEYS_PATH);
+  let keyRegistry = { keys: [] };
+  if (keyRegistryFileExists) {
+    try {
+      keyRegistry = JSON.parse(fs.readFileSync(PUBLIC_KEYS_PATH, "utf8"));
+    } catch (_err) {
+      keyRegistry = { keys: [] };
+    }
+  }
+  const rawKeys = Array.isArray(keyRegistry.keys) ? keyRegistry.keys : [];
+  const normalizedKeys = [];
+  const seenKeyIds = new Set();
+  let registryStructuralIssues = false;
+  for (const item of rawKeys) {
+    if (!item || typeof item !== "object") {
+      registryStructuralIssues = true;
+      continue;
+    }
+    const keyId = String(item.key_id || "").trim();
+    const publicKeyB64 = String(item.public_key_b64 || "").trim();
+    if (!keyId || !publicKeyB64) {
+      registryStructuralIssues = true;
+      continue;
+    }
+    if (seenKeyIds.has(keyId)) {
+      registryStructuralIssues = true;
+      continue;
+    }
+    seenKeyIds.add(keyId);
+    normalizedKeys.push({
+      key_id: keyId,
+      algorithm: "Ed25519",
+      public_key_b64: publicKeyB64,
+    });
+  }
+  const activeEntry = normalizedKeys.find((item) => item.key_id === SIGNING_KEY_ID) || null;
+  const activeKeyRegistered = Boolean(activeEntry);
+  const activeKeyMatchesPublic = Boolean(
+    activeEntry
+      && runtimePublicKeyB64
+      && String(activeEntry.public_key_b64).trim() === String(runtimePublicKeyB64).trim()
+  );
+  const localOrEphemeralSigning = keyMode !== "configured" || LOCAL_DEV_KEY_IDS.has(SIGNING_KEY_ID);
+  let trustSource = "signing_disabled";
+  if (!SIGNING_ENABLED) {
+    trustSource = "signing_disabled";
+  } else if (localOrEphemeralSigning) {
+    trustSource = "dev_local_signing";
+  } else if (EXTERNAL_TRUST_REGISTRY) {
+    trustSource = "external_trust_registry";
+  } else {
+    trustSource = "managed_signing";
+  }
+  const productionTrustReady = Boolean(
+    SIGNING_ENABLED
+      && keyMode === "configured"
+      && activeKeyRegistered
+      && activeKeyMatchesPublic
+      && normalizedKeys.length > 0
+      && (trustSource === "managed_signing" || trustSource === "external_trust_registry")
+  );
+  const trustBlockers = [];
+  if (SIGNING_ENABLED && !IS_DEV_RUNTIME && keyMode !== "configured") {
+    trustBlockers.push({
+      code: "NON_DEV_EPHEMERAL_SIGNING_BLOCKED",
+      message: "Non-development bridge runtime requires SIGNING_PRIVATE_KEY_PEM; ephemeral signing is blocked.",
+      blocking: true,
+    });
+  }
+  if (SIGNING_ENABLED && !activeKeyRegistered) {
+    trustBlockers.push({
+      code: "MISSING_REGISTERED_ACTIVE_KEY",
+      message: `Signing key '${SIGNING_KEY_ID}' is not present in contracts/keys/public_keys.json.`,
+      blocking: true,
+    });
+  }
+  if (SIGNING_ENABLED && activeKeyRegistered && !activeKeyMatchesPublic) {
+    trustBlockers.push({
+      code: "ACTIVE_KEY_MISMATCH",
+      message: `Signing key '${SIGNING_KEY_ID}' does not match registered public key material.`,
+      blocking: true,
+    });
+  }
+  const trustWarnings = [];
+  if (SIGNING_ENABLED && localOrEphemeralSigning) {
+    trustWarnings.push("Signing key is local/ephemeral. Configure managed production key material before live deployment.");
+  }
+  if (SIGNING_ENABLED && registryStructuralIssues) {
+    trustWarnings.push("Public key registry contains invalid/duplicate entries and should be remediated.");
+  }
+  return {
+    trust_source: trustSource,
+    trust_registry_mode: TRUST_REGISTRY_MODE,
+    trust_registry_source: EXTERNAL_TRUST_REGISTRY ? "external" : "local_registry_file",
+    trust_registry_mutable: false,
+    key_registry_file_exists: keyRegistryFileExists,
+    key_registry_ok: activeKeyRegistered && activeKeyMatchesPublic,
+    active_key_registered: activeKeyRegistered,
+    active_key_matches_public: activeKeyMatchesPublic,
+    registered_key_count: normalizedKeys.length,
+    production_trust_ready: productionTrustReady,
+    signing_trust_blockers: trustBlockers,
+    signing_trust_warnings: trustWarnings,
+  };
+}
+
 const { publicKey: signingPublicKey, keyMode: signingKeyMode } = loadSigningKeyPair();
+const bridgeTrustState = loadBridgeTrustState({ publicKey: signingPublicKey, keyMode: signingKeyMode });
+if (SIGNING_ENABLED && !IS_DEV_RUNTIME && bridgeTrustState.signing_trust_blockers.length > 0) {
+  const firstBlocker = bridgeTrustState.signing_trust_blockers[0];
+  throw new Error(
+    `BRIDGE_TRUST_BLOCKED:${firstBlocker.code}:${firstBlocker.message}`,
+  );
+}
 
 const LLM_ENABLED = process.env.LLM_INGESTION_ENABLED === "true";
 const LLM_STUB_ENABLED = process.env.LLM_STUB_ENABLED === "true";
@@ -141,14 +279,28 @@ app.use("/api/ingest", ingestRouter);
 /* ================= HEALTH ================= */
 
 app.get("/health", (_req, res) => {
-  return res.json({
-    status: "OK",
+  const trustReady = (!SIGNING_ENABLED) || IS_DEV_RUNTIME || bridgeTrustState.production_trust_ready;
+  return res.status(trustReady ? 200 : 503).json({
+    status: trustReady ? "OK" : "DEGRADED",
     service: "backend-ui-bridge",
     auth_mode: getAuthMode(),
     signing: {
       enabled: SIGNING_ENABLED,
       key_id: SIGNING_KEY_ID,
       key_mode: signingKeyMode,
+      signing_mode: signingKeyMode,
+      trust_source: bridgeTrustState.trust_source,
+      trust_registry_mode: bridgeTrustState.trust_registry_mode,
+      trust_registry_source: bridgeTrustState.trust_registry_source,
+      production_trust_ready: bridgeTrustState.production_trust_ready,
+    },
+    trust: {
+      key_registry_ok: bridgeTrustState.key_registry_ok,
+      active_key_registered: bridgeTrustState.active_key_registered,
+      active_key_matches_public: bridgeTrustState.active_key_matches_public,
+      registered_key_count: bridgeTrustState.registered_key_count,
+      signing_trust_blockers: bridgeTrustState.signing_trust_blockers,
+      signing_trust_warnings: bridgeTrustState.signing_trust_warnings,
     },
     timestamp: new Date().toISOString(),
   });
@@ -158,6 +310,7 @@ app.get("/readiness", async (_req, res) => {
   const checks = {
     bridge_state_writable: false,
     runtime_reachable: false,
+    bridge_trust_ready: (!SIGNING_ENABLED) || IS_DEV_RUNTIME || bridgeTrustState.production_trust_ready,
   };
 
   try {
@@ -177,7 +330,7 @@ app.get("/readiness", async (_req, res) => {
     checks.runtime_reachable = false;
   }
 
-  const ready = checks.bridge_state_writable && checks.runtime_reachable;
+  const ready = checks.bridge_state_writable && checks.runtime_reachable && checks.bridge_trust_ready;
   return res.status(ready ? 200 : 503).json({
     status: ready ? "READY" : "NOT_READY",
     checks,
@@ -1079,8 +1232,13 @@ function localDbStatusSnapshot() {
     integrity: {
       ok: true,
       mode: "bridge_fallback",
-      key_registry_ok: SIGNING_ENABLED ? signingKeyMode === "configured" || IS_DEV_RUNTIME : true,
+      key_registry_ok: SIGNING_ENABLED ? bridgeTrustState.key_registry_ok || IS_DEV_RUNTIME : true,
       signing_mode: signingKeyMode,
+      trust_source: bridgeTrustState.trust_source,
+      trust_registry_source: bridgeTrustState.trust_registry_source,
+      trust_registry_mode: bridgeTrustState.trust_registry_mode,
+      production_trust_ready: bridgeTrustState.production_trust_ready,
+      signing_trust_blockers: bridgeTrustState.signing_trust_blockers,
     },
   };
 }
@@ -1761,8 +1919,16 @@ app.get("/admin/config/effective", requireRole(["admin"]), (_req, res) => {
       key_id: SIGNING_KEY_ID,
       key_mode: signingKeyMode,
       signing_mode: signingKeyMode,
-      trust_registry_source: fs.existsSync(PUBLIC_KEYS_PATH) ? "local_registry_file" : "external_or_missing",
-      trust_registry_mutable: false,
+      trust_source: bridgeTrustState.trust_source,
+      trust_registry_mode: bridgeTrustState.trust_registry_mode,
+      trust_registry_source: bridgeTrustState.trust_registry_source,
+      trust_registry_mutable: bridgeTrustState.trust_registry_mutable,
+      production_trust_ready: bridgeTrustState.production_trust_ready,
+      active_key_registered: bridgeTrustState.active_key_registered,
+      active_key_matches_public: bridgeTrustState.active_key_matches_public,
+      registered_key_count: bridgeTrustState.registered_key_count,
+      signing_trust_blockers: bridgeTrustState.signing_trust_blockers,
+      signing_trust_warnings: bridgeTrustState.signing_trust_warnings,
     },
     llm: {
       ingestion_enabled: LLM_ENABLED,

@@ -20,6 +20,9 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
   const [goalsInput, setGoalsInput] = useState("Cycle-time reduction >=15%");
   const [regulatoryContextInput, setRegulatoryContextInput] = useState("GDPR, UK DPA 2018");
   const [successTargetsInput, setSuccessTargetsInput] = useState(">=15% cycle-time reduction; <=1% Sev1 increase");
+  const [successMetricsInput, setSuccessMetricsInput] = useState(
+    "Cycle-time reduction percent|20|15|percent|6 months|cio-owner",
+  );
   const [evidenceRefsInput, setEvidenceRefsInput] = useState(
     "https://www.fortinet.com/products/secure-sd-wan\nhttps://www.paloaltonetworks.com/sase/prisma-sd-wan",
   );
@@ -165,6 +168,77 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
     setStatus("");
   }
 
+  function isPrincipleOnlyMetric(metricName: string): boolean {
+    const metric = metricName.trim().toLowerCase();
+    if (!metric) return false;
+    if (/\d/.test(metric)) return false;
+    return [
+      "privacy-by-design",
+      "privacy by design",
+      "zero trust",
+      "deterministic governance",
+      "deterministic-governance",
+      "security-first",
+      "compliance-first",
+    ].some((token) => metric.includes(token));
+  }
+
+  function parseSuccessMetrics(value: string): { metrics: Array<{
+    metric_name: string;
+    baseline: number;
+    target_value: number;
+    unit: string;
+    measurement_window: string;
+    owner: string;
+  }>; errors: string[] } {
+    const lines = value
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    const metrics: Array<{
+      metric_name: string;
+      baseline: number;
+      target_value: number;
+      unit: string;
+      measurement_window: string;
+      owner: string;
+    }> = [];
+    const errors: string[] = [];
+
+    for (const [idx, line] of lines.entries()) {
+      const parts = line.split("|").map((part) => part.trim());
+      if (parts.length < 6) {
+        errors.push(`Success metric row ${idx + 1} must include 6 pipe-delimited fields.`);
+        continue;
+      }
+      const [metric_name, baselineRaw, targetRaw, unit, measurement_window, owner] = parts;
+      const baseline = Number(baselineRaw);
+      const target_value = Number(targetRaw);
+      if (!metric_name || !unit || !measurement_window || !owner) {
+        errors.push(`Success metric row ${idx + 1} is missing required fields.`);
+        continue;
+      }
+      if (!Number.isFinite(baseline) || !Number.isFinite(target_value)) {
+        errors.push(`Success metric row ${idx + 1} must include numeric baseline and target.`);
+        continue;
+      }
+      if (isPrincipleOnlyMetric(metric_name)) {
+        errors.push(`Success metric row ${idx + 1} is principle-only and not measurable.`);
+        continue;
+      }
+      metrics.push({
+        metric_name,
+        baseline,
+        target_value,
+        unit,
+        measurement_window,
+        owner,
+      });
+    }
+
+    return { metrics, errors };
+  }
+
   async function submitRole() {
     const evidenceRefs = parseEvidenceRefs(evidenceRefsInput);
     const strongRefs = evidenceRefs.filter(isStrongEvidenceRef);
@@ -205,6 +279,15 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
     try {
       setRunningCompile(true);
       setStatus("Running deterministic LLM + governed compile...");
+      const parsedSuccessMetrics = parseSuccessMetrics(successMetricsInput);
+      if (parsedSuccessMetrics.errors.length > 0) {
+        setStatus(parsedSuccessMetrics.errors[0]);
+        return;
+      }
+      if (parsedSuccessMetrics.metrics.length === 0) {
+        setStatus("At least one success metric row is required.");
+        return;
+      }
       const effectiveGovernanceModes = Array.from(new Set([...governanceModes, ...requiredGovernanceModes]));
       if (effectiveGovernanceModes.length !== governanceModes.length) {
         setGovernanceModes(effectiveGovernanceModes);
@@ -224,6 +307,7 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
         goals: parseList(goalsInput),
         regulatory_context: parseList(regulatoryContextInput),
         success_targets: parseList(successTargetsInput),
+        success_metrics: parsedSuccessMetrics.metrics,
         governance_modes: effectiveGovernanceModes,
         provider: llmProvider,
         human_intent: humanIntent,
@@ -322,6 +406,15 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
         <div>
           <label>Success Targets:</label>
           <input value={successTargetsInput} onChange={(e) => setSuccessTargetsInput(e.target.value)} style={{ width: "100%" }} />
+        </div>
+        <div>
+          <label>Success Metrics (name|baseline|target|unit|window|owner):</label>
+          <textarea
+            rows={3}
+            value={successMetricsInput}
+            onChange={(e) => setSuccessMetricsInput(e.target.value)}
+            placeholder="Cycle-time reduction percent|20|15|percent|6 months|cio-owner"
+          />
         </div>
       </div>
 
