@@ -52,6 +52,7 @@ RUN groupadd -r diiac && useradd -r -g diiac -s /bin/false diiac \
              /workspace/artefacts/decision-packs \
              /workspace/ledger \
              /workspace/contracts/keys \
+ && cp /workspace/backend-ui-bridge/contracts/keys/public_keys.json /workspace/contracts/keys/public_keys.json \
  && chown -R diiac:diiac /workspace
 USER diiac
 

@@ -28,9 +28,9 @@ param uiDnsSubdomain = 'diiacui'
 
 // Image coordinates (dedicated ACR destination).
 param imageRepositoryPrefix = 'diiac'
-param runtimeImageTag = '1.3.0-ab41660-closure'
-param bridgeImageTag = '1.3.0-ab41660-closure'
-param frontendImageTag = '1.3.0-ab41660-closure'
+param runtimeImageTag = '1.3.0-b1a1e77-wave1'
+param bridgeImageTag = '1.3.0-b1a1e77-wave1-fix2'
+param frontendImageTag = '1.3.0-b1a1e77-wave1'
 param runtimeAppVersion = 'v1.3.0-ui'
 
 // Entra / auth config.
