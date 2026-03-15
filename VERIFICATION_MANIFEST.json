@@ -1,7 +1,7 @@
 {
-  "generated_at_utc": "2026-03-15T12:05:00Z",
+  "generated_at_utc": "2026-03-15T12:12:00Z",
   "repository_root": "F:/code/diiac/diiac_v1.3.0_ui",
-  "commit": "74a66ea",
+  "commit": "466b05f",
   "items": [
     {
       "epic_id": "E6",
@@ -254,10 +254,10 @@
       ],
       "verification_commands": [
         "python -m pytest -q tests/test_wave2_parity_contracts.py --basetemp .pytest_tmp -k \"trust_bundle_contains_validity_window or historical_pack_verifies_under_rotated_key_registry or unknown_key_export_fails or tampered_signature_fails_verification\"",
-        "node scripts/verify_decision_pack.js artifacts/5fea0f49-9911-5a83-8f29-e68230a01a0b contracts/keys/public_keys.json"
+        "node scripts/verify_decision_pack.js artifacts/11ee6d88-a473-5dc8-acd6-cb817ef4742d contracts/keys/public_keys.json"
       ],
       "verification_result": "PASS",
-      "generated_artifacts": ["artifacts/5fea0f49-9911-5a83-8f29-e68230a01a0b/trust_bundle.json"],
+      "generated_artifacts": ["artifacts/11ee6d88-a473-5dc8-acd6-cb817ef4742d/trust_bundle.json"],
       "artifact_hashes": {
         "scripts/verify_decision_pack.js": "D76B954C40F6523450045934DC242C6FB99C030E01B4D32D8037213B86B2D329"
       },

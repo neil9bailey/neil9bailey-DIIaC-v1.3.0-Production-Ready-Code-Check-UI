@@ -1,7 +1,7 @@
 # VALIDATION_OUTPUTS
 
-Generated_at_utc: 2026-03-15T12:05:00Z  
-Commit: 74a66ea  
+Generated_at_utc: 2026-03-15T12:12:00Z  
+Commit: 466b05f  
 Repository_root: F:/code/diiac/diiac_v1.3.0_ui
 
 ## Command Log
@@ -288,6 +288,85 @@ app.py 2EC72EA2...
 backend-ui-bridge/server.js 59A25A3F...
 Frontend/src/api.ts EC611BDA...
 ...
+```
+
+### CMD-33
+- command: `git rev-parse --short HEAD`
+- pass_fail: PASS
+- output_snippet:
+```text
+466b05f
+```
+
+### CMD-34
+- command: `python -m pytest -q --basetemp .pytest_tmp`
+- pass_fail: PASS
+- output_snippet:
+```text
+collected 89 items
+89 passed in 15.99s
+```
+
+### CMD-35
+- command: `node --check backend-ui-bridge/server.js`
+- pass_fail: PASS
+- output_snippet:
+```text
+(no output)
+```
+
+### CMD-36
+- command: `npm --prefix Frontend run test -- --run`
+- pass_fail: PASS
+- output_snippet:
+```text
+1 passed test file, 2 passed tests
+```
+
+### CMD-37
+- command: `npm --prefix Frontend run build`
+- pass_fail: PASS
+- output_snippet:
+```text
+tsc --noEmit && vite build
+✓ built in 4.20s
+```
+
+### CMD-38
+- command: `python scripts_e2e_runtime_smoke.py`
+- pass_fail: PASS
+- output_snippet:
+```text
+E2E runtime smoke PASSED
+```
+
+### CMD-39
+- command: `python scripts_e2e_assurance_validation.py`
+- pass_fail: PASS
+- output_snippet:
+```text
+chatgpt_run: PASS (19/19)
+copilot_run: PASS (19/19)
+dashboard_validation: PASS (6/6)
+OVERALL: PASS
+```
+
+### CMD-40
+- command: `python scripts_production_readiness_check.py`
+- pass_fail: PASS
+- output_snippet:
+```text
+Production readiness check PASSED
+```
+
+### CMD-41
+- command: `$id=(Get-Content e2e_assurance_validation_export.json | ConvertFrom-Json).copilot_run.execution_id; node scripts/verify_decision_pack.js artifacts/$id contracts/keys/public_keys.json`
+- pass_fail: PASS
+- output_snippet:
+```text
+USING_EXECUTION_ID=11ee6d88-a473-5dc8-acd6-cb817ef4742d
+"overall": "PASS"
+"signature_ok": true
 ```
 
 ## Commands Not Run / Could Not Run
