@@ -576,21 +576,21 @@ def create_app() -> Flask:
             and str(entry.get("key_id", "")).strip() in local_dev_key_ids
         }
     )
-    runtime_ephemeral_entry: dict[str, Any] | None = None
-    if signing_enabled and is_dev_runtime and key_mode == "ephemeral":
-        runtime_ephemeral_entry = {
+    runtime_dev_signing_entry: dict[str, Any] | None = None
+    if signing_enabled and is_dev_runtime and signing_key_id in local_dev_key_ids:
+        runtime_dev_signing_entry = {
             "key_id": signing_key_id,
             "algorithm": "Ed25519",
             "public_key_b64": public_key_b64,
             "valid_from": _utc_now(),
             "valid_to": None,
-            "trust_origin": "runtime_ephemeral_dev",
+            "trust_origin": "runtime_ephemeral_dev" if key_mode == "ephemeral" else "runtime_local_dev",
         }
     active_signing_entry: dict[str, Any] | None = active_entry
-    if runtime_ephemeral_entry and (
+    if runtime_dev_signing_entry and (
         not isinstance(active_entry, dict) or active_entry.get("public_key_b64") != public_key_b64
     ):
-        active_signing_entry = runtime_ephemeral_entry
+        active_signing_entry = runtime_dev_signing_entry
     registered_key_count = len(
         [entry for entry in normalized_keys if isinstance(entry, dict) and entry.get("key_id")]
     )
@@ -663,7 +663,7 @@ def create_app() -> Flask:
                 "blocking": True,
             }
         )
-    if signing_enabled and not active_key_registered:
+    if signing_enabled and not active_key_registered and not (is_dev_runtime and signing_key_id in local_dev_key_ids):
         signing_trust_blockers.append(
             {
                 "code": "MISSING_REGISTERED_ACTIVE_KEY",
@@ -749,8 +749,16 @@ def create_app() -> Flask:
             "contracts_keys": (
                 public_keys_file.exists()
                 and registered_key_count > 0
-                and active_key_registered
-                and active_key_matches_public
+                and (
+                    (active_key_registered and active_key_matches_public)
+                    or (
+                        signing_enabled
+                        and is_dev_runtime
+                        and signing_key_id in local_dev_key_ids
+                        and isinstance(active_signing_entry, dict)
+                        and str(active_signing_entry.get("public_key_b64", "")).strip() == public_key_b64
+                    )
+                )
             ),
             "policy_packs_loaded": policy_pack_dir.exists() and policy_pack_dir.is_dir() and len(policy_packs) > 0,
             "signing_trust_ready": (not signing_enabled) or production_trust_ready,
@@ -1138,7 +1146,7 @@ def create_app() -> Flask:
         if (
             signing_enabled
             and is_dev_runtime
-            and key_mode == "ephemeral"
+            and signing_key_id in local_dev_key_ids
             and key_id.strip() == signing_key_id
         ):
             return public_key, None
