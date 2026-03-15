@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "review_state_incomplete",
+  "mode": "compile",
+  "scenario": "review_state_incomplete",
+  "expected_codes": [
+    "REVIEW_STATE_INCOMPLETE"
+  ]
+}

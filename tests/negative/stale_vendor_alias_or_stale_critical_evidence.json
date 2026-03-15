@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "stale_vendor_alias_or_stale_critical_evidence",
+  "mode": "compile",
+  "scenario": "stale_critical_evidence",
+  "expected_codes": [
+    "STALE_CRITICAL_EVIDENCE"
+  ]
+}

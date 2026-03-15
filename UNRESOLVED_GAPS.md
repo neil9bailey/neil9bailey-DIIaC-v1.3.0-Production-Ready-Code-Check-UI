@@ -1,55 +1,50 @@
 # UNRESOLVED_GAPS
 
-Generated_at_utc: 2026-03-13T01:12:00Z
-Commit: bfe6ea2
-Scope_note: R1-R6 blockers were the only implementation scope for this run.
+Generated_at_utc: 2026-03-15T12:05:00Z  
+Commit: 74a66ea
 
 ## Verified Facts vs Inference
 
-- Verified facts: derived from current code, direct tests, and command outputs in [VALIDATION_OUTPUTS.md](/F:/code/diiac/diiac_v1.3.0_ui/VALIDATION_OUTPUTS.md).
-- Inference: used only where behavior is not directly asserted by tests.
+- Verified facts: all R1-R14 items are backed by runtime-path code + direct tests in `tests/test_admin_console.py`, `tests/test_wave2_parity_contracts.py`, `tests/test_wave3_accountability.py`, `tests/test_golden_exports.py`, and `tests/test_negative_fixtures.py`.
+- Inference: none required for ticket status assignment.
 
 ## Unresolved Runtime Behaviors
 
-- No unresolved runtime behavior remains for R1-R6 target controls (replay legacy injection, bridge/runtime non-dev trust parity, board hard-fails, KPI strictness, stale critical evidence blocking, vendor mismatch hard-fails).
-- Remaining out-of-scope behavior gaps (not implemented in this run):
-  - Full policy semantics exposure/rendering (Epic 4).
-  - Human review workflow/ledger event chain (Epic 8).
+- None found for R1-R14 target behaviors on local tested runtime paths.
+
+## Operational Gaps (Outside Local Runtime Proof)
+
+- Live Azure deployment regression validation was not executed in this local closure run.
+- Remote repository push/synchronization was not proven by local test execution.
 
 ## Partial Policy Semantics
 
-- Backend semantics fields exist, but full end-to-end response schema + UI rendering coverage remains out of scope in this run.
-- No dedicated frontend tests currently prove operator-visible semantics differentiation across all assurance/compliance states.
+- None in R7 scope. Required response semantics fields are present in runtime response, OpenAPI schemas, frontend API typing, and frontend rendering tests.
 
 ## Placeholder Logic Still Present Anywhere
 
-- Placeholder classification logic still exists in `app.py` (`placeholder-*`, `auto-ref-*`) for detection/rejection semantics.
-- This is not fallback synthesis on production/replay output paths; it is classification logic.
+- Placeholder detection logic remains in runtime classification paths (`placeholder-*`, `auto-ref-*`) as rejection/guard logic.
+- No placeholder synthesis path remains on production board output path.
 
 ## Fallback Logic Still Present Anywhere
 
-- Dev-mode trust registry auto-registration remains available when explicitly enabled (`TRUST_REGISTRY_DEV_AUTOREGISTER=true`).
-- Some non-target narrative/recommendation fields still use conservative defaults when upstream content is absent (outside R1-R6 scope).
+- Dev-only trust auto-registration can still be enabled via `TRUST_REGISTRY_DEV_AUTOREGISTER=true`.
+- Non-dev fallback trust behavior remains blocked (startup hard-fail).
 
 ## Self-Healing Trust Logic Still Present Anywhere
 
-- Dev-only self-healing trust behavior exists by design (`allow_registry_autoregister` path).
-- Non-dev self-healing remains blocked and startup fails on trust misconfiguration.
+- Dev-only self-healing trust behavior exists by design.
+- No self-healing trust behavior exists on non-dev runtime paths.
 
 ## Weak Evidence Binding Still Present Anywhere
 
-- R6 hard-fail controls are implemented and directly tested.
-- Additional non-target evidence-model work remains (for example broader fixture coverage across all gate permutations).
+- None found on selected-vendor production path covered by R6 + R14 + R12 tests.
 
 ## Incomplete UI/API Exposure of Runtime Semantics
 
-- KPI request contract is now strict and wired through frontend/backend.
-- Remaining semantics exposure gaps are non-wave items (full policy semantics rendering and expanded response contracts).
+- None found for required R7/R13 response semantics and review accountability fields.
 
 ## Tests That Do Not Truly Prove Claimed Behavior
 
-- Required R1-R6 tests are present and passing.
-- Remaining test depth gaps (out of scope for this run):
-  - No golden snapshot fixture suite (`tests/golden`).
-  - No comprehensive negative fixture matrix (`tests/negative`) covering every gate permutation.
-  - No dedicated UI semantic rendering tests for full policy semantics uplift.
+- No claim in R1-R14 is currently marked as implemented without a direct proving test.
+- Residual limitation: test proofs are local CI/dev-path proofs; live Azure deployment/runtime parity remains an operational deployment activity outside local repository tests.

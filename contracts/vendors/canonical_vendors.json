@@ -14,6 +14,16 @@
       ],
       "approved_domains": [
         "fortinet.com"
+      ],
+      "products": [
+        {
+          "canonical_label": "Fortinet Secure SD-WAN",
+          "aliases": [
+            "Fortinet Secure SD-WAN",
+            "Fortinet SASE",
+            "Fortinet SD-WAN"
+          ]
+        }
       ]
     },
     {
@@ -30,6 +40,16 @@
       ],
       "approved_domains": [
         "paloaltonetworks.com"
+      ],
+      "products": [
+        {
+          "canonical_label": "Prisma SD-WAN",
+          "aliases": [
+            "Prisma SD-WAN",
+            "Prisma SASE",
+            "Palo Alto Prisma SD-WAN"
+          ]
+        }
       ]
     },
     {
@@ -46,6 +66,16 @@
       "approved_domains": [
         "cisco.com",
         "meraki.com"
+      ],
+      "products": [
+        {
+          "canonical_label": "Cisco Secure SD-WAN",
+          "aliases": [
+            "Cisco Secure SD-WAN",
+            "Cisco SD-WAN",
+            "Cisco Meraki"
+          ]
+        }
       ]
     },
     {
@@ -57,6 +87,15 @@
       "deprecated_aliases": [],
       "approved_domains": [
         "zscaler.com"
+      ],
+      "products": [
+        {
+          "canonical_label": "Zscaler Zero Trust Exchange",
+          "aliases": [
+            "Zscaler Zero Trust Exchange",
+            "Zscaler"
+          ]
+        }
       ]
     }
   ],
@@ -66,11 +105,19 @@
       "pricing": 120,
       "operational": 180,
       "commercial": 180,
+      "interoperability": 180,
+      "deployment": 180,
       "general": 365
     },
     "critical_classes": [
       "security",
       "pricing"
+    ],
+    "required_selected_vendor_classes": [
+      "security",
+      "pricing_or_commercial",
+      "operational",
+      "interoperability_or_deployment"
     ]
   }
 }

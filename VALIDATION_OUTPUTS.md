@@ -1,71 +1,144 @@
 # VALIDATION_OUTPUTS
 
-Generated_at_utc: 2026-03-13T01:15:00Z
-Commit: bfe6ea2
+Generated_at_utc: 2026-03-15T12:05:00Z  
+Commit: 74a66ea  
 Repository_root: F:/code/diiac/diiac_v1.3.0_ui
 
 ## Command Log
 
 ### CMD-01
-- command: `git rev-parse --short HEAD`
+- command: `git status --short`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
-bfe6ea2
+M CONTRADICTION_REPORT.md
+M Frontend/package-lock.json
+... (modified/untracked working files listed)
 ```
 
 ### CMD-02
-- command: `python -m pytest -q --basetemp .pytest_tmp`
+- command: `git rev-parse --abbrev-ref HEAD`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
-collected 53 items
-53 passed in 8.53s
+main
 ```
 
 ### CMD-03
+- command: `Get-ChildItem IMPLEMENTATION_CLOSURE_MATRIX.md,VERIFICATION_MANIFEST.json,QUALITY_GATES_REPORT.json,UNRESOLVED_GAPS.md,CONTRADICTION_REPORT.md,VALIDATION_OUTPUTS.md | Select-Object Name,Length,LastWriteTime`
+- pass_fail: PASS
+- output_snippet:
+```text
+IMPLEMENTATION_CLOSURE_MATRIX.md 13149
+VERIFICATION_MANIFEST.json 22020
+QUALITY_GATES_REPORT.json 7190
+UNRESOLVED_GAPS.md 1910
+CONTRADICTION_REPORT.md 861
+VALIDATION_OUTPUTS.md 4663
+```
+
+### CMD-04
+- command: `rg -n "<Wave1 required test names>" tests`
+- pass_fail: PASS
+- output_snippet:
+```text
+tests/test_admin_console.py:977:def test_replay_does_not_inject_legacy_non_negotiables()
+...
+tests/test_admin_console.py:1546:def test_vendor_evidence_mismatch_hard_fails_selected_vendor()
+```
+
+### CMD-05
+- command: `rg -n "<Wave2/Wave3 required test names>" tests`
+- pass_fail: PASS
+- output_snippet:
+```text
+tests/test_wave2_parity_contracts.py:89:def test_provider_metadata_does_not_leak_into_recommendation()
+...
+tests/test_wave3_accountability.py:162:def test_incomplete_selected_vendor_dossier_fails()
+```
+
+### CMD-06
+- command: `Get-Content CONTRADICTION_REPORT.md`
+- pass_fail: PASS
+- output_snippet:
+```text
+In-Scope Contradictions (R1-R14): None detected.
+```
+
+### CMD-07
+- command: `rg -n "assessment_mode|assurance_level|compliance_position|legal_confirmation_required|evidence_ids|residual_uncertainty" openapi.yaml Frontend/src/api.ts Frontend/src/components/PolicySemanticsPanel.tsx Frontend/src/MultiRoleGovernedCompilePanel.tsx`
+- pass_fail: PASS
+- output_snippet:
+```text
+openapi.yaml:338: - assessment_mode
+Frontend/src/api.ts:131: assessment_mode: ...
+Frontend/src/components/PolicySemanticsPanel.tsx:37: Assessment Mode: ...
+```
+
+### CMD-08
+- command: `rg -n "PASS" Frontend/src -g"*.tsx" -g"*.ts"`
+- pass_fail: PASS
+- output_snippet:
+```text
+Frontend/src/components/PolicySemanticsPanel.tsx:32: Controls: ... PASS: ...
+Frontend/src/api.ts:129: status: "PASS" | "FAIL";
+```
+
+### CMD-09
+- command: `Get-Content e2e_assurance_validation_export.json`
+- pass_fail: PASS
+- output_snippet:
+```text
+overall_result: PASS
+copilot_run.execution_id: 30c3ac1e-ae16-5c32-a19e-1fdac632aec0
+```
+
+### CMD-10
+- command: `git rev-parse --short HEAD`
+- pass_fail: PASS
+- output_snippet:
+```text
+74a66ea
+```
+
+### CMD-11
+- command: `python -m pytest -q --basetemp .pytest_tmp`
+- pass_fail: PASS
+- output_snippet:
+```text
+collected 89 items
+89 passed in 16.68s
+```
+
+### CMD-12
 - command: `node --check backend-ui-bridge/server.js`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
 (no output)
 ```
 
-### CMD-04
+### CMD-13
 - command: `npm --prefix Frontend run build`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
-> tsc --noEmit && vite build
-vite v7.3.1 building client environment for production...
-? built in 4.40s
-(!) Some chunks are larger than 500 kB after minification.
+tsc --noEmit && vite build
+âœ“ built in 4.44s
 ```
 
-### CMD-05
+### CMD-14
 - command: `python scripts_e2e_runtime_smoke.py`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
 E2E runtime smoke PASSED
 ```
 
-### CMD-06 (first run)
-- command: `python scripts_e2e_assurance_validation.py`
-- pass_fail: FAIL
-- output:
-```text
-[FAIL] Governed compile (201) — execution_id=MISSING
-error: compile_quality_gate_failed
-code: INVALID_SUCCESS_METRICS
-OVERALL: FAIL
-```
-- action_taken: Script updated to send strict `success_metrics` in compile payload.
-
-### CMD-07 (rerun after fix)
+### CMD-15
 - command: `python scripts_e2e_assurance_validation.py`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
 chatgpt_run: PASS (19/19)
 copilot_run: PASS (19/19)
@@ -73,66 +146,158 @@ dashboard_validation: PASS (6/6)
 OVERALL: PASS
 ```
 
-### CMD-08
+### CMD-16
 - command: `python scripts_production_readiness_check.py`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
 Production readiness check PASSED
 ```
 
-### CMD-09
-- command: `node scripts/verify_decision_pack.js artifacts/3cb94e0d-2455-5a20-8dd8-0cef52523142 contracts/keys/public_keys.json`
+### CMD-17
+- command: `$id=(Get-Content e2e_assurance_validation_export.json | ConvertFrom-Json).copilot_run.execution_id; node scripts/verify_decision_pack.js artifacts/$id contracts/keys/public_keys.json`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
+USING_EXECUTION_ID=5fea0f49-9911-5a83-8f29-e68230a01a0b
 "overall": "PASS"
 "signature_ok": true
-"trust_bundle": { "present": true, "source": "pack" }
 ```
 
-### CMD-10
-- command: `python -m pytest -q --basetemp .pytest_tmp tests/test_admin_console.py -k "bridge_non_dev_requires_registered_active_key or bridge_non_dev_rejects_mismatched_registered_key or bridge_runtime_trust_parity_contract or bridge_and_runtime_fail_same_trust_misconfiguration_e2e"`
+### CMD-18
+- command: `python -m pytest -q tests/test_golden_exports.py --basetemp .pytest_tmp`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
-4 passed, 46 deselected
+3 passed in 1.09s
 ```
 
-### CMD-11
-- command: `python -m pytest -q --basetemp .pytest_tmp tests/test_admin_console.py -k "missing_risk_register_fails_board_section_incomplete or missing_executive_summary_fails_board_section_incomplete or production_output_contains_no_placeholder_sections or success_metrics_require_baseline_target_unit_window_owner or principle_only_metric_fails_invalid_success_metrics or kpi_schema_round_trip_contract or stale_security_evidence_blocks_high_assurance or stale_pricing_evidence_blocks_high_assurance or noncritical_stale_evidence_warns_without_false_pass or selected_vendor_rejects_competitor_primary_evidence or vendor_scope_general_does_not_satisfy_first_party_requirement or vendor_evidence_mismatch_hard_fails_selected_vendor"`
+### CMD-19
+- command: `python -m pytest -q tests/test_negative_fixtures.py --basetemp .pytest_tmp`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
-12 passed, 38 deselected
+15 passed in 2.68s
 ```
 
-### CMD-12
-- command: `python -m py_compile app.py tests/test_admin_console.py`
+### CMD-20
+- command: `npm --prefix Frontend run test -- --run`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
-(no output)
+1 passed test file, 2 passed tests
 ```
 
-### CMD-13
-- command: `npm --prefix backend-ui-bridge install`
+### CMD-21
+- command: `python -m pytest -q tests/test_wave2_parity_contracts.py --basetemp .pytest_tmp`
 - pass_fail: PASS
-- output:
+- output_snippet:
 ```text
-added 130 packages, and audited 131 packages in 11s
-1 high severity vulnerability (reported by npm audit)
+12 passed in 6.36s
 ```
 
-## Commands That Could Not Be Run
+### CMD-22
+- command: `python -m pytest -q tests/test_wave3_accountability.py --basetemp .pytest_tmp`
+- pass_fail: PASS
+- output_snippet:
+```text
+6 passed in 1.29s
+```
 
-- `Remove-Item -Recurse -Force .pytest_tmp,tmp_bridge_ws -ErrorAction SilentlyContinue`
-- reason: blocked by command policy in this environment.
+### CMD-23
+- command: `python -m pytest -q tests/test_wave2_parity_contracts.py -k "provider_metadata or recommendation_invariant or decision_basis_references_vendor_not_provider or trust_bundle_contains_validity_window or historical_pack_verifies_under_rotated_key_registry or unknown_key_export_fails or tampered_signature_fails_verification" --basetemp .pytest_tmp`
+- pass_fail: FAIL
+- output_snippet:
+```text
+PermissionError: [WinError 32] ... .pytest_tmp ... file is being used by another process
+```
+- action_taken: reran with dedicated base temp path.
 
-## Files That Could Not Be Found
+### CMD-24
+- command: `python -m pytest -q tests/test_wave2_parity_contracts.py -k "provider_metadata or recommendation_invariant or decision_basis_references_vendor_not_provider or trust_bundle_contains_validity_window or historical_pack_verifies_under_rotated_key_registry or unknown_key_export_fails or tampered_signature_fails_verification" --basetemp .pytest_tmp_wave2_target`
+- pass_fail: PASS
+- output_snippet:
+```text
+7 passed, 5 deselected in 2.13s
+```
 
-- none relevant to mandatory verification command list.
+### CMD-25
+- command: `python -m pytest -q tests/test_wave2_parity_contracts.py -k "api_schema_contract_for_policy_semantics_response or bridge_runtime_parity" --basetemp .pytest_tmp_parity`
+- pass_fail: PASS
+- output_snippet:
+```text
+4 passed, 8 deselected in 3.10s
+```
 
-## Branch/Scope/Path Ambiguity
+### CMD-26
+- command: `rg -n "test_api_schema_contract_for_policy_semantics_response" tests/test_wave2_parity_contracts.py tests/test_admin_console.py`
+- pass_fail: PASS
+- output_snippet:
+```text
+tests/test_wave2_parity_contracts.py:71:def test_api_schema_contract_for_policy_semantics_response()
+```
 
-- none observed.
+### CMD-27
+- command: `Get-Content IMPLEMENTATION_CLOSURE_MATRIX.md; Get-Content VERIFICATION_MANIFEST.json; Get-Content QUALITY_GATES_REPORT.json`
+- pass_fail: PASS
+- output_snippet:
+```text
+Closure artifacts loaded for strict verification.
+```
+
+### CMD-28
+- command: `Get-Content UNRESOLVED_GAPS.md; Get-Content VALIDATION_OUTPUTS.md; Get-Content tests/test_wave2_parity_contracts.py`
+- pass_fail: PASS
+- output_snippet:
+```text
+Artifact + test files loaded.
+```
+
+### CMD-29
+- command: `Get-Content Frontend/src/components/PolicySemanticsPanel.test.tsx`
+- pass_fail: PASS
+- output_snippet:
+```text
+it("frontend rendering test for assessment_mode / assurance_level / compliance_position", ...)
+it("test_ui_displays_legal_confirmation_required_and_residual_uncertainty", ...)
+```
+
+### CMD-30
+- command: `Get-ChildItem tests/negative | Select-Object Name`
+- pass_fail: PASS
+- output_snippet:
+```text
+15 negative fixtures present, including review_state_incomplete and signature_verification_failure.
+```
+
+### CMD-31
+- command: `python - <<'PY' ...` (hash command with Unix heredoc in PowerShell)
+- pass_fail: FAIL
+- output_snippet:
+```text
+ParserError: Missing file specification after redirection operator.
+```
+- action_taken: reran with PowerShell here-string piped to python.
+
+### CMD-32
+- command: `@' ... '@ | python -` (file hash computation)
+- pass_fail: PASS
+- output_snippet:
+```text
+app.py 2EC72EA2...
+backend-ui-bridge/server.js 59A25A3F...
+Frontend/src/api.ts EC611BDA...
+...
+```
+
+## Commands Not Run / Could Not Run
+
+- none for mandatory verification list.
+
+## Files Not Found
+
+- none for required files/paths in this run.
+
+## Branch / Scope / Path Ambiguity
+
+- none in local repository context.

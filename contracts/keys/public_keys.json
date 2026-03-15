@@ -3,12 +3,16 @@
     {
       "key_id": "diiac-vendorlogic-prod",
       "algorithm": "Ed25519",
-      "public_key_b64": "Nf1tHex5Z3i+XE3hjeCp0VyKq/qmFNc8hfkkgI5up/c="
+      "public_key_b64": "Nf1tHex5Z3i+XE3hjeCp0VyKq/qmFNc8hfkkgI5up/c=",
+      "valid_from": "2025-01-01T00:00:00+00:00",
+      "valid_to": null
     },
     {
       "key_id": "ephemeral-local-ed25519",
       "algorithm": "Ed25519",
-      "public_key_b64": "CBsUYE9HdAsDo8MKSWqMa9PbkCy9eZ0FtpWl2tSUQ6Q="
+      "public_key_b64": "CBsUYE9HdAsDo8MKSWqMa9PbkCy9eZ0FtpWl2tSUQ6Q=",
+      "valid_from": "2025-01-01T00:00:00+00:00",
+      "valid_to": null
     }
   ]
 }

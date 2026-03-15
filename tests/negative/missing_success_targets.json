@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "missing_success_targets",
+  "mode": "compile",
+  "scenario": "missing_success_targets",
+  "expected_codes": [
+    "MISSING_SUCCESS_TARGETS"
+  ]
+}

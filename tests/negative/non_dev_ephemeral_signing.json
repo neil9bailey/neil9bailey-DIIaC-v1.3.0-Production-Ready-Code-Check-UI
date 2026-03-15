@@ -1,0 +1,6 @@
+﻿{
+  "fixture_id": "non_dev_ephemeral_signing",
+  "mode": "startup",
+  "scenario": "non_dev_ephemeral_signing",
+  "expected_error_substring": "SIGNING_PRIVATE_KEY_PEM"
+}

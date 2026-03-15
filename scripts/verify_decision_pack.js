@@ -208,32 +208,79 @@ function buildPublicKeyFromRawEd25519(rawPublicKey) {
   return crypto.createPublicKey({ key: spki, format: "der", type: "spki" });
 }
 
-function resolvePublicKeyB64(sigmeta, registry, trustBundle) {
-  if (typeof sigmeta.public_key_b64 === "string" && sigmeta.public_key_b64.trim()) {
-    return sigmeta.public_key_b64.trim();
+function parseIsoDate(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
+function findTrustBundleKeyEntry(trustBundle, signingKeyId) {
+  if (!trustBundle || typeof trustBundle !== "object") return null;
+  const activeKey = trustBundle.active_key;
+  if (activeKey && activeKey.key_id === signingKeyId && typeof activeKey.public_key_b64 === "string") {
+    return { ...activeKey, source: "trust_bundle.active_key" };
   }
-  if (trustBundle && typeof trustBundle === "object") {
-    const activeKey = trustBundle.active_key;
-    if (
-      activeKey &&
-      activeKey.key_id === sigmeta.signing_key_id &&
-      typeof activeKey.public_key_b64 === "string" &&
-      activeKey.public_key_b64.trim()
-    ) {
-      return activeKey.public_key_b64.trim();
-    }
-    const historical = Array.isArray(trustBundle.historical_keys) ? trustBundle.historical_keys : [];
-    const historicalEntry = historical.find(
-      (item) => item && item.key_id === sigmeta.signing_key_id && typeof item.public_key_b64 === "string",
-    );
-    if (historicalEntry && historicalEntry.public_key_b64.trim()) {
-      return historicalEntry.public_key_b64.trim();
-    }
-  }
+  const historical = Array.isArray(trustBundle.historical_keys) ? trustBundle.historical_keys : [];
+  const historicalEntry = historical.find(
+    (item) => item && item.key_id === signingKeyId && typeof item.public_key_b64 === "string",
+  );
+  return historicalEntry ? { ...historicalEntry, source: "trust_bundle.historical_keys" } : null;
+}
+
+function findRegistryKeyEntry(registry, signingKeyId) {
   if (!registry || !Array.isArray(registry.keys)) return null;
-  const keyId = sigmeta.signing_key_id;
-  const entry = registry.keys.find((item) => item && item.key_id === keyId && typeof item.public_key_b64 === "string");
-  return entry ? entry.public_key_b64.trim() : null;
+  const entry = registry.keys.find(
+    (item) => item && item.key_id === signingKeyId && typeof item.public_key_b64 === "string",
+  );
+  return entry ? { ...entry, source: "registry.keys" } : null;
+}
+
+function resolveKeyMaterial(sigmeta, registry, trustBundle) {
+  const signingKeyId = sigmeta.signing_key_id;
+  const trustEntry = findTrustBundleKeyEntry(trustBundle, signingKeyId);
+  const registryEntry = findRegistryKeyEntry(registry, signingKeyId);
+  const sigmetaPublic = (typeof sigmeta.public_key_b64 === "string" && sigmeta.public_key_b64.trim())
+    ? sigmeta.public_key_b64.trim()
+    : null;
+  const candidatePublicKeyB64 = sigmetaPublic
+    || (trustEntry && typeof trustEntry.public_key_b64 === "string" ? trustEntry.public_key_b64.trim() : null)
+    || (registryEntry && typeof registryEntry.public_key_b64 === "string" ? registryEntry.public_key_b64.trim() : null);
+  return {
+    public_key_b64: candidatePublicKeyB64,
+    key_entry: trustEntry || registryEntry || null,
+    key_entry_source: trustEntry ? trustEntry.source : (registryEntry ? registryEntry.source : null),
+    public_key_source: sigmetaPublic
+      ? "sigmeta.public_key_b64"
+      : trustEntry
+        ? trustEntry.source
+        : registryEntry
+          ? registryEntry.source
+          : null,
+  };
+}
+
+function validateKeyValidityWindow(signaturePayload, keyEntry) {
+  const signedAt = signaturePayload && typeof signaturePayload === "object" ? signaturePayload.signed_at : null;
+  if (!signedAt || typeof signedAt !== "string") {
+    return { ok: false, error: "missing_signed_at" };
+  }
+  const signedAtDate = parseIsoDate(signedAt);
+  if (!signedAtDate) {
+    return { ok: false, error: "invalid_signed_at" };
+  }
+  if (!keyEntry || typeof keyEntry !== "object") {
+    return { ok: true, error: null };
+  }
+  const validFrom = parseIsoDate(keyEntry.valid_from);
+  const validTo = parseIsoDate(keyEntry.valid_to);
+  if (validFrom && signedAtDate < validFrom) {
+    return { ok: false, error: "key_not_yet_valid" };
+  }
+  if (validTo && signedAtDate > validTo) {
+    return { ok: false, error: "key_expired" };
+  }
+  return { ok: true, error: null };
 }
 
 function usage() {
@@ -350,7 +397,8 @@ function main() {
   if (registryPath && fs.existsSync(registryPath)) {
     registry = readJson(registryPath);
   }
-  const publicKeyB64 = resolvePublicKeyB64(sigmeta, registry, trustBundle);
+  const keyMaterial = resolveKeyMaterial(sigmeta, registry, trustBundle);
+  const publicKeyB64 = keyMaterial.public_key_b64;
   let signatureOk = false;
   let signatureError = null;
   if (!publicKeyB64) {
@@ -360,6 +408,12 @@ function main() {
   } else if (!signatureB64) {
     signatureError = "signature_missing";
   } else {
+    const keyValidity = validateKeyValidityWindow(signaturePayload, keyMaterial.key_entry);
+    if (!keyValidity.ok) {
+      signatureError = keyValidity.error;
+    }
+  }
+  if (!signatureError && publicKeyB64 && signaturePayload && typeof signaturePayload === "object" && signatureB64) {
     try {
       const publicKeyRaw = Buffer.from(publicKeyB64, "base64");
       const publicKey = buildPublicKeyFromRawEd25519(publicKeyRaw);
@@ -403,6 +457,10 @@ function main() {
       signing_key_id: sigmeta.signing_key_id,
       payload_schema_version: sigmeta.signature_payload_schema_version || null,
       error: signatureError,
+      public_key_source: keyMaterial.public_key_source,
+      key_entry_source: keyMaterial.key_entry_source,
+      valid_from: keyMaterial.key_entry && keyMaterial.key_entry.valid_from ? keyMaterial.key_entry.valid_from : null,
+      valid_to: keyMaterial.key_entry && keyMaterial.key_entry.valid_to ? keyMaterial.key_entry.valid_to : null,
     },
     trust_bundle: {
       present: Boolean(trustBundle),

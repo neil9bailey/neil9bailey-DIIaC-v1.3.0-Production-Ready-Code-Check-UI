@@ -1,94 +1,76 @@
 # BEHAVIORAL_DELTA_REPORT
 
-Generated_at_utc: 2026-03-13T00:00:20Z
-Commit: 612e654
+Generated_at_utc: 2026-03-15T12:05:00Z  
+Commit: 74a66ea
 
-## Trust Registry Mutation
+## Trust Separation (R2, R10)
 
-- previous_behavior: trust registry reconciliation/mutation could occur without strict production separation.
-- current_behavior: non-dev auto-registration disabled; dev auto-registration requires explicit `TRUST_REGISTRY_DEV_AUTOREGISTER=true`.
-- exact_code_refs: `app.py` create_app trust registry write block; non-dev startup checks.
-- exact_tests: `test_runtime_reconciles_public_key_registry_entry`; `test_non_dev_runtime_requires_registered_active_signing_key`.
-- change_status: partial.
-- remaining_for_decision_grade: structured startup error taxonomy + bridge/runtime trust parity checks.
+- previous_behavior: bridge/runtime could diverge on non-dev trust checks.
+- current_behavior: bridge and runtime enforce registered active key + key-match blocking in non-dev; trust bundles include lifecycle metadata.
+- exact_code_refs: `app.py` startup trust guards; `backend-ui-bridge/server.js:loadBridgeTrustState`; `scripts/verify_decision_pack.js:validateKeyValidityWindow`.
+- exact_tests: `test_bridge_non_dev_requires_registered_active_key`; `test_bridge_non_dev_rejects_mismatched_registered_key`; `test_bridge_runtime_parity_for_non_dev_trust_blockers`; `test_trust_bundle_contains_validity_window`.
+- change_status: complete.
+- remaining_for_decision_grade: live non-dev deployment verification.
 
-## Non-Dev Ephemeral Signing
+## Replay/Input Default Injection (R1)
 
-- previous_behavior: ephemeral path existed in key loader.
-- current_behavior: non-dev blocks ephemeral key use in runtime and bridge startup.
-- exact_code_refs: `app.py` key mode checks; `backend-ui-bridge/server.js` `loadSigningKeyPair`.
-- exact_tests: `test_non_dev_runtime_blocks_ephemeral_signing`.
-- change_status: partial.
-- remaining_for_audit_grade: bridge registry key-match enforcement and explicit bridge non-dev negative coverage.
+- previous_behavior: replay/default paths could synthesize fallback constraints/provenance.
+- current_behavior: replay rejects missing required provenance/evidence with structured errors; no deterministic-governance, llm-hallucination-risk, or auto-ref synthesis on production replay path.
+- exact_code_refs: `app.py:_validate_replay_payload`; `app.py:verify_replay`.
+- exact_tests: `test_replay_does_not_inject_legacy_non_negotiables`; `test_replay_does_not_inject_legacy_risk_flags`; `test_replay_rejects_missing_evidence_ids_without_auto_refs`; `test_replay_fails_with_structured_error_on_missing_required_provenance`.
+- change_status: complete.
+- remaining_for_decision_grade: none in local runtime path.
 
-## Sign-Then-Verify Export Gate
+## Board Completeness + KPI Strictness (R3, R4)
 
-- previous_behavior: signed artifacts existed, but export release gating was weaker.
-- current_behavior: export routes verify signature before publication; compile aborts if immediate verify fails.
-- exact_code_refs: `app.py` `_verify_signature_contract`, `_generate_signed_export_artifacts`, `/decision-pack/*/export*`.
-- exact_tests: `test_signed_export_includes_verification_metadata_and_schema_version`.
-- change_status: partial.
-- remaining_for_audit_grade: explicit tampered signature and unknown key-id negative tests.
+- previous_behavior: structurally valid reports could pass with placeholders/non-measurable KPI intent.
+- current_behavior: missing required sections hard-fail; KPI schema requires metric_name/baseline/target/unit/window/owner and rejects principle-only values.
+- exact_code_refs: `app.py:_enforce_sections`; `app.py:_validate_success_metric_kpi`; `openapi.yaml:SuccessMetricInput`.
+- exact_tests: `test_missing_risk_register_fails_board_section_incomplete`; `test_missing_executive_summary_fails_board_section_incomplete`; `test_production_output_contains_no_placeholder_sections`; `test_success_metrics_require_baseline_target_unit_window_owner`; `test_principle_only_metric_fails_invalid_success_metrics`; `test_kpi_schema_round_trip_contract`.
+- change_status: complete.
+- remaining_for_decision_grade: none in local runtime path.
 
-## Claim/Evidence Compile Gate
+## Evidence/Vendor Hardening (R5, R6, R14)
 
-- previous_behavior: weaker claim-to-evidence closure.
-- current_behavior: unresolved evidence triggers compile hard-fail.
-- exact_code_refs: `app.py` `UNRESOLVED_EVIDENCE` hard gate.
-- exact_tests: `test_compile_hard_gate_rejects_unresolved_evidence_and_non_measurable_metrics`.
-- change_status: partial.
-- remaining_for_decision_grade: broaden gate tests across placeholder and competitor-primary cases.
+- previous_behavior: stale critical evidence and vendor mismatch could under-block in edge cases.
+- current_behavior: class-aware stale critical evidence blocks high-assurance; competitor-primary and selected-vendor mismatch are hard-failed; selected-vendor dossier completeness + product normalization required.
+- exact_code_refs: `app.py` vendor/evidence hard-gate block; `contracts/vendors/canonical_vendors.json`.
+- exact_tests: `test_stale_security_evidence_blocks_high_assurance`; `test_stale_pricing_evidence_blocks_high_assurance`; `test_selected_vendor_rejects_competitor_primary_evidence`; `test_vendor_scope_general_does_not_satisfy_first_party_requirement`; `test_vendor_evidence_mismatch_hard_fails_selected_vendor`; `test_selected_vendor_requires_security_pricing_operational_support`; `test_product_label_normalization_is_applied`; `test_incomplete_selected_vendor_dossier_fails`.
+- change_status: complete.
+- remaining_for_decision_grade: ongoing registry curation operations outside code path.
 
-## Board Completeness Gate
+## Policy Semantics + UI Contract (R7)
 
-- previous_behavior: placeholder/structural completion could pass with weak substance.
-- current_behavior: board completeness hard gate (`BOARD_SECTION_INCOMPLETE`) exists.
-- exact_code_refs: `app.py` `_enforce_sections` + hard gate block.
-- exact_tests: indirect section-presence checks only.
-- change_status: partial.
-- remaining_for_decision_grade: explicit missing-section and placeholder-section negative tests.
+- previous_behavior: policy interpretation could be PASS-centric in API/UI surfaces.
+- current_behavior: API schema/runtime/frontend expose and render assessment_mode, assurance_level, compliance_position, legal_confirmation_required, evidence_ids, residual_uncertainty.
+- exact_code_refs: `openapi.yaml:PolicyControlResult`; `Frontend/src/api.ts`; `Frontend/src/components/PolicySemanticsPanel.tsx`; `app.py` policy control construction.
+- exact_tests: `test_api_schema_contract_for_policy_semantics_response`; `frontend rendering test for assessment_mode / assurance_level / compliance_position`; `test_ui_displays_legal_confirmation_required_and_residual_uncertainty`.
+- change_status: complete.
+- remaining_for_decision_grade: none in local contract path.
 
-## KPI Measurability
+## Provider Invariance + Parity (R8, R9)
 
-- previous_behavior: principle-only metrics could pass.
-- current_behavior: measurable KPI gate exists (`INVALID_SUCCESS_METRICS`).
-- exact_code_refs: `app.py` `_is_measurable_metric`, `_metric_to_kpi`, hard gate block.
-- exact_tests: `test_compile_hard_gate_rejects_unresolved_evidence_and_non_measurable_metrics`.
-- change_status: partial.
-- remaining_for_audit_grade: strict KPI schema validation for baseline/target/timeframe/tolerance.
+- previous_behavior: provider labels had potential to leak into recommendation narrative; bridge/runtime parity not explicitly regression-tested.
+- current_behavior: provider metadata excluded from recommendation basis; recommendation invariant under provider-label-only changes; bridge/runtime parity suite covers trust, intent, review/policy semantics.
+- exact_code_refs: `app.py:_build_execution`; `tests/test_wave2_parity_contracts.py`.
+- exact_tests: `test_provider_metadata_does_not_leak_into_recommendation`; `test_recommendation_invariant_under_provider_label_change`; `test_decision_basis_references_vendor_not_provider`; `test_bridge_runtime_parity_for_non_dev_trust_blockers`; `test_bridge_runtime_parity_for_intent_preservation`; `test_bridge_runtime_parity_for_review_state_and_policy_semantics`.
+- change_status: complete.
+- remaining_for_decision_grade: live deployment parity smoke.
 
-## Intent Preservation
+## Golden/Negative Fixture Architecture (R11, R12)
 
-- previous_behavior: bridge default values could overwrite intent.
-- current_behavior: bridge compile path forwards user constraints; default overwrite removed in that path.
-- exact_code_refs: `backend-ui-bridge/server.js` `/api/llm-governed-compile` payload mapping.
-- exact_tests: `test_inline_payload_preserves_intent_without_default_overwrite`.
-- change_status: partial.
-- remaining_for_decision_grade: remove replay fallback default injection and add missing-input markers.
+- previous_behavior: coverage focused on general suite with limited fixture-level decision-pack lock-in.
+- current_behavior: deterministic golden fixtures for enterprise/transport/finance and one negative fixture per required hard gate.
+- exact_code_refs: `tests/golden/*.json`; `tests/test_golden_exports.py`; `tests/negative/*.json`; `tests/test_negative_fixtures.py`.
+- exact_tests: `test_golden_it_enterprise_export`; `test_golden_transport_export`; `test_golden_finance_export`; `test_negative_fixture_cases[...]` (15 scenarios).
+- change_status: complete.
+- remaining_for_decision-grade: fixture governance process maintenance.
 
-## Policy Semantics Uplift
+## Human Accountability Ledger (R13)
 
-- previous_behavior: PASS-centric semantics could overstate assurance.
-- current_behavior: runtime emits `assessment_mode`, `assurance_level`, `compliance_position`, `legal_confirmation_required`, `evidence_ids`, `residual_uncertainty`.
-- exact_code_refs: `app.py` policy control result construction.
-- exact_tests: no direct enum assertion suite.
-- change_status: partial.
-- remaining_for_audit_grade: full enum lifecycle + frontend rendering + OpenAPI response schema coverage.
-
-## Vendor Normalization/Freshness
-
-- previous_behavior: weaker canonical vendor and freshness posture.
-- current_behavior: canonical vendor registry and mismatch checks added; freshness status computed.
-- exact_code_refs: `contracts/vendors/canonical_vendors.json`; `app.py` vendor/freshness blocks.
-- exact_tests: vendor name preservation + LLM freshness override tests.
-- change_status: partial.
-- remaining_for_decision_grade: hard-fail stale critical evidence + class-complete dossier checks.
-
-## Human Review Gate
-
-- previous_behavior: high-assurance posture could be inferred without strict review metadata gate.
-- current_behavior: high-assurance compile blocked without complete review state.
-- exact_code_refs: `app.py` `REVIEW_STATE_INCOMPLETE` gate block.
-- exact_tests: `test_high_assurance_requires_completed_review_state`.
-- change_status: partial.
-- remaining_for_audit_grade: immutable approval events in ledger + board/UI exception/waiver rendering.
+- previous_behavior: review/approval semantics existed without full immutable event surfacing guarantees.
+- current_behavior: review completion, approval, exceptions, waivers append ledger-linked events and surface in exports/UI.
+- exact_code_refs: `app.py:_build_review_event_refs`; `openapi.yaml:ReviewState`; `openapi.yaml:ReviewApprovalEvent`; `Frontend/src/components/PolicySemanticsPanel.tsx`.
+- exact_tests: `test_review_completion_appends_ledger_event`; `test_approval_appends_ledger_event`; `test_exceptions_and_waivers_surface_in_export_and_ui`.
+- change_status: complete.
+- remaining_for_audit-grade: operational retention/rotation controls in deployed environment.

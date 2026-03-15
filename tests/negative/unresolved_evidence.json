@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "unresolved_evidence",
+  "mode": "compile",
+  "scenario": "unresolved_evidence",
+  "expected_codes": [
+    "UNRESOLVED_EVIDENCE"
+  ]
+}

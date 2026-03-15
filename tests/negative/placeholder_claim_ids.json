@@ -1,0 +1,8 @@
+{
+  "fixture_id": "placeholder_claim_ids",
+  "mode": "compile",
+  "scenario": "placeholder_claim_ids",
+  "expected_codes": [
+    "PLACEHOLDER_CLAIM_ID_PRESENT"
+  ]
+}

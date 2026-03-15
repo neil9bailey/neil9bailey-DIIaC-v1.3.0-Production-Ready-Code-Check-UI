@@ -88,9 +88,17 @@ def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
             "pricing": 120,
             "operational": 180,
             "commercial": 180,
+            "interoperability": 180,
+            "deployment": 180,
             "general": 365,
         },
         "critical_classes": ["security", "pricing"],
+        "required_selected_vendor_classes": [
+            "security",
+            "pricing_or_commercial",
+            "operational",
+            "interoperability_or_deployment",
+        ],
     }
     if not vendors_file.exists():
         return {
@@ -98,6 +106,7 @@ def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
             "vendors": [],
             "alias_to_vendor_id": {},
             "domain_to_vendor_id": {},
+            "product_alias_to_canonical": {},
             "evidence_policy": default_evidence_policy,
         }
     try:
@@ -110,6 +119,7 @@ def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
 
     alias_to_vendor_id: dict[str, str] = {}
     domain_to_vendor_id: dict[str, str] = {}
+    product_alias_to_canonical: dict[str, dict[str, str]] = {}
     normalized_vendors: list[dict[str, Any]] = []
     for vendor in vendors:
         if not isinstance(vendor, dict):
@@ -127,6 +137,29 @@ def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
         deprecated_aliases = vendor.get("deprecated_aliases")
         if not isinstance(deprecated_aliases, list):
             deprecated_aliases = []
+        products = vendor.get("products")
+        if not isinstance(products, list):
+            products = []
+        normalized_products: list[dict[str, Any]] = []
+        for product in products:
+            if not isinstance(product, dict):
+                continue
+            canonical_label = str(product.get("canonical_label", "")).strip()
+            if not canonical_label:
+                continue
+            product_aliases = product.get("aliases")
+            if not isinstance(product_aliases, list):
+                product_aliases = []
+            normalized_products.append(
+                {
+                    "canonical_label": canonical_label[:200],
+                    "aliases": [
+                        str(alias).strip()[:200]
+                        for alias in product_aliases
+                        if isinstance(alias, str) and str(alias).strip()
+                    ],
+                }
+            )
         normalized_vendors.append(
             {
                 "vendor_id": vendor_id,
@@ -140,6 +173,7 @@ def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
                 "deprecated_aliases": [
                     str(a).strip() for a in deprecated_aliases if isinstance(a, str) and a.strip()
                 ],
+                "products": normalized_products,
             }
         )
 
@@ -156,6 +190,21 @@ def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
             alias_to_vendor_id[_vendor_key(alias)] = vendor_id
         for domain in vendor["approved_domains"]:
             domain_to_vendor_id[domain] = vendor_id
+        product_alias_to_canonical[vendor_id] = {}
+        for product in vendor.get("products", []):
+            if not isinstance(product, dict):
+                continue
+            canonical_label = str(product.get("canonical_label", "")).strip()
+            if not canonical_label:
+                continue
+            product_alias_to_canonical[vendor_id][_vendor_key(canonical_label)] = canonical_label
+            aliases = product.get("aliases")
+            if not isinstance(aliases, list):
+                aliases = []
+            for alias in aliases:
+                if not isinstance(alias, str) or not alias.strip():
+                    continue
+                product_alias_to_canonical[vendor_id][_vendor_key(alias)] = canonical_label
 
     raw_evidence_policy = payload.get("evidence_policy")
     if not isinstance(raw_evidence_policy, dict):
@@ -182,15 +231,25 @@ def _load_vendor_registry(vendors_file: Path) -> dict[str, Any]:
         for item in raw_critical
         if isinstance(item, str) and item.strip()
     ] or list(default_evidence_policy["critical_classes"])
+    raw_required_classes = raw_evidence_policy.get("required_selected_vendor_classes")
+    if not isinstance(raw_required_classes, list):
+        raw_required_classes = []
+    normalized_required_classes = [
+        str(item).strip().lower()
+        for item in raw_required_classes
+        if isinstance(item, str) and item.strip()
+    ] or list(default_evidence_policy["required_selected_vendor_classes"])
 
     return {
         "version": str(payload.get("version", "v1")),
         "vendors": normalized_vendors,
         "alias_to_vendor_id": alias_to_vendor_id,
         "domain_to_vendor_id": domain_to_vendor_id,
+        "product_alias_to_canonical": product_alias_to_canonical,
         "evidence_policy": {
             "freshness_threshold_days": normalized_thresholds,
             "critical_classes": normalized_critical,
+            "required_selected_vendor_classes": normalized_required_classes,
         },
     }
 
@@ -321,6 +380,13 @@ def create_app() -> Flask:
             return maximum
         return parsed
 
+    def _normalize_validity_timestamp(value: Any) -> str | None:
+        if isinstance(value, str) and value.strip():
+            parsed = _parse_utc_timestamp(value.strip())
+            if parsed:
+                return parsed.isoformat()
+        return None
+
     strict_deterministic_mode = os.getenv("STRICT_DETERMINISTIC_MODE", "false").lower() == "true"
     signing_enabled = os.getenv("SIGNING_ENABLED", "true").lower() != "false"
     signing_key_id = os.getenv("SIGNING_KEY_ID", "ephemeral-local-ed25519")
@@ -422,12 +488,22 @@ def create_app() -> Flask:
         if key_id in seen_key_ids:
             registry_structural_issues = True
             continue
+        valid_from = _normalize_validity_timestamp(entry.get("valid_from"))
+        valid_to = _normalize_validity_timestamp(entry.get("valid_to"))
+        if valid_from and valid_to:
+            parsed_from = _parse_utc_timestamp(valid_from)
+            parsed_to = _parse_utc_timestamp(valid_to)
+            if parsed_from and parsed_to and parsed_to < parsed_from:
+                registry_structural_issues = True
+                continue
         seen_key_ids.add(key_id)
         normalized_keys.append(
             {
                 "key_id": key_id,
                 "algorithm": "Ed25519",
                 "public_key_b64": entry_public_key,
+                "valid_from": valid_from,
+                "valid_to": valid_to,
             }
         )
 
@@ -441,6 +517,8 @@ def create_app() -> Flask:
                     "key_id": signing_key_id,
                     "algorithm": "Ed25519",
                     "public_key_b64": public_key_b64,
+                    "valid_from": _utc_now(),
+                    "valid_to": None,
                 }
             )
             registry_updated = True
@@ -453,6 +531,9 @@ def create_app() -> Flask:
                 registry_updated = True
             if entry.get("public_key_b64") != public_key_b64:
                 entry["public_key_b64"] = public_key_b64
+                registry_updated = True
+            if not entry.get("valid_from"):
+                entry["valid_from"] = _utc_now()
                 registry_updated = True
             break
         key_registry["keys"] = normalized_keys
@@ -471,6 +552,8 @@ def create_app() -> Flask:
             "key_id": signing_key_id,
             "algorithm": "Ed25519",
             "public_key_b64": public_key_b64,
+            "valid_from": _utc_now(),
+            "valid_to": None,
             "trust_origin": "runtime_ephemeral_dev",
         }
     active_signing_entry: dict[str, Any] | None = active_entry
@@ -904,6 +987,70 @@ def create_app() -> Flask:
             "signed_at": signed_at,
         }
 
+    def _build_review_event_refs(
+        execution_id: str,
+        requested_assurance_level_value: str,
+        review_state_value: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        refs: list[dict[str, Any]] = []
+
+        def _append_ref(event_type: str, details: dict[str, Any]) -> None:
+            deterministic_seed = _canonical_json(
+                {
+                    "execution_id": execution_id,
+                    "event_type": event_type,
+                    "details": details,
+                }
+            )
+            refs.append(
+                {
+                    "event_type": event_type,
+                    "event_ref_id": f"rev-{_sha256_text(deterministic_seed)[:20]}",
+                    "details": details,
+                }
+            )
+
+        if review_state_value.get("human_review_completed"):
+            _append_ref(
+                "HUMAN_REVIEW_COMPLETED",
+                {
+                    "requested_assurance_level": requested_assurance_level_value,
+                    "reviewed_by": review_state_value.get("reviewed_by"),
+                    "review_timestamps": review_state_value.get("review_timestamps", {}),
+                },
+            )
+        if review_state_value.get("approved_by"):
+            _append_ref(
+                "HUMAN_APPROVAL_RECORDED",
+                {
+                    "requested_assurance_level": requested_assurance_level_value,
+                    "approved_by": review_state_value.get("approved_by"),
+                    "review_timestamps": review_state_value.get("review_timestamps", {}),
+                },
+            )
+
+        for idx, exception in enumerate(review_state_value.get("open_exceptions", []), start=1):
+            if not isinstance(exception, str) or not exception.strip():
+                continue
+            _append_ref(
+                "REVIEW_EXCEPTION_RECORDED",
+                {
+                    "index": idx,
+                    "exception": exception.strip()[:500],
+                },
+            )
+        for idx, waived_control in enumerate(review_state_value.get("waived_controls", []), start=1):
+            if not isinstance(waived_control, str) or not waived_control.strip():
+                continue
+            _append_ref(
+                "CONTROL_WAIVER_RECORDED",
+                {
+                    "index": idx,
+                    "control_id": waived_control.strip()[:200],
+                },
+            )
+        return refs
+
     def _resolve_public_key_for_key_id(key_id: str) -> tuple[Ed25519PublicKey | None, str | None]:
         if not isinstance(key_id, str) or not key_id.strip():
             return None, "missing_signing_key_id"
@@ -1068,6 +1215,33 @@ def create_app() -> Flask:
             if isinstance(alias, str) and alias.strip()
         }
         return canonical, vendor_id, used_deprecated_alias
+
+    def _normalize_product_label(vendor_id: str | None, text: str) -> tuple[str | None, str | None]:
+        if not isinstance(vendor_id, str) or not vendor_id.strip():
+            return None, None
+        if not isinstance(text, str) or not text.strip():
+            return None, None
+        raw_text = text.strip()[:256]
+        source_key = _vendor_identity_key(raw_text)
+        product_alias_index = vendor_registry.get("product_alias_to_canonical", {})
+        if not isinstance(product_alias_index, dict):
+            return None, None
+        vendor_product_map = product_alias_index.get(vendor_id)
+        if not isinstance(vendor_product_map, dict):
+            return None, None
+        normalized = vendor_product_map.get(source_key)
+        if isinstance(normalized, str) and normalized.strip():
+            return raw_text, normalized.strip()[:200]
+        for alias_key, canonical in vendor_product_map.items():
+            if (
+                isinstance(alias_key, str)
+                and alias_key
+                and alias_key in source_key
+                and isinstance(canonical, str)
+                and canonical.strip()
+            ):
+                return alias_key[:200], canonical.strip()[:200]
+        return None, None
 
     def _is_measurable_metric(metric_text: str) -> bool:
         if not isinstance(metric_text, str):
@@ -1298,6 +1472,10 @@ def create_app() -> Flask:
             evidence_class = "operational"
         elif any(token in lower_ref for token in ["commercial", "contract", "procurement", "renewal", "terms"]):
             evidence_class = "commercial"
+        elif any(token in lower_ref for token in ["interoperability", "api", "integration", "compatibility", "interop"]):
+            evidence_class = "interoperability"
+        elif any(token in lower_ref for token in ["deployment", "implementation", "rollout", "migration", "runbook"]):
+            evidence_class = "deployment"
 
         captured_at: str | None = None
         captured_at_match = re.search(
@@ -2060,6 +2238,15 @@ def create_app() -> Flask:
             )
         effective_request_payload = dict(payload)
         effective_request_payload.pop("llm_analysis", None)
+        # Provider labels are provenance metadata and must not affect deterministic scoring.
+        effective_request_payload.pop("llm_provider", None)
+        bridge_metadata_snapshot = effective_request_payload.get("bridge_metadata")
+        if isinstance(bridge_metadata_snapshot, dict):
+            effective_request_payload["bridge_metadata"] = {
+                key: value
+                for key, value in bridge_metadata_snapshot.items()
+                if str(key).strip().lower() not in {"provider", "provider_label", "provider_name"}
+            }
         effective_request_payload["llm_analysis_hash"] = llm_analysis_hash
         effective_request_payload["profile_id"] = profile_id
         effective_request_payload["governance_modes"] = governance_modes
@@ -2092,6 +2279,9 @@ def create_app() -> Flask:
         all_assertions: list[str] = []
         all_non_negotiables: list[str] = []
         all_risk_flags: list[str] = []
+        requested_goals = _normalize_string_list(payload.get("goals"))
+        requested_regulatory_context = _normalize_string_list(payload.get("regulatory_context"))
+        requested_success_targets = _normalize_string_list(payload.get("success_targets"))
         for role_item in role_bundle:
             role_assertions = _normalize_string_list(role_item.get("assertions"))
             role_non_negotiables = _normalize_string_list(role_item.get("non_negotiables"))
@@ -2102,6 +2292,12 @@ def create_app() -> Flask:
             intent_text_parts.extend(role_assertions)
             intent_text_parts.extend(role_non_negotiables)
             intent_text_parts.extend(role_risk_flags)
+        if requested_goals:
+            intent_text_parts.extend([f"goal:{goal}" for goal in requested_goals])
+        if requested_regulatory_context:
+            intent_text_parts.extend([f"regulatory:{item}" for item in requested_regulatory_context])
+        if requested_success_targets:
+            intent_text_parts.extend([f"target:{target}" for target in requested_success_targets])
         intent_text = " | ".join(intent_text_parts)
 
         # When LLM analysis is present, extract options from LLM output;
@@ -2231,6 +2427,7 @@ def create_app() -> Flask:
         } or {"security", "pricing"}
 
         evidence_objects: list[dict[str, Any]] = []
+        unmapped_product_alias_refs: list[str] = []
         for detail in evidence_ref_details:
             source_ref = detail["source_ref"]
             evidence_id = f"evidence-{_sha256_text(source_ref)[:16]}"
@@ -2265,6 +2462,23 @@ def create_app() -> Flask:
                 canonical_hint, vendor_id_hint, _used_deprecated = _vendor_from_registry(source_ref)
                 if isinstance(vendor_id_hint, str):
                     vendor_scope = vendor_id_hint
+            product_label_raw, product_label_normalized = _normalize_product_label(vendor_scope, source_ref)
+            if vendor_scope != "general" and not product_label_normalized:
+                product_alias_index = vendor_registry.get("product_alias_to_canonical", {})
+                vendor_product_map = (
+                    product_alias_index.get(vendor_scope, {})
+                    if isinstance(product_alias_index, dict)
+                    else {}
+                )
+                if isinstance(vendor_product_map, dict) and vendor_product_map:
+                    source_key = _vendor_identity_key(source_ref)
+                    if any(
+                        isinstance(alias_key, str)
+                        and alias_key
+                        and alias_key in source_key
+                        for alias_key in vendor_product_map.keys()
+                    ):
+                        unmapped_product_alias_refs.append(source_ref)
             evidence_timestamp_raw = detail.get("captured_at") or default_evidence_timestamp
             evidence_timestamp = (
                 _parse_utc_timestamp(str(evidence_timestamp_raw)) or llm_audit_min_timestamp
@@ -2302,6 +2516,8 @@ def create_app() -> Flask:
                     "source_uri": source_uri,
                     "artifact_ref": artifact_ref,
                     "vendor_scope": vendor_scope,
+                    "product_label_raw": product_label_raw,
+                    "product_label_normalized": product_label_normalized,
                     "captured_at": evidence_timestamp,
                     "effective_date": evidence_timestamp,
                     "hash": _sha256_text(f"{source_ref}:{category}:{evidence_timestamp}"),
@@ -2903,6 +3119,11 @@ def create_app() -> Flask:
             target for target in intent_signals.get("explicit_targets", [])
             if isinstance(target, str) and target.strip()
         ]
+        explicit_regulatory_constraints = [
+            constraint
+            for constraint in intent_signals.get("regulatory_constraints", [])
+            if isinstance(constraint, str) and constraint.strip()
+        ]
         def _target_preserved(target_text: str, corpus_text: str) -> bool:
             if target_text.lower() in corpus_text.lower():
                 return True
@@ -2915,8 +3136,23 @@ def create_app() -> Flask:
             target for target in explicit_targets
             if not _target_preserved(target, success_metrics_text)
         ]
-        regulation_mentioned = bool(intent_signals.get("regulatory_constraints"))
-        target_goal_mentioned = bool(intent_signals.get("explicit_targets"))
+        missing_requested_success_targets = [
+            target
+            for target in (requested_goals + requested_success_targets)
+            if not _target_preserved(target, success_metrics_text)
+        ]
+        missing_regulatory_constraints = [
+            constraint
+            for constraint in explicit_regulatory_constraints
+            if not _target_preserved(constraint, regulatory_constraints_text)
+        ]
+        missing_requested_regulatory_constraints = [
+            constraint
+            for constraint in requested_regulatory_context
+            if not _target_preserved(constraint, regulatory_constraints_text)
+        ]
+        regulation_mentioned = bool(intent_signals.get("regulatory_constraints") or requested_regulatory_context)
+        target_goal_mentioned = bool(intent_signals.get("explicit_targets") or requested_goals or requested_success_targets)
         required_report_fields = {
             "objectives_section_present": bool(sections_by_title.get("objectives")),
             "recommendation_section_present": bool(sections_by_title.get("recommendation")),
@@ -2935,7 +3171,12 @@ def create_app() -> Flask:
             "success_metrics_section_present": success_metrics_section is not None and bool(success_metrics_text),
             "regulatory_constraints_present": (not regulation_mentioned) or bool(regulatory_constraints_text),
             "success_targets_present": (not target_goal_mentioned) or bool(success_metrics_text),
-            "intent_targets_preserved": len(missing_intent_targets) == 0,
+            "regulatory_constraints_preserved": (
+                len(missing_regulatory_constraints) == 0 and len(missing_requested_regulatory_constraints) == 0
+            ),
+            "intent_targets_preserved": (
+                len(missing_intent_targets) == 0 and len(missing_requested_success_targets) == 0
+            ),
         }
         report_completeness_failures = [
             field for field, passed in required_report_fields.items()
@@ -3073,6 +3314,7 @@ def create_app() -> Flask:
 
         recommendation["claim_ids"] = [e["claim_id"] for e in evidence_entries[:3]]
         recommendation["evidence_ids"] = sorted(set(recommendation["evidence_ids"]))[:6]
+        selected_vendor_basis = recommendation["selected_vendor"] or "no approved vendor selection"
 
         board_report = {
             "execution_id": execution_id,
@@ -3092,9 +3334,15 @@ def create_app() -> Flask:
                 "confidence_level": recommendation["confidence_level"],
                 "confidence_rationale": recommendation["confidence_rationale"],
                 "decision_basis": (
-                    "LLM-analysed content governed by deterministic scoring + profile/policy controls + evidence linkage"
+                    (
+                        "LLM-analysed content governed by deterministic scoring + profile/policy controls "
+                        f"+ evidence linkage for vendor {selected_vendor_basis}"
+                    )
                     if isinstance(llm_analysis, dict) and llm_analysis
-                    else "Deterministic weighted scoring + profile/policy controls + role evidence"
+                    else (
+                        "Deterministic weighted scoring + profile/policy controls + role evidence "
+                        f"for vendor {selected_vendor_basis}"
+                    )
                 ),
                 "decision_status": recommendation["decision_status"],
                 "governance_modes": governance_modes,
@@ -3263,6 +3511,7 @@ def create_app() -> Flask:
                 {"claim_ids": competitor_primary_claims, "selected_vendor": selected_vendor_canonical},
             )
 
+        selected_vendor_recommended = bool(recommendation.get("selected_vendor"))
         if selected_vendor_id:
             first_party_count = len(
                 [
@@ -3288,6 +3537,74 @@ def create_app() -> Flask:
                     },
                 )
 
+            required_selected_vendor_classes = (
+                evidence_policy.get("required_selected_vendor_classes")
+                if isinstance(evidence_policy, dict)
+                else []
+            )
+            if not isinstance(required_selected_vendor_classes, list):
+                required_selected_vendor_classes = []
+            required_selected_vendor_classes = [
+                str(item).strip().lower()
+                for item in required_selected_vendor_classes
+                if isinstance(item, str) and item.strip()
+            ] or [
+                "security",
+                "pricing_or_commercial",
+                "operational",
+                "interoperability_or_deployment",
+            ]
+
+            selected_vendor_evidence = [
+                item
+                for item in evidence_objects
+                if item.get("vendor_scope") == selected_vendor_id and item.get("provenance_class") != "generated_narrative"
+            ]
+            selected_vendor_class_counts: dict[str, int] = {}
+            for item in selected_vendor_evidence:
+                cls = str(item.get("evidence_class", "general")).strip().lower() or "general"
+                selected_vendor_class_counts[cls] = selected_vendor_class_counts.get(cls, 0) + 1
+            has_interop_or_deploy = (
+                selected_vendor_class_counts.get("interoperability", 0) > 0
+                or selected_vendor_class_counts.get("deployment", 0) > 0
+            )
+            missing_required_classes: list[str] = []
+            for required_class in required_selected_vendor_classes:
+                if required_class == "interoperability_or_deployment":
+                    if not has_interop_or_deploy:
+                        missing_required_classes.append(required_class)
+                    continue
+                if required_class == "pricing_or_commercial":
+                    if (
+                        selected_vendor_class_counts.get("pricing", 0) < 1
+                        and selected_vendor_class_counts.get("commercial", 0) < 1
+                    ):
+                        missing_required_classes.append(required_class)
+                    continue
+                if selected_vendor_class_counts.get(required_class, 0) < 1:
+                    missing_required_classes.append(required_class)
+            if selected_vendor_recommended and missing_required_classes:
+                _add_hard_gate(
+                    "SELECTED_VENDOR_DOSSIER_INCOMPLETE",
+                    "Selected vendor dossier is incomplete for required evidence classes.",
+                    {
+                        "selected_vendor": selected_vendor_canonical,
+                        "missing_required_classes": missing_required_classes,
+                        "required_selected_vendor_classes": required_selected_vendor_classes,
+                        "class_counts": selected_vendor_class_counts,
+                    },
+                )
+
+            if selected_vendor_recommended and unmapped_product_alias_refs:
+                _add_hard_gate(
+                    "PRODUCT_LABEL_NORMALIZATION_REQUIRED",
+                    "Selected-vendor evidence contains product aliases without canonical normalization.",
+                    {
+                        "selected_vendor": selected_vendor_canonical,
+                        "source_refs": sorted(set(unmapped_product_alias_refs)),
+                    },
+                )
+
         if (not success_metric_kpis) or measurable_kpi_count == 0 or success_metric_schema_failures:
             _add_hard_gate(
                 "INVALID_SUCCESS_METRICS",
@@ -3298,18 +3615,37 @@ def create_app() -> Flask:
                 },
             )
 
-        if regulation_mentioned and not regulatory_constraints_text:
+        if regulation_mentioned and (
+            (not regulatory_constraints_text)
+            or missing_regulatory_constraints
+            or missing_requested_regulatory_constraints
+        ):
             _add_hard_gate(
                 "MISSING_REGULATORY_CONSTRAINTS",
                 "Regulatory constraints are required when regulation is explicitly mentioned.",
-                {"regulatory_constraints_detected": intent_signals.get("regulatory_constraints", [])},
+                {
+                    "regulatory_constraints_detected": intent_signals.get("regulatory_constraints", []),
+                    "missing_regulatory_constraints": missing_regulatory_constraints,
+                    "requested_regulatory_context": requested_regulatory_context,
+                    "missing_requested_regulatory_constraints": missing_requested_regulatory_constraints,
+                },
             )
 
-        if target_goal_mentioned and not success_metrics_text:
+        if target_goal_mentioned and (
+            (not success_metrics_text)
+            or missing_intent_targets
+            or missing_requested_success_targets
+        ):
             _add_hard_gate(
                 "MISSING_SUCCESS_TARGETS",
                 "Explicit goals/targets require populated success target outputs.",
-                {"explicit_targets": intent_signals.get("explicit_targets", [])},
+                {
+                    "explicit_targets": intent_signals.get("explicit_targets", []),
+                    "missing_success_targets": missing_intent_targets,
+                    "requested_goals": requested_goals,
+                    "requested_success_targets": requested_success_targets,
+                    "missing_requested_success_targets": missing_requested_success_targets,
+                },
             )
 
         decision_basis = str(board_report.get("decision_summary", {}).get("decision_basis", ""))
@@ -3388,6 +3724,11 @@ def create_app() -> Flask:
                 "hard_gate_failures": hard_gate_failures,
                 "quality_gate_failures": quality_gate_failures,
             }, 422
+        review_event_refs = _build_review_event_refs(
+            execution_id=execution_id,
+            requested_assurance_level_value=requested_assurance_level,
+            review_state_value=review_state,
+        )
         schema_contract = {
             "schema_id": schema_id,
             "schema_version": schema_version,
@@ -3440,14 +3781,17 @@ def create_app() -> Flask:
             "profile_override_log.json": execution_profile_overrides,
             "down_select_recommendation.json": recommendation,
             "review_state.json": review_state,
+            "review_approval_events.json": review_event_refs,
             "trust_bundle.json": {
                 "trust_bundle_version": "diiac-trust-bundle-v1",
                 "signing_key_id": signing_key_id,
                 "trust_source": trust_source,
                 "trust_registry_mode": trust_registry_mode,
                 "signing_mode": signing_mode,
+                "validity_reference_time": "signature_payload.signed_at",
                 "active_key": active_signing_entry,
                 "historical_keys": normalized_keys,
+                "review_event_refs": review_event_refs,
             },
             "vendor_registry_snapshot.json": {
                 "version": vendor_registry.get("version"),
@@ -3574,6 +3918,7 @@ def create_app() -> Flask:
             "trust_registry_mode": trust_registry_mode,
             "public_key_b64": trusted_public_key_b64,
             "verification": signature_verification,
+            "review_event_refs": review_event_refs,
             "offline_verification": {
                 "script": "scripts/verify_decision_pack.js",
                 "notes": (
@@ -3626,6 +3971,30 @@ def create_app() -> Flask:
                 "merkle_root": merkle["root"],
             },
         )
+        review_event_records: list[dict[str, Any]] = []
+        for event_ref in review_event_refs:
+            if not isinstance(event_ref, dict):
+                continue
+            event_type = str(event_ref.get("event_type", "")).strip() or "REVIEW_EVENT"
+            event_ref_id = str(event_ref.get("event_ref_id", "")).strip()
+            details = event_ref.get("details") if isinstance(event_ref.get("details"), dict) else {}
+            review_record = _append_ledger(
+                event_type,
+                {
+                    "execution_id": execution_id,
+                    "event_ref_id": event_ref_id,
+                    "requested_assurance_level": requested_assurance_level,
+                    **details,
+                },
+            )
+            review_event_records.append(
+                {
+                    "event_type": event_type,
+                    "event_ref_id": event_ref_id,
+                    "record_id": review_record.get("record_id"),
+                    "record_hash": review_record.get("record_hash"),
+                }
+            )
 
         execution = {
             "execution_id": execution_id,
@@ -3653,6 +4022,7 @@ def create_app() -> Flask:
             "vendor_scoring_matrix": vendor_scoring_matrix,
             "down_select_recommendation": recommendation,
             "review_state": review_state,
+            "review_approval_events": review_event_records,
             "deterministic_compilation_log": deterministic_log,
             "schema_contract": schema_contract,
             "business_profile_snapshot": profile_snapshot,
@@ -3679,6 +4049,10 @@ def create_app() -> Flask:
             "rp_levels": rp,
             "governance_modes": governance_modes,
             "decision_summary": board_report["decision_summary"],
+            "recommendation": recommendation,
+            "policy_pack_compliance": policy_pack_results,
+            "review_state": review_state,
+            "review_approval_events": review_event_records,
             "deterministic_input_snapshot_hash": deterministic_input_snapshot_hash,
             "execution_state": {
                 "signature_present": bool(sig_b64),

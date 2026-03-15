@@ -1,25 +1,30 @@
 # CONTRADICTION_REPORT
 
-Generated_at_utc: 2026-03-13T01:13:00Z
-Commit: bfe6ea2
-Scope: R1-R6 only
+Generated_at_utc: 2026-03-15T12:05:00Z  
+Commit: 74a66ea
 
-## In-Scope Contradictions (R1-R6)
+## In-Scope Contradictions (R1-R14)
 
 - None detected.
 
-Verified checks performed:
-- Replay path no longer synthesizes legacy defaults (`deterministic-governance`, `llm-hallucination-risk`, `auto-ref-*`) and now returns structured errors for missing required provenance/evidence.
-- Bridge non-dev startup now fails on the same trust misconfigurations as runtime (missing active registered key, active key mismatch).
-- Board required sections now hard-fail when missing and production outputs tested contain no placeholder sections.
-- KPI schema strictness is enforced at request validation + compile gates and frontend emits strict KPI objects.
-- Stale critical evidence (security/pricing) blocks high-assurance compile; stale noncritical evidence remains warning-only.
-- Vendor mismatch and competitor-primary evidence are explicitly hard-failed.
+## Checks Performed
 
-## Out-of-Scope/Program-Level Contradictions (Not Claimed Resolved In This Run)
+- Verified all ticket claims against runtime-path code symbols and direct tests.
+- Verified OpenAPI response contract and frontend rendering for policy semantics fields.
+- Verified bridge/runtime trust and intent parity tests.
+- Verified trust lifecycle + verifier negative tests.
+- Verified golden fixture and negative fixture suites.
+- Verified review/approval ledger event append and export/UI exposure.
 
-- Full policy semantics uplift (Epic 4) is still incomplete end-to-end in response contracts/UI rendering.
-- Golden/negative fixture programs (Epic 7) are not fully implemented.
-- Human review workflow ledger-chain accountability (Epic 8) remains incomplete.
+## Historical Docs-vs-Runtime Drift
 
-These are not contradictions against R1-R6 completion claims; they remain explicit out-of-scope items for this run.
+- Previous Wave 1 closure artifacts under this repo reported out-of-scope gaps for R7-R14.
+- Current runtime and tests now implement and verify those previously-open items.
+
+## Remaining Contradictions
+
+- None found in targeted control posture for this run.
+
+## Operational Contradiction Risk (Not Locally Proven)
+
+- Azure live deployment/runtime state is not verified by local repository tests.

@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "invalid_success_metrics",
+  "mode": "compile",
+  "scenario": "invalid_success_metrics",
+  "expected_codes": [
+    "INVALID_SUCCESS_METRICS"
+  ]
+}

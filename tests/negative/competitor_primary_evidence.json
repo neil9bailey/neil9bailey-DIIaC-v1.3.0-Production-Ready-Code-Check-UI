@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "competitor_primary_evidence",
+  "mode": "compile",
+  "scenario": "vendor_evidence_mismatch",
+  "expected_codes": [
+    "COMPETITOR_PRIMARY_EVIDENCE"
+  ]
+}

@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "decision_provenance_inconsistent",
+  "mode": "compile",
+  "scenario": "decision_provenance_inconsistent",
+  "expected_codes": [
+    "DECISION_PROVENANCE_INCONSISTENT"
+  ]
+}

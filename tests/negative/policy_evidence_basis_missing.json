@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "policy_evidence_basis_missing",
+  "mode": "compile",
+  "scenario": "policy_evidence_basis_missing",
+  "expected_codes": [
+    "POLICY_EVIDENCE_BASIS_MISSING"
+  ]
+}

@@ -1,262 +1,369 @@
 {
-  "generated_at_utc": "2026-03-13T01:08:00Z",
+  "generated_at_utc": "2026-03-15T12:05:00Z",
   "repository_root": "F:/code/diiac/diiac_v1.3.0_ui",
-  "commit": "bfe6ea2",
+  "commit": "74a66ea",
   "items": [
     {
       "epic_id": "E6",
       "ticket_id": "R1",
-      "claim": "Replay/runtime paths no longer inject legacy deterministic-governance, llm-hallucination-risk, or auto-ref fallbacks; explicit replay provenance is required with structured errors.",
+      "claim": "Replay no longer injects deterministic-governance, llm-hallucination-risk, or auto-ref fallbacks; missing provenance fails with structured errors.",
       "status": "implemented",
-      "code_refs": [
-        "app.py:758",
-        "app.py:773",
-        "app.py:4310"
-      ],
-      "symbol_refs": [
-        "_replay_validation_error",
-        "_validate_replay_payload",
-        "verify_replay"
-      ],
+      "code_refs": ["app.py"],
+      "symbol_refs": ["_replay_validation_error", "_validate_replay_payload", "verify_replay"],
       "test_refs": [
-        "tests/test_admin_console.py:test_replay_does_not_inject_legacy_non_negotiables",
-        "tests/test_admin_console.py:test_replay_does_not_inject_legacy_risk_flags",
-        "tests/test_admin_console.py:test_replay_rejects_missing_evidence_ids_without_auto_refs",
-        "tests/test_admin_console.py:test_replay_fails_with_structured_error_on_missing_required_provenance",
-        "tests/test_admin_console.py:test_replay_verification_certificate_for_deterministic_execution"
+        "tests/test_admin_console.py::test_replay_does_not_inject_legacy_non_negotiables",
+        "tests/test_admin_console.py::test_replay_does_not_inject_legacy_risk_flags",
+        "tests/test_admin_console.py::test_replay_rejects_missing_evidence_ids_without_auto_refs",
+        "tests/test_admin_console.py::test_replay_fails_with_structured_error_on_missing_required_provenance"
       ],
       "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"llm-hallucination-risk|auto-ref-|MISSING_REPLAY_INPUTS|MISSING_REQUIRED_PROVENANCE|MISSING_EVIDENCE_IDS\" app.py"
+        "python -m pytest -q tests/test_admin_console.py --basetemp .pytest_tmp -k \"replay_does_not_inject_legacy_non_negotiables or replay_does_not_inject_legacy_risk_flags or replay_rejects_missing_evidence_ids_without_auto_refs or replay_fails_with_structured_error_on_missing_required_provenance\""
       ],
       "verification_result": "PASS",
-      "generated_artifacts": [
-        "artifacts/replay-* / replay_certificate.json"
-      ],
+      "generated_artifacts": ["artifacts/*/replay_certificate.json"],
       "artifact_hashes": {
-        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
-        "tests/test_admin_console.py": "BA4A1BCA5DB34CC132D3B3009BF9FCF1CE52A073C6AADCC4B0DC1337341CBA24"
+        "app.py": "2EC72EA2AE3D87265847F959BCB6E1C3B9595C30EB9983BF95D310D96A63C771"
       },
-      "remaining_risks": [
-        "No additional R1 runtime gaps observed on production-relevant replay path."
-      ],
+      "remaining_risks": [],
       "confidence": "verified"
     },
     {
       "epic_id": "E1",
       "ticket_id": "R2",
-      "claim": "Bridge enforces non-dev trust parity with runtime for key-registry presence and active-key match, and exposes structured trust blocker state.",
+      "claim": "Bridge/runtime non-dev trust parity enforced for registered active key and key-material match; trust blockers surfaced.",
       "status": "implemented",
-      "code_refs": [
-        "backend-ui-bridge/server.js:99",
-        "backend-ui-bridge/server.js:209",
-        "backend-ui-bridge/server.js:282",
-        "backend-ui-bridge/server.js:1911",
-        "app.py:553",
-        "app.py:3706",
-        "Frontend/src/api.ts:180"
-      ],
-      "symbol_refs": [
-        "loadBridgeTrustState",
-        "BRIDGE_TRUST_BLOCKED",
-        "bridgeTrustState.signing_trust_blockers",
-        "admin_health",
-        "health"
-      ],
+      "code_refs": ["backend-ui-bridge/server.js", "app.py", "Frontend/src/api.ts"],
+      "symbol_refs": ["loadBridgeTrustState", "BRIDGE_TRUST_BLOCKED", "health", "admin_health"],
       "test_refs": [
-        "tests/test_admin_console.py:test_bridge_non_dev_requires_registered_active_key",
-        "tests/test_admin_console.py:test_bridge_non_dev_rejects_mismatched_registered_key",
-        "tests/test_admin_console.py:test_bridge_runtime_trust_parity_contract",
-        "tests/test_admin_console.py:test_bridge_and_runtime_fail_same_trust_misconfiguration_e2e",
-        "tests/test_admin_console.py:test_non_dev_runtime_blocks_ephemeral_signing",
-        "tests/test_admin_console.py:test_non_dev_runtime_requires_registered_active_signing_key"
+        "tests/test_admin_console.py::test_bridge_non_dev_requires_registered_active_key",
+        "tests/test_admin_console.py::test_bridge_non_dev_rejects_mismatched_registered_key",
+        "tests/test_admin_console.py::test_bridge_runtime_trust_parity_contract",
+        "tests/test_admin_console.py::test_bridge_and_runtime_fail_same_trust_misconfiguration_e2e",
+        "tests/test_admin_console.py::test_non_dev_runtime_blocks_ephemeral_signing",
+        "tests/test_admin_console.py::test_non_dev_runtime_requires_registered_active_signing_key"
       ],
       "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "node --check backend-ui-bridge/server.js",
-        "rg -n \"loadBridgeTrustState|BRIDGE_TRUST_BLOCKED|signing_trust_blockers|production_trust_ready\" backend-ui-bridge/server.js"
+        "python -m pytest -q tests/test_admin_console.py --basetemp .pytest_tmp -k \"bridge_non_dev_requires_registered_active_key or bridge_non_dev_rejects_mismatched_registered_key or bridge_runtime_trust_parity_contract or bridge_and_runtime_fail_same_trust_misconfiguration_e2e or non_dev_runtime_blocks_ephemeral_signing or non_dev_runtime_requires_registered_active_signing_key\"",
+        "node --check backend-ui-bridge/server.js"
       ],
       "verification_result": "PASS",
-      "generated_artifacts": [
-        "backend-ui-bridge /health JSON",
-        "backend-ui-bridge /admin/config/effective JSON"
-      ],
+      "generated_artifacts": ["backend-ui-bridge /health payload", "backend-ui-bridge /admin/config/effective payload"],
       "artifact_hashes": {
         "backend-ui-bridge/server.js": "59A25A3F3BAF2ABC7DB4E870540FCAF02A67F9003A05CAE9FDC194115E8474E5",
-        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
-        "Frontend/src/api.ts": "3F7216522B50F60430BEE51D7B97E2684D73F13E45CF095A4FE2575C16F867A6",
-        "tests/test_admin_console.py": "BA4A1BCA5DB34CC132D3B3009BF9FCF1CE52A073C6AADCC4B0DC1337341CBA24"
+        "app.py": "2EC72EA2AE3D87265847F959BCB6E1C3B9595C30EB9983BF95D310D96A63C771",
+        "Frontend/src/api.ts": "EC611BDA067BC4E03B015EC03BE277593F8906C66CCF44FB748E7D1C6F1AD91C"
       },
-      "remaining_risks": [
-        "Production admin endpoint parity checks require Entra auth mode; startup parity in non-dev is directly tested and enforced."
-      ],
+      "remaining_risks": [],
       "confidence": "verified"
     },
     {
       "epic_id": "E3",
       "ticket_id": "R3",
-      "claim": "Board required-section completeness now hard-fails for missing Executive Summary/Risk Register with no production placeholder synthesis.",
+      "claim": "Missing required board sections hard-fail; production path no longer synthesizes placeholder sections.",
       "status": "implemented",
-      "code_refs": [
-        "app.py:993",
-        "app.py:1746",
-        "app.py:3342"
-      ],
-      "symbol_refs": [
-        "_enforce_sections",
-        "_build_human_readable_sections",
-        "BOARD_SECTION_INCOMPLETE"
-      ],
+      "code_refs": ["app.py"],
+      "symbol_refs": ["_enforce_sections", "_build_human_readable_sections", "BOARD_SECTION_INCOMPLETE"],
       "test_refs": [
-        "tests/test_admin_console.py:test_missing_risk_register_fails_board_section_incomplete",
-        "tests/test_admin_console.py:test_missing_executive_summary_fails_board_section_incomplete",
-        "tests/test_admin_console.py:test_production_output_contains_no_placeholder_sections"
+        "tests/test_admin_console.py::test_missing_risk_register_fails_board_section_incomplete",
+        "tests/test_admin_console.py::test_missing_executive_summary_fails_board_section_incomplete",
+        "tests/test_admin_console.py::test_production_output_contains_no_placeholder_sections"
       ],
       "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"BOARD_SECTION_INCOMPLETE|_enforce_sections|Risk Register|Executive Summary\" app.py"
+        "python -m pytest -q tests/test_admin_console.py --basetemp .pytest_tmp -k \"missing_risk_register_fails_board_section_incomplete or missing_executive_summary_fails_board_section_incomplete or production_output_contains_no_placeholder_sections\""
       ],
       "verification_result": "PASS",
-      "generated_artifacts": [
-        "artifacts/*/board_report.json",
-        "artifacts/*/report_completeness.json"
-      ],
+      "generated_artifacts": ["artifacts/*/board_report.json", "artifacts/*/report_completeness.json"],
       "artifact_hashes": {
-        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
-        "tests/test_admin_console.py": "BA4A1BCA5DB34CC132D3B3009BF9FCF1CE52A073C6AADCC4B0DC1337341CBA24"
+        "app.py": "2EC72EA2AE3D87265847F959BCB6E1C3B9595C30EB9983BF95D310D96A63C771"
       },
-      "remaining_risks": [
-        "No additional R3 hard-fail contradiction observed in tested paths."
-      ],
+      "remaining_risks": [],
       "confidence": "verified"
     },
     {
       "epic_id": "E3",
       "ticket_id": "R4",
-      "claim": "KPI schema is board-grade strict (metric_name, baseline, target_value, unit, measurement_window, owner) and principle-only values fail validation.",
+      "claim": "KPI schema requires metric_name, baseline, target_value, unit, measurement_window, owner; principle-only metrics are rejected.",
       "status": "implemented",
-      "code_refs": [
-        "app.py:684",
-        "app.py:1189",
-        "app.py:3293",
-        "openapi.yaml:273",
-        "Frontend/src/MultiRoleGovernedCompilePanel.tsx:176"
-      ],
-      "symbol_refs": [
-        "_validate_compile_payload",
-        "_validate_success_metric_kpi",
-        "INVALID_SUCCESS_METRICS",
-        "SuccessMetricInput"
-      ],
+      "code_refs": ["app.py", "openapi.yaml", "Frontend/src/api.ts", "Frontend/src/MultiRoleGovernedCompilePanel.tsx"],
+      "symbol_refs": ["_validate_compile_payload", "_validate_success_metric_kpi", "INVALID_SUCCESS_METRICS", "SuccessMetricInput"],
       "test_refs": [
-        "tests/test_admin_console.py:test_success_metrics_require_baseline_target_unit_window_owner",
-        "tests/test_admin_console.py:test_principle_only_metric_fails_invalid_success_metrics",
-        "tests/test_admin_console.py:test_kpi_schema_round_trip_contract"
+        "tests/test_admin_console.py::test_success_metrics_require_baseline_target_unit_window_owner",
+        "tests/test_admin_console.py::test_principle_only_metric_fails_invalid_success_metrics",
+        "tests/test_admin_console.py::test_kpi_schema_round_trip_contract"
       ],
       "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "npm --prefix Frontend run build",
-        "rg -n \"success_metrics|SuccessMetricInput|INVALID_SUCCESS_METRICS\" app.py openapi.yaml Frontend/src/api.ts Frontend/src/MultiRoleGovernedCompilePanel.tsx"
+        "python -m pytest -q tests/test_admin_console.py --basetemp .pytest_tmp -k \"success_metrics_require_baseline_target_unit_window_owner or principle_only_metric_fails_invalid_success_metrics or kpi_schema_round_trip_contract\"",
+        "npm --prefix Frontend run build"
       ],
       "verification_result": "PASS",
-      "generated_artifacts": [
-        "Frontend/dist/*",
-        "artifacts/*/down_select_recommendation.json"
-      ],
+      "generated_artifacts": ["Frontend/dist/*"],
       "artifact_hashes": {
-        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
-        "openapi.yaml": "2D36AEC573718552CA8A49AF98F9F53DDE0E16B1041016B88D2ACEF43B8618A8",
-        "Frontend/src/api.ts": "3F7216522B50F60430BEE51D7B97E2684D73F13E45CF095A4FE2575C16F867A6",
-        "Frontend/src/MultiRoleGovernedCompilePanel.tsx": "D9F7C6265577251D045877FC4880717C22C096DE4D5417528CCA8846BC215BEF"
+        "app.py": "2EC72EA2AE3D87265847F959BCB6E1C3B9595C30EB9983BF95D310D96A63C771",
+        "openapi.yaml": "D79F187EFCE45CCA9A89782B90BD4AA1A9992508992BD09719F7ABFC5FE1B113"
       },
-      "remaining_risks": [
-        "Legacy e2e script required update to emit strict KPI objects; runtime enforcement is active."
-      ],
+      "remaining_risks": [],
       "confidence": "verified"
     },
     {
       "epic_id": "E5",
       "ticket_id": "R5",
-      "claim": "Class-aware evidence freshness thresholds are enforced; stale critical (security/pricing) evidence blocks high-assurance compile, noncritical stale remains warning-only.",
+      "claim": "Evidence freshness is class-aware; stale security/pricing evidence blocks high-assurance export path while noncritical stale remains warning-only.",
       "status": "implemented",
-      "code_refs": [
-        "contracts/vendors/canonical_vendors.json:64",
-        "app.py:2201",
-        "app.py:3375"
-      ],
-      "symbol_refs": [
-        "_load_vendor_registry",
-        "critical_evidence_classes",
-        "STALE_CRITICAL_EVIDENCE"
-      ],
+      "code_refs": ["app.py", "contracts/vendors/canonical_vendors.json"],
+      "symbol_refs": ["_load_vendor_registry", "STALE_CRITICAL_EVIDENCE"],
       "test_refs": [
-        "tests/test_admin_console.py:test_stale_security_evidence_blocks_high_assurance",
-        "tests/test_admin_console.py:test_stale_pricing_evidence_blocks_high_assurance",
-        "tests/test_admin_console.py:test_noncritical_stale_evidence_warns_without_false_pass"
+        "tests/test_admin_console.py::test_stale_security_evidence_blocks_high_assurance",
+        "tests/test_admin_console.py::test_stale_pricing_evidence_blocks_high_assurance",
+        "tests/test_admin_console.py::test_noncritical_stale_evidence_warns_without_false_pass"
       ],
       "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "python scripts_e2e_runtime_smoke.py",
-        "python scripts_e2e_assurance_validation.py",
-        "rg -n \"STALE_CRITICAL_EVIDENCE|stale_noncritical|freshness_threshold_days|critical_classes\" app.py contracts/vendors/canonical_vendors.json"
+        "python -m pytest -q tests/test_admin_console.py --basetemp .pytest_tmp -k \"stale_security_evidence_blocks_high_assurance or stale_pricing_evidence_blocks_high_assurance or noncritical_stale_evidence_warns_without_false_pass\""
       ],
       "verification_result": "PASS",
-      "generated_artifacts": [
-        "e2e_assurance_validation_export.json",
-        "artifacts/3cb94e0d-2455-5a20-8dd8-0cef52523142/trust_bundle.json"
-      ],
+      "generated_artifacts": ["e2e_assurance_validation_export.json"],
       "artifact_hashes": {
-        "contracts/vendors/canonical_vendors.json": "3A4AFF77FE79FB6A3A617BDDBD80FCB3CDE7251731A7FA09B7F5C235D27E1AC3",
-        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
-        "scripts_e2e_assurance_validation.py": "25591705EF9A49D6A9DAC16DC468520D24372506C63DADBF4A4B76D65303CE35",
-        "e2e_assurance_validation_export.json": "6124E3A25B573196BBE5780C4D070E1F3506A125B58652D3CECD67266308B94F",
-        "artifacts/3cb94e0d-2455-5a20-8dd8-0cef52523142/trust_bundle.json": "770AE8E65E83405B5BCAEF02A0D7F2A79ED5A5C7FF0B7777BD6B19739084776C"
+        "contracts/vendors/canonical_vendors.json": "BA18A1FEDD501C81C74B627BA68D33675D18FB13F1616215956F289C8E01168C"
       },
-      "remaining_risks": [
-        "No additional R5 blocker observed in tested high-assurance path."
-      ],
+      "remaining_risks": [],
       "confidence": "verified"
     },
     {
       "epic_id": "E2",
       "ticket_id": "R6",
-      "claim": "Selected-vendor mismatch, competitor-primary evidence, and vendor_scope=general primary support are explicitly blocked with hard-fail gates.",
+      "claim": "Selected-vendor mismatch and competitor-primary evidence are hard-failed; vendor_scope=general cannot satisfy selected-vendor primary support.",
       "status": "implemented",
-      "code_refs": [
-        "app.py:3249",
-        "app.py:3256",
-        "app.py:3261",
-        "app.py:3282"
-      ],
-      "symbol_refs": [
-        "selected_vendor_misaligned_claims",
-        "general_scope_primary_claims",
-        "competitor_primary_claims",
-        "VENDOR_EVIDENCE_MISMATCH",
-        "COMPETITOR_PRIMARY_EVIDENCE"
-      ],
+      "code_refs": ["app.py", "contracts/vendors/canonical_vendors.json"],
+      "symbol_refs": ["VENDOR_EVIDENCE_MISMATCH", "COMPETITOR_PRIMARY_EVIDENCE"],
       "test_refs": [
-        "tests/test_admin_console.py:test_selected_vendor_rejects_competitor_primary_evidence",
-        "tests/test_admin_console.py:test_vendor_scope_general_does_not_satisfy_first_party_requirement",
-        "tests/test_admin_console.py:test_vendor_evidence_mismatch_hard_fails_selected_vendor"
+        "tests/test_admin_console.py::test_selected_vendor_rejects_competitor_primary_evidence",
+        "tests/test_admin_console.py::test_vendor_scope_general_does_not_satisfy_first_party_requirement",
+        "tests/test_admin_console.py::test_vendor_evidence_mismatch_hard_fails_selected_vendor"
       ],
       "verification_commands": [
-        "python -m pytest -q --basetemp .pytest_tmp",
-        "rg -n \"VENDOR_EVIDENCE_MISMATCH|COMPETITOR_PRIMARY_EVIDENCE|vendor_scope=general\" app.py"
+        "python -m pytest -q tests/test_admin_console.py --basetemp .pytest_tmp -k \"selected_vendor_rejects_competitor_primary_evidence or vendor_scope_general_does_not_satisfy_first_party_requirement or vendor_evidence_mismatch_hard_fails_selected_vendor\""
       ],
       "verification_result": "PASS",
-      "generated_artifacts": [
-        "artifacts/*/evidence_objects.json",
-        "artifacts/*/evidence_trace_map.json"
-      ],
+      "generated_artifacts": ["artifacts/*/evidence_objects.json", "artifacts/*/evidence_trace_map.json"],
       "artifact_hashes": {
-        "app.py": "E13ACD51A05795C79410E915E05D5FF0624F24DE1C145606CB74F538A716F064",
-        "contracts/vendors/canonical_vendors.json": "3A4AFF77FE79FB6A3A617BDDBD80FCB3CDE7251731A7FA09B7F5C235D27E1AC3",
-        "tests/test_admin_console.py": "BA4A1BCA5DB34CC132D3B3009BF9FCF1CE52A073C6AADCC4B0DC1337341CBA24"
+        "app.py": "2EC72EA2AE3D87265847F959BCB6E1C3B9595C30EB9983BF95D310D96A63C771"
       },
-      "remaining_risks": [
-        "No additional R6 blocker observed in tested selected-vendor path."
+      "remaining_risks": [],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E4",
+      "ticket_id": "R7",
+      "claim": "Policy semantics response schema and frontend rendering expose assessment_mode, assurance_level, compliance_position, legal_confirmation_required, evidence_ids, residual_uncertainty.",
+      "status": "implemented",
+      "code_refs": [
+        "openapi.yaml",
+        "app.py",
+        "Frontend/src/api.ts",
+        "Frontend/src/components/PolicySemanticsPanel.tsx",
+        "Frontend/src/MultiRoleGovernedCompilePanel.tsx"
       ],
+      "symbol_refs": ["PolicyControlResult", "PolicyPackResult", "GovernedCompileResponse", "LlmGovernedCompileResponse", "PolicySemanticsPanel"],
+      "test_refs": [
+        "tests/test_wave2_parity_contracts.py::test_api_schema_contract_for_policy_semantics_response",
+        "Frontend/src/components/PolicySemanticsPanel.test.tsx::frontend rendering test for assessment_mode / assurance_level / compliance_position",
+        "Frontend/src/components/PolicySemanticsPanel.test.tsx::test_ui_displays_legal_confirmation_required_and_residual_uncertainty"
+      ],
+      "verification_commands": [
+        "python -m pytest -q tests/test_wave2_parity_contracts.py::test_api_schema_contract_for_policy_semantics_response --basetemp .pytest_tmp",
+        "npm --prefix Frontend run test",
+        "npm --prefix Frontend run build"
+      ],
+      "verification_result": "PASS",
+      "generated_artifacts": ["Frontend/dist/*"],
+      "artifact_hashes": {
+        "Frontend/src/components/PolicySemanticsPanel.tsx": "4B724A7778447D16E4E86431E6FC565D315B9294F65E4AE92CE7BFEE6A7DA72E",
+        "Frontend/src/components/PolicySemanticsPanel.test.tsx": "1F968434504F1A7F21B157C95B09F5439CBEC61109C7B5D48F9072CD354E9BDD"
+      },
+      "remaining_risks": [],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E6",
+      "ticket_id": "R8",
+      "claim": "Provider metadata does not leak into recommendation basis and provider-label-only changes do not alter recommendation outcomes.",
+      "status": "implemented",
+      "code_refs": ["app.py", "tests/test_wave2_parity_contracts.py"],
+      "symbol_refs": ["_build_execution", "decision_basis"],
+      "test_refs": [
+        "tests/test_wave2_parity_contracts.py::test_provider_metadata_does_not_leak_into_recommendation",
+        "tests/test_wave2_parity_contracts.py::test_recommendation_invariant_under_provider_label_change",
+        "tests/test_wave2_parity_contracts.py::test_decision_basis_references_vendor_not_provider"
+      ],
+      "verification_commands": [
+        "python -m pytest -q tests/test_wave2_parity_contracts.py --basetemp .pytest_tmp -k \"provider_metadata_does_not_leak_into_recommendation or recommendation_invariant_under_provider_label_change or decision_basis_references_vendor_not_provider\""
+      ],
+      "verification_result": "PASS",
+      "generated_artifacts": [],
+      "artifact_hashes": {
+        "app.py": "2EC72EA2AE3D87265847F959BCB6E1C3B9595C30EB9983BF95D310D96A63C771",
+        "tests/test_wave2_parity_contracts.py": "B6D1806B6958777C78F4175B54FDF06B4E8FC9E9895C0BC6CF0B969654969C7C"
+      },
+      "remaining_risks": [],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E1",
+      "ticket_id": "R9",
+      "claim": "Bridge/runtime parity suite verifies trust blocking, intent preservation, and review-state/policy semantics parity contract.",
+      "status": "implemented",
+      "code_refs": ["tests/test_wave2_parity_contracts.py", "backend-ui-bridge/server.js", "app.py"],
+      "symbol_refs": [
+        "test_bridge_runtime_parity_for_non_dev_trust_blockers",
+        "test_bridge_runtime_parity_for_intent_preservation",
+        "test_bridge_runtime_parity_for_review_state_and_policy_semantics"
+      ],
+      "test_refs": [
+        "tests/test_wave2_parity_contracts.py::test_bridge_runtime_parity_for_non_dev_trust_blockers",
+        "tests/test_wave2_parity_contracts.py::test_bridge_runtime_parity_for_intent_preservation",
+        "tests/test_wave2_parity_contracts.py::test_bridge_runtime_parity_for_review_state_and_policy_semantics"
+      ],
+      "verification_commands": [
+        "python -m pytest -q tests/test_wave2_parity_contracts.py --basetemp .pytest_tmp -k \"bridge_runtime_parity_for_non_dev_trust_blockers or bridge_runtime_parity_for_intent_preservation or bridge_runtime_parity_for_review_state_and_policy_semantics\""
+      ],
+      "verification_result": "PASS",
+      "generated_artifacts": [],
+      "artifact_hashes": {
+        "tests/test_wave2_parity_contracts.py": "B6D1806B6958777C78F4175B54FDF06B4E8FC9E9895C0BC6CF0B969654969C7C"
+      },
+      "remaining_risks": [],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E1",
+      "ticket_id": "R10",
+      "claim": "Trust bundle includes validity windows and verifier enforces key lifecycle; unknown-key and tampered-signature negatives fail.",
+      "status": "implemented",
+      "code_refs": [
+        "app.py",
+        "scripts/verify_decision_pack.js",
+        "tests/test_wave2_parity_contracts.py",
+        "contracts/keys/public_keys.json",
+        "backend-ui-bridge/contracts/keys/public_keys.json"
+      ],
+      "symbol_refs": ["_normalize_validity_timestamp", "resolveKeyMaterial", "validateKeyValidityWindow"],
+      "test_refs": [
+        "tests/test_wave2_parity_contracts.py::test_trust_bundle_contains_validity_window",
+        "tests/test_wave2_parity_contracts.py::test_historical_pack_verifies_under_rotated_key_registry",
+        "tests/test_wave2_parity_contracts.py::test_unknown_key_export_fails",
+        "tests/test_wave2_parity_contracts.py::test_tampered_signature_fails_verification"
+      ],
+      "verification_commands": [
+        "python -m pytest -q tests/test_wave2_parity_contracts.py --basetemp .pytest_tmp -k \"trust_bundle_contains_validity_window or historical_pack_verifies_under_rotated_key_registry or unknown_key_export_fails or tampered_signature_fails_verification\"",
+        "node scripts/verify_decision_pack.js artifacts/5fea0f49-9911-5a83-8f29-e68230a01a0b contracts/keys/public_keys.json"
+      ],
+      "verification_result": "PASS",
+      "generated_artifacts": ["artifacts/5fea0f49-9911-5a83-8f29-e68230a01a0b/trust_bundle.json"],
+      "artifact_hashes": {
+        "scripts/verify_decision_pack.js": "D76B954C40F6523450045934DC242C6FB99C030E01B4D32D8037213B86B2D329"
+      },
+      "remaining_risks": [],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E7",
+      "ticket_id": "R11",
+      "claim": "Golden board-export fixture suite added for it_enterprise, transport, and finance profiles.",
+      "status": "implemented",
+      "code_refs": ["tests/golden/golden_it_enterprise_export.json", "tests/golden/golden_transport_export.json", "tests/golden/golden_finance_export.json", "tests/test_golden_exports.py"],
+      "symbol_refs": ["golden_it_enterprise_export", "golden_transport_export", "golden_finance_export"],
+      "test_refs": [
+        "tests/test_golden_exports.py::test_golden_it_enterprise_export",
+        "tests/test_golden_exports.py::test_golden_transport_export",
+        "tests/test_golden_exports.py::test_golden_finance_export"
+      ],
+      "verification_commands": ["python -m pytest -q tests/test_golden_exports.py --basetemp .pytest_tmp"],
+      "verification_result": "PASS",
+      "generated_artifacts": ["tests/golden/*.json"],
+      "artifact_hashes": {
+        "tests/golden/golden_it_enterprise_export.json": "984B130CF7E8165FB0E8B6135DEF9E7985801BE15EFE7FAD8B3632C0BA12B1C8",
+        "tests/golden/golden_transport_export.json": "166F9447AB33B7B7E5DDFD6DC3F231C2A5498EC378619E602EEB4C72D13DB487",
+        "tests/golden/golden_finance_export.json": "174DE3A382353CB78504FE85C6CC3A77CB60003C36E1268133158FC2C0BABD21"
+      },
+      "remaining_risks": [],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E7",
+      "ticket_id": "R12",
+      "claim": "Negative fixture suite added with one dedicated fixture per required hard gate (compile/startup/verifier paths).",
+      "status": "implemented",
+      "code_refs": ["tests/negative/*.json", "tests/test_negative_fixtures.py", "app.py"],
+      "symbol_refs": ["test_negative_fixture_cases"],
+      "test_refs": [
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[placeholder_claim_ids]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[unresolved_evidence]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[vendor_evidence_mismatch]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[competitor_primary_evidence]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[invalid_success_metrics]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[missing_regulatory_constraints]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[missing_success_targets]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[decision_provenance_inconsistent]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[policy_evidence_basis_missing]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[board_section_incomplete]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[review_state_incomplete]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[stale_vendor_alias_or_stale_critical_evidence]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[non_dev_missing_trust_registry]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[non_dev_ephemeral_signing]",
+        "tests/test_negative_fixtures.py::test_negative_fixture_cases[signature_verification_failure]"
+      ],
+      "verification_commands": ["python -m pytest -q tests/test_negative_fixtures.py --basetemp .pytest_tmp"],
+      "verification_result": "PASS",
+      "generated_artifacts": ["tests/negative/*.json"],
+      "artifact_hashes": {
+        "tests/test_negative_fixtures.py": "A1D665320EB94FD3991411FC4CC14C701404E22238CF468858DCBEF0CD170444"
+      },
+      "remaining_risks": [],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E8",
+      "ticket_id": "R13",
+      "claim": "Review completion, approval, exceptions, and waivers append immutable ledger events and surface in export/UI semantics.",
+      "status": "implemented",
+      "code_refs": ["app.py", "openapi.yaml", "Frontend/src/api.ts", "Frontend/src/components/PolicySemanticsPanel.tsx", "tests/test_wave3_accountability.py"],
+      "symbol_refs": ["_build_review_event_refs", "review_approval_events.json"],
+      "test_refs": [
+        "tests/test_wave3_accountability.py::test_review_completion_appends_ledger_event",
+        "tests/test_wave3_accountability.py::test_approval_appends_ledger_event",
+        "tests/test_wave3_accountability.py::test_exceptions_and_waivers_surface_in_export_and_ui"
+      ],
+      "verification_commands": [
+        "python -m pytest -q tests/test_wave3_accountability.py --basetemp .pytest_tmp -k \"review_completion_appends_ledger_event or approval_appends_ledger_event or exceptions_and_waivers_surface_in_export_and_ui\""
+      ],
+      "verification_result": "PASS",
+      "generated_artifacts": ["artifacts/*/review_approval_events.json", "artifacts/*/trust_bundle.json"],
+      "artifact_hashes": {
+        "tests/test_wave3_accountability.py": "D34988A6F85BE0D3968291F34F8E2545888FBE4EEA53DB7CB711046298DE5CC6"
+      },
+      "remaining_risks": [],
+      "confidence": "verified"
+    },
+    {
+      "epic_id": "E5",
+      "ticket_id": "R14",
+      "claim": "Selected-vendor dossier completeness gates enforce security + pricing/commercial + operational + interoperability/deployment and product normalization.",
+      "status": "implemented",
+      "code_refs": ["app.py", "contracts/vendors/canonical_vendors.json", "tests/test_wave3_accountability.py"],
+      "symbol_refs": ["SELECTED_VENDOR_DOSSIER_INCOMPLETE", "PRODUCT_LABEL_NORMALIZATION_REQUIRED", "_normalize_product_label"],
+      "test_refs": [
+        "tests/test_wave3_accountability.py::test_selected_vendor_requires_security_pricing_operational_support",
+        "tests/test_wave3_accountability.py::test_product_label_normalization_is_applied",
+        "tests/test_wave3_accountability.py::test_incomplete_selected_vendor_dossier_fails"
+      ],
+      "verification_commands": [
+        "python -m pytest -q tests/test_wave3_accountability.py --basetemp .pytest_tmp -k \"selected_vendor_requires_security_pricing_operational_support or product_label_normalization_is_applied or incomplete_selected_vendor_dossier_fails\""
+      ],
+      "verification_result": "PASS",
+      "generated_artifacts": ["artifacts/*/evidence_objects.json"],
+      "artifact_hashes": {
+        "contracts/vendors/canonical_vendors.json": "BA18A1FEDD501C81C74B627BA68D33675D18FB13F1616215956F289C8E01168C"
+      },
+      "remaining_risks": [],
       "confidence": "verified"
     }
   ]

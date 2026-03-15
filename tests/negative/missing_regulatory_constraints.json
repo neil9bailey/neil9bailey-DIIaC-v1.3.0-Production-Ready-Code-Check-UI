@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "missing_regulatory_constraints",
+  "mode": "compile",
+  "scenario": "missing_regulatory_constraints",
+  "expected_codes": [
+    "MISSING_REGULATORY_CONSTRAINTS"
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "context_id": "ctx-golden-it-enterprise",
+  "profile_id": "it_enterprise_profile_v1",
+  "role_input": {
+    "role": "cto",
+    "domain": "network",
+    "assertions": [
+      "Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."
+    ],
+    "non_negotiables": [
+      "Budget cap GBP 1.8M/year"
+    ],
+    "risk_flags": [
+      "vendor-lockin"
+    ],
+    "evidence_refs": [
+      "https://www.fortinet.com/security/advisory?captured_at=2026-02-01T00:00:00Z",
+      "https://www.fortinet.com/pricing/enterprise?captured_at=2026-02-01T00:00:00Z",
+      "https://www.fortinet.com/operational/sla?captured_at=2026-02-01T00:00:00Z",
+      "https://www.fortinet.com/commercial/contract-terms?captured_at=2026-02-01T00:00:00Z",
+      "https://www.fortinet.com/deployment/runbook?captured_at=2026-02-01T00:00:00Z",
+      "https://www.fortinet.com/products/fortinet-sase?captured_at=2026-02-01T00:00:00Z",
+      "urn:independent:analyst-report:2026q1"
+    ]
+  },
+  "compile_overrides": {
+    "llm_provider": "Copilot",
+    "llm_audit_timestamp": "2026-03-10T00:00:00+00:00",
+    "llm_analysis": {
+      "executive_summary": {
+        "summary": "Golden fixture generation."
+      },
+      "vendor_scoring": {
+        "options": [
+          {
+            "vendor": "Fortinet",
+            "focus": "secure SD-WAN"
+          }
+        ]
+      },
+      "audit_trail": {
+        "timestamp": "2026-03-10T00:00:00Z"
+      }
+    }
+  },
+  "expected": {
+    "board_sections": [
+      "Executive Summary",
+      "Context",
+      "Objectives",
+      "Recommendation",
+      "Assumptions",
+      "Disqualifiers",
+      "Residual Risks",
+      "Measurable KPIs",
+      "Regulatory Constraints",
+      "Implementation Guardrails",
+      "What Would Change The Recommendation",
+      "Risk Register"
+    ],
+    "claim_ids": [
+      "claim-c9cf3c934144ad40fab1",
+      "claim-9b8f7fc098fb563d91c0",
+      "claim-b83acca9c400dd024a6e"
+    ],
+    "policy_control_required_fields": [
+      "control_id",
+      "status",
+      "assessment_mode",
+      "assurance_level",
+      "compliance_position",
+      "legal_confirmation_required",
+      "evidence_ids",
+      "residual_uncertainty",
+      "required_signals",
+      "missing_signals",
+      "evidence_basis"
+    ],
+    "trust_required_fields": [
+      "trust_bundle_version",
+      "signing_key_id",
+      "trust_source",
+      "trust_registry_mode",
+      "signing_mode",
+      "validity_reference_time",
+      "active_key",
+      "historical_keys",
+      "review_event_refs"
+    ],
+    "kpi_required_fields": [
+      "metric_name",
+      "baseline",
+      "target_value",
+      "unit",
+      "measurement_window",
+      "owner"
+    ]
+  }
+}

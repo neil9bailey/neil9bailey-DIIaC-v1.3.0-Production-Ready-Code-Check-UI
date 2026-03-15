@@ -114,6 +114,86 @@ export interface ContainerStatusResponse {
   containers: JsonObject[];
 }
 
+export interface ReviewState {
+  human_review_required?: boolean;
+  human_review_completed?: boolean;
+  reviewed_by?: string | null;
+  approved_by?: string | null;
+  review_timestamps?: Record<string, string>;
+  open_exceptions?: string[];
+  waived_controls?: string[];
+}
+
+export interface PolicyControlSemantics {
+  control_id: string;
+  status: "PASS" | "FAIL";
+  assessment_status?: "PASS" | "FAIL";
+  assessment_mode: "signal_assessment" | "evidence_backed_assessment" | "independent_reviewed_assessment";
+  assurance_level: "generated" | "evidence_backed" | "human_reviewed" | "externally_validated";
+  compliance_position: "not_assessed" | "control_signals_satisfied" | "evidence_indicates_alignment" | "legal_confirmation_required" | "externally_confirmed";
+  legal_confirmation_required: boolean;
+  evidence_ids: string[];
+  residual_uncertainty: string;
+  title?: string;
+  reference?: string;
+  required_signals?: string[];
+  missing_signals?: string[];
+}
+
+export interface PolicyPackSemantics {
+  pack_id?: string;
+  jurisdiction?: string;
+  version?: string;
+  pack_hash?: string;
+  enforced?: boolean;
+  summary?: {
+    total_controls?: number;
+    pass_count?: number;
+    fail_count?: number;
+  };
+  controls: PolicyControlSemantics[];
+}
+
+export interface ReviewApprovalEvent {
+  event_type?: string;
+  event_ref_id?: string;
+  record_id?: number;
+  record_hash?: string;
+}
+
+export interface RecommendationSemantics {
+  major_recommendation?: string;
+  selected_vendor?: string | null;
+  decision_status?: string;
+  evidence_ids?: string[];
+  requested_assurance_level?: string;
+  review_state?: ReviewState;
+  review_event_refs?: Array<Record<string, JsonValue>>;
+  policy_pack_compliance?: PolicyPackSemantics[];
+  success_metrics?: Array<Record<string, JsonValue>>;
+}
+
+export interface GovernedCompileResult {
+  execution_id?: string;
+  decision_summary?: {
+    decision_status?: string;
+    selected_vendor?: string | null;
+    requested_assurance_level?: string;
+    review_state?: ReviewState;
+    policy_pack_summary?: Record<string, JsonValue>;
+  };
+  recommendation?: RecommendationSemantics;
+  policy_pack_compliance?: PolicyPackSemantics[];
+  review_state?: ReviewState;
+  review_approval_events?: ReviewApprovalEvent[];
+  execution_state?: { execution_id?: string; signature_present?: boolean; signing_enabled?: boolean };
+}
+
+export interface LlmGovernedCompileResponse {
+  compile?: GovernedCompileResult;
+  [k: string]: unknown;
+}
+
 export interface AuditExportResponse {
   audit_export_id: string;
   download_url: string;
@@ -360,19 +440,11 @@ export function runLlmGovernedCompile(payload: {
     tolerance?: number | null;
   }>;
   requested_assurance_level?: "generated" | "evidence_backed" | "human_reviewed" | "externally_validated";
-  review_state?: {
-    human_review_required?: boolean;
-    human_review_completed?: boolean;
-    reviewed_by?: string;
-    approved_by?: string;
-    review_timestamps?: Record<string, string>;
-    open_exceptions?: string[];
-    waived_controls?: string[];
-  };
+  review_state?: ReviewState;
   governance_modes?: string[];
   provider?: string;
   human_intent?: string;
-}): Promise<{ compile?: { execution_id?: string; execution_state?: { execution_id?: string }; decision_summary?: { decision_status?: string } } }> {
+}): Promise<LlmGovernedCompileResponse> {
   return request("/api/llm-governed-compile", { method: "POST", body: JSON.stringify(payload) });
 }
 

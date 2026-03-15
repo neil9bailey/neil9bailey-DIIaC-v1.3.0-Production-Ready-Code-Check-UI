@@ -1,0 +1,8 @@
+﻿{
+  "fixture_id": "board_section_incomplete",
+  "mode": "compile",
+  "scenario": "board_section_incomplete",
+  "expected_codes": [
+    "BOARD_SECTION_INCOMPLETE"
+  ]
+}

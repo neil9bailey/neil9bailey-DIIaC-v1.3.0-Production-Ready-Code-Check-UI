@@ -1,0 +1,9 @@
+﻿{
+  "fixture_id": "signature_verification_failure",
+  "mode": "verifier",
+  "scenario": "signature_verification_failure",
+  "expected_signature_errors": [
+    "invalid_signature",
+    "signature_verify_exception"
+  ]
+}

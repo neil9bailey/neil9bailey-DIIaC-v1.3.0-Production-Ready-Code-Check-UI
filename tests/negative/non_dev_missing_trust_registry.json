@@ -1,0 +1,6 @@
+﻿{
+  "fixture_id": "non_dev_missing_trust_registry",
+  "mode": "startup",
+  "scenario": "non_dev_missing_trust_registry",
+  "expected_error_substring": "not present in contracts/keys/public_keys.json"
+}

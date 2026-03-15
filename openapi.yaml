@@ -304,6 +304,258 @@ components:
           type: number
           nullable: true
 
+    ReviewState:
+      type: object
+      properties:
+        human_review_required:
+          type: boolean
+        human_review_completed:
+          type: boolean
+        reviewed_by:
+          type: string
+          nullable: true
+        approved_by:
+          type: string
+          nullable: true
+        review_timestamps:
+          type: object
+          additionalProperties:
+            type: string
+        open_exceptions:
+          type: array
+          items:
+            type: string
+        waived_controls:
+          type: array
+          items:
+            type: string
+
+    PolicyControlResult:
+      type: object
+      required:
+        - control_id
+        - status
+        - assessment_mode
+        - assurance_level
+        - compliance_position
+        - legal_confirmation_required
+        - evidence_ids
+        - residual_uncertainty
+      properties:
+        control_id:
+          type: string
+        title:
+          type: string
+          nullable: true
+        reference:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [PASS, FAIL]
+        assessment_status:
+          type: string
+          enum: [PASS, FAIL]
+        assessment_mode:
+          type: string
+          enum: [signal_assessment, evidence_backed_assessment, independent_reviewed_assessment]
+        assurance_level:
+          type: string
+          enum: [generated, evidence_backed, human_reviewed, externally_validated]
+        compliance_position:
+          type: string
+          enum: [not_assessed, control_signals_satisfied, evidence_indicates_alignment, legal_confirmation_required, externally_confirmed]
+        legal_confirmation_required:
+          type: boolean
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        residual_uncertainty:
+          type: string
+        required_signals:
+          type: array
+          items:
+            type: string
+        missing_signals:
+          type: array
+          items:
+            type: string
+
+    PolicyPackResult:
+      type: object
+      properties:
+        pack_id:
+          type: string
+        jurisdiction:
+          type: string
+        version:
+          type: string
+        pack_hash:
+          type: string
+        enforced:
+          type: boolean
+        summary:
+          type: object
+          properties:
+            total_controls:
+              type: integer
+            pass_count:
+              type: integer
+            fail_count:
+              type: integer
+        controls:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyControlResult"
+
+    ReviewApprovalEvent:
+      type: object
+      properties:
+        event_type:
+          type: string
+        event_ref_id:
+          type: string
+        record_id:
+          type: integer
+        record_hash:
+          type: string
+
+    Recommendation:
+      type: object
+      properties:
+        major_recommendation:
+          type: string
+        selected_vendor:
+          type: string
+          nullable: true
+        decision_status:
+          type: string
+        evidence_ids:
+          type: array
+          items:
+            type: string
+        success_metrics:
+          type: array
+          items:
+            $ref: "#/components/schemas/SuccessMetricInput"
+        requested_assurance_level:
+          type: string
+        review_state:
+          $ref: "#/components/schemas/ReviewState"
+        review_event_refs:
+          type: array
+          items:
+            type: object
+        policy_pack_compliance:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyPackResult"
+
+    GovernedCompileResponse:
+      type: object
+      required:
+        - execution_id
+        - decision_summary
+        - recommendation
+      properties:
+        execution_id:
+          type: string
+        context_hash:
+          type: string
+        pack_hash:
+          type: string
+        manifest_hash:
+          type: string
+        merkle_root:
+          type: string
+        profile_id:
+          type: string
+        schema_id:
+          type: string
+        rp_levels:
+          type: object
+        governance_modes:
+          type: array
+          items:
+            type: string
+        decision_summary:
+          type: object
+        recommendation:
+          $ref: "#/components/schemas/Recommendation"
+        policy_pack_compliance:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyPackResult"
+        review_state:
+          $ref: "#/components/schemas/ReviewState"
+        review_approval_events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReviewApprovalEvent"
+        deterministic_input_snapshot_hash:
+          type: string
+        execution_state:
+          type: object
+          properties:
+            signature_present:
+              type: boolean
+            signing_enabled:
+              type: boolean
+            signing_mode:
+              type: string
+            signature_payload_schema_version:
+              type: string
+            signature_verified:
+              type: boolean
+            trust_source:
+              type: string
+            trust_registry_source:
+              type: string
+
+    LlmGovernedCompileResponse:
+      type: object
+      properties:
+        mode:
+          type: string
+        provider:
+          type: string
+        llm_output_hash:
+          type: string
+        llm_audit_timestamp:
+          type: string
+        llm_provider_reported_timestamp:
+          type: string
+          nullable: true
+        llm_sections:
+          type: array
+          items:
+            type: string
+        execution_context_id:
+          type: string
+        profile_id_requested:
+          type: string
+        profile_id_effective:
+          type: string
+        profile_lock_active:
+          type: boolean
+        profile_overridden:
+          type: boolean
+        governance_modes_requested:
+          type: array
+          items:
+            type: string
+        governance_modes_effective:
+          type: array
+          items:
+            type: string
+        governance_modes_auto_added:
+          type: array
+          items:
+            type: string
+        compile:
+          $ref: "#/components/schemas/GovernedCompileResponse"
+
     ExecutionSummary:
       type: object
       properties:
@@ -629,20 +881,70 @@ paths:
             schema:
               $ref: "#/components/schemas/CompileRequest"
       responses:
-        "200":
+        "201":
           description: Governed compile result
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ExecutionSummary"
+                $ref: "#/components/schemas/GovernedCompileResponse"
         "400":
           description: Validation error
+        "422":
+          description: Hard quality gate failure
         "503":
           description: Runtime dependency failure
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeDependencyFailure"
+
+  /api/llm-governed-compile:
+    post:
+      tags: [governance]
+      summary: Execute LLM-assisted governed compile via bridge/runtime pipeline
+      operationId: postLlmGovernedCompile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/CompileRequest"
+                - type: object
+                  properties:
+                    provider:
+                      type: string
+                    role:
+                      type: string
+                    domain:
+                      type: string
+                    goals:
+                      type: array
+                      items:
+                        type: string
+                    regulatory_context:
+                      type: array
+                      items:
+                        type: string
+                    success_targets:
+                      type: array
+                      items:
+                        type: string
+                    human_intent:
+                      type: string
+      responses:
+        "200":
+          description: LLM-governed compile result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LlmGovernedCompileResponse"
+        "400":
+          description: Validation error
+        "422":
+          description: Hard quality gate failure
+        "500":
+          description: Bridge/runtime failure
 
   /api/compile:
     post:

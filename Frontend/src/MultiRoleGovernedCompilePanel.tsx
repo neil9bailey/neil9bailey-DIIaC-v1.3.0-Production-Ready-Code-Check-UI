@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { createHumanInput, type BusinessProfileEntry, listBusinessProfiles, runLlmGovernedCompile, submitRoleInput } from "./api";
+import { createHumanInput, type BusinessProfileEntry, type GovernedCompileResult, listBusinessProfiles, runLlmGovernedCompile, submitRoleInput } from "./api";
 import type { LlmProvider } from "./App";
+import PolicySemanticsPanel from "./components/PolicySemanticsPanel";
 
 interface Props {
   role: string;
@@ -35,6 +36,7 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
   const [status, setStatus] = useState("");
   const [submittingRole, setSubmittingRole] = useState(false);
   const [runningCompile, setRunningCompile] = useState(false);
+  const [latestCompileResult, setLatestCompileResult] = useState<GovernedCompileResult | null>(null);
 
   useEffect(() => {
     if (role !== "admin") return;
@@ -314,6 +316,9 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
       });
 
       const executionId = response.compile?.execution_id || response.compile?.execution_state?.execution_id;
+      if (response.compile) {
+        setLatestCompileResult(response.compile);
+      }
       if (executionId) {
         onExecutionComplete(executionId);
         const decisionStatus = response.compile?.decision_summary?.decision_status;
@@ -507,6 +512,12 @@ export default function MultiRoleGovernedCompilePanel({ role, llmProvider, onExe
       </div>
 
       {status && <div className="status">{status}</div>}
+      <PolicySemanticsPanel
+        recommendation={latestCompileResult?.recommendation}
+        policyPackCompliance={latestCompileResult?.policy_pack_compliance}
+        reviewState={latestCompileResult?.review_state}
+        reviewEvents={latestCompileResult?.review_approval_events}
+      />
     </div>
   );
 }
