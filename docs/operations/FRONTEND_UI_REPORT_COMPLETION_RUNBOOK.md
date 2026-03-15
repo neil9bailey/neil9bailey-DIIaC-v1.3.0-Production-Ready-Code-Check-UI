@@ -329,28 +329,38 @@ You receive:
 
 ## 7A. If Customer Does Not Preselect a Vendor (Top-Vendor Down-Select Mode)
 
-You can run vendor-neutral.
-
-How:
-1. Keep `Assertion` vendor-agnostic (do not name one vendor as mandatory).
-2. Provide first-party evidence for each candidate vendor likely to rank in top positions.
-3. Include independent evidence refs applicable across options.
-4. Keep KPIs and constraints vendor-neutral and measurable.
-
-Why this matters:
-- runtime requires selected-vendor claims to be supported by selected-vendor evidence
-- if winner is Vendor B but most primary evidence is Vendor A, you will hit:
-  - `VENDOR_EVIDENCE_MISMATCH`
+Current gate behavior is strict:
+- a single run with mixed first-party refs from multiple competing vendors can hard-fail with:
   - `COMPETITOR_PRIMARY_EVIDENCE`
+  - `VENDOR_EVIDENCE_MISMATCH`
 
-Vendor-neutral assertion example:
-- Approve the highest-scoring secure hybrid WAN option that meets regulatory constraints, no-unplanned-outage migration posture, and defined MTTR/failover KPI targets.
+Reliable approach (recommended):
+1. Keep business constraints/KPIs identical across runs.
+2. Run one compile per candidate vendor (Cisco run, Palo Alto run, Fortinet run, etc.).
+3. For each run, include:
+   - first-party evidence for that candidate vendor only
+   - independent non-generated evidence
+4. Compare resulting deterministic outputs and scores across those runs.
 
-Vendor-neutral evidence pattern:
+Why:
+- selected-vendor claim support must align with selected-vendor evidence scope
+- competitor first-party refs in the same claim path can block compile
+
+Vendor-neutral decision framing example:
+- Select the top secure hybrid WAN option meeting resilience, regulation, and KPI constraints.
+
+Per-candidate evidence pattern example (for Palo Alto run):
 ```text
 https://www.paloaltonetworks.com/sase/prisma-sd-wan
-https://www.fortinet.com/products/secure-sd-wan
+https://www.paloaltonetworks.com/network-security/prisma-access
+https://www.ncsc.gov.uk/collection/network-security
+urn:national-highways:network-modernisation-board-paper:2026-q2
+```
+
+Per-candidate evidence pattern example (for Cisco run):
+```text
 https://www.cisco.com/site/us/en/products/networking/sd-wan/index.html
+https://www.cisco.com/c/en/us/products/security/secure-access/index.html
 https://www.ncsc.gov.uk/collection/network-security
 urn:national-highways:network-modernisation-board-paper:2026-q2
 ```
