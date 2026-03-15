@@ -1,7 +1,7 @@
 # CONTRADICTION_REPORT
 
-Generated_at_utc: 2026-03-15T12:12:00Z  
-Commit: 466b05f
+Generated_at_utc: 2026-03-15T12:44:00Z  
+Commit: 28ca865
 
 ## In-Scope Contradictions (R1-R14)
 
