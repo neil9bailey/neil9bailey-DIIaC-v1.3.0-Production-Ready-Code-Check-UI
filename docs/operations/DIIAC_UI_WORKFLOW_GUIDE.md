@@ -1,5 +1,7 @@
 # DIIaC UI Report Compilation Guide (v1.3.0-ui)
 
+> Note: for current Wave 1-3 hardened UI behavior and field-by-field completion examples, use `docs/operations/FRONTEND_UI_REPORT_COMPLETION_RUNBOOK.md`.
+
 This guide is the operator playbook for compiling a high-quality governance report from the UI.
 It maps each UI field to what it controls, what to enter, and what "good" looks like before sending to the LLM pipeline.
 
