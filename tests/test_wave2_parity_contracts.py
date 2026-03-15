@@ -255,6 +255,16 @@ def test_bridge_runtime_parity_for_intent_preservation(tmp_path):
             "goals": ["Cycle-time reduction >=15%"],
             "regulatory_context": ["GDPR"],
             "success_targets": ["<=1% Sev1 increase"],
+            "success_metrics": [
+                {
+                    "metric_name": "Cycle-time reduction",
+                    "baseline": 20,
+                    "target_value": 15,
+                    "unit": "percent",
+                    "measurement_window": "6 months",
+                    "owner": "cio-owner",
+                }
+            ],
             "review_state": {"human_review_required": False},
         }
         status_code, response = _http_json(
@@ -268,6 +278,7 @@ def test_bridge_runtime_parity_for_intent_preservation(tmp_path):
         assert isinstance(payload, dict)
         assert payload.get("non_negotiables") == request_payload["non_negotiables"]
         assert payload.get("risk_flags") == request_payload["risk_flags"]
+        assert payload.get("success_metrics") == request_payload["success_metrics"]
         assert "deterministic-governance" not in payload.get("non_negotiables", [])
         assert "llm-hallucination-risk" not in payload.get("risk_flags", [])
         assert "review_state" in payload

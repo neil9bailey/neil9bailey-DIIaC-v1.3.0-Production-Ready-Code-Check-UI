@@ -793,6 +793,7 @@ app.post("/api/llm-governed-compile", requireRole(["admin"]), async (req, res) =
       goals = [],
       regulatory_context = [],
       success_targets = [],
+      success_metrics = [],
       requested_assurance_level = "generated",
       review_state = {},
       governance_modes = [],
@@ -881,6 +882,7 @@ app.post("/api/llm-governed-compile", requireRole(["admin"]), async (req, res) =
       llm_analysis: aiReport || null,
       llm_provider: provider,
       llm_audit_timestamp: bridgeAuditTimestamp,
+      success_metrics: Array.isArray(success_metrics) ? success_metrics : [],
       requested_assurance_level,
       review_state: (review_state && typeof review_state === "object") ? review_state : {},
       bridge_metadata: {
