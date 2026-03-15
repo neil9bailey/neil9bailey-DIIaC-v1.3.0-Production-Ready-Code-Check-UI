@@ -40,6 +40,86 @@ It includes two complete worked examples and a precise summary of what happens w
 | `Run Governed Compile` | Click after role submission and compile controls are set. | Triggers LLM + governed deterministic compile pipeline. |
 | `Status` banner | Read and capture execution result and `execution_id`. | Use `execution_id` for downstream report retrieval, verification, and audit. |
 
+## 2A. Exact Input Rules (Formatting, Spaces, Delimiters)
+
+These rules reflect current frontend parsing and runtime gates.
+
+### General list fields
+
+Fields:
+- `Non-Negotiables`
+- `Risk Flags`
+- `Goals`
+- `Regulatory Context`
+- `Success Targets`
+- `Evidence References`
+
+Accepted separators:
+- newline
+- comma `,`
+- semicolon `;`
+
+Normalization behavior:
+- surrounding spaces are trimmed
+- empty values are dropped
+- duplicates are removed
+
+Important:
+- spaces are allowed inside values
+- if you use commas inside one value, it will split into multiple values
+- safest format for multi-word content is **one item per line**
+
+### Success Metrics field
+
+Expected row format:
+- `metric_name|baseline|target_value|unit|measurement_window|owner`
+
+Rules:
+- rows are split by newline
+- columns are split by pipe `|`
+- at least 6 pipe-delimited columns required per row
+- spaces are allowed around each column (they are trimmed)
+- `baseline` and `target_value` must be numeric
+- `metric_name`, `unit`, `measurement_window`, `owner` must be non-empty
+- principle-only metric names (for example `privacy-by-design`, `deterministic-governance`, `security-first`) do not satisfy KPI requirements
+
+Examples:
+```text
+WAN incident MTTR minutes|180|144|minutes|12 months|nh-noc-owner
+Branch failover recovery minutes|40|34|minutes|9 months|nh-network-owner
+```
+
+Do not do this:
+```text
+UK data residency for log/telemetry stores| | |count|12 months|CTO
+```
+
+### Evidence references
+
+Minimum:
+- at least 2 strong refs are required before submit/compile
+
+Strong refs include:
+- `http://` / `https://`
+- `urn:...`
+- `sha256:...`
+- durable file-style refs (path/document suffixes)
+
+Best practice:
+- one ref per line
+- include first-party vendor refs and independent refs
+
+### Execution Context ID
+
+UI normalization behavior:
+- lowercased
+- only `a-z`, `0-9`, `-`
+- max 64 chars
+- repeated hyphens collapsed
+
+Recommended pattern:
+- `ctx-<customer>-<decision>-<period>`
+
 ## 3. Worked Example A: National Highways (Technical Solution)
 
 Use case: public-sector National Highways secure ZTNA/SASE Hybrid WAN with SD-WAN overlay over existing MPLS core.
@@ -246,6 +326,34 @@ You receive:
 4. Honest policy semantics: controls expose proof level and residual uncertainty, not just PASS labels.
 5. Deterministic auditability: replay, signature verification, and decision-pack artifacts support due diligence and audit.
 6. Human accountability: review state, approval events, exceptions, and waivers are visible for high-assurance outputs.
+
+## 7A. If Customer Does Not Preselect a Vendor (Top-Vendor Down-Select Mode)
+
+You can run vendor-neutral.
+
+How:
+1. Keep `Assertion` vendor-agnostic (do not name one vendor as mandatory).
+2. Provide first-party evidence for each candidate vendor likely to rank in top positions.
+3. Include independent evidence refs applicable across options.
+4. Keep KPIs and constraints vendor-neutral and measurable.
+
+Why this matters:
+- runtime requires selected-vendor claims to be supported by selected-vendor evidence
+- if winner is Vendor B but most primary evidence is Vendor A, you will hit:
+  - `VENDOR_EVIDENCE_MISMATCH`
+  - `COMPETITOR_PRIMARY_EVIDENCE`
+
+Vendor-neutral assertion example:
+- Approve the highest-scoring secure hybrid WAN option that meets regulatory constraints, no-unplanned-outage migration posture, and defined MTTR/failover KPI targets.
+
+Vendor-neutral evidence pattern:
+```text
+https://www.paloaltonetworks.com/sase/prisma-sd-wan
+https://www.fortinet.com/products/secure-sd-wan
+https://www.cisco.com/site/us/en/products/networking/sd-wan/index.html
+https://www.ncsc.gov.uk/collection/network-security
+urn:national-highways:network-modernisation-board-paper:2026-q2
+```
 
 ## 8. Final Accuracy Checklist Before Compile
 
