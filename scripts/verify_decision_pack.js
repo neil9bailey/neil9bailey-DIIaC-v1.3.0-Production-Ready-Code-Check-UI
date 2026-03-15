@@ -270,10 +270,24 @@ function validateKeyValidityWindow(signaturePayload, keyEntry) {
     return { ok: false, error: "invalid_signed_at" };
   }
   if (!keyEntry || typeof keyEntry !== "object") {
-    return { ok: true, error: null };
+    return { ok: false, error: "missing_key_entry" };
   }
-  const validFrom = parseIsoDate(keyEntry.valid_from);
-  const validTo = parseIsoDate(keyEntry.valid_to);
+  const validFromRaw = typeof keyEntry.valid_from === "string" ? keyEntry.valid_from.trim() : "";
+  const validToRaw = typeof keyEntry.valid_to === "string" ? keyEntry.valid_to.trim() : "";
+  if (!validFromRaw) {
+    return { ok: false, error: "missing_key_valid_from" };
+  }
+  const validFrom = parseIsoDate(validFromRaw);
+  if (!validFrom) {
+    return { ok: false, error: "invalid_key_valid_from" };
+  }
+  if (validToRaw && !parseIsoDate(validToRaw)) {
+    return { ok: false, error: "invalid_key_valid_to" };
+  }
+  const validTo = validToRaw ? parseIsoDate(validToRaw) : null;
+  if (validTo && validTo < validFrom) {
+    return { ok: false, error: "invalid_key_validity_window" };
+  }
   if (validFrom && signedAtDate < validFrom) {
     return { ok: false, error: "key_not_yet_valid" };
   }

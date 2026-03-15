@@ -23,6 +23,13 @@ export default function PolicySemanticsPanel({
   return (
     <div className="panel" data-testid="policy-semantics-panel">
       <h3>Policy Semantics and Review Accountability</h3>
+      {(recommendation?.selected_vendor || recommendation?.selected_vendor_id) && (
+        <div className="console-box" style={{ marginBottom: 8 }}>
+          <h4>Recommendation Identity</h4>
+          <div>Selected Vendor: {recommendation?.selected_vendor || "Not selected"}</div>
+          <div>Selected Vendor ID: {recommendation?.selected_vendor_id || "Not canonicalized"}</div>
+        </div>
+      )}
       {packs.map((pack, packIdx) => (
         <div key={`${pack.pack_id || "pack"}-${packIdx}`} style={{ marginBottom: 12 }}>
           <h4 style={{ marginBottom: 4 }}>

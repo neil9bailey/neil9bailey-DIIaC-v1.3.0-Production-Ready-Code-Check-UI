@@ -388,8 +388,12 @@ def test_llm_audit_timestamp_override_prevents_stale_freshness_failure():
         'non_negotiables': ['Budget cap GBP 1.8M/year'],
         'risk_flags': ['vendor-lockin'],
         'evidence_refs': [
-            'https://www.fortinet.com/products/secure-sd-wan',
-            'https://www.paloaltonetworks.com/sase/prisma-sd-wan',
+            'https://www.fortinet.com/security/advisory?captured_at=2026-02-01T00:00:00Z',
+            'https://www.fortinet.com/pricing/enterprise?captured_at=2026-02-01T00:00:00Z',
+            'https://www.fortinet.com/operational/sla?captured_at=2026-02-01T00:00:00Z',
+            'https://www.fortinet.com/commercial/contract-terms?captured_at=2026-02-01T00:00:00Z',
+            'https://www.fortinet.com/deployment/runbook?captured_at=2026-02-01T00:00:00Z',
+            'https://www.fortinet.com/products/fortinet-sase?captured_at=2026-02-01T00:00:00Z',
             'urn:independent:analyst-report:2026q1',
         ],
     })
@@ -408,10 +412,9 @@ def test_llm_audit_timestamp_override_prevents_stale_freshness_failure():
             'vendor_scoring': {
                 'options': [
                     {'vendor': 'Fortinet', 'focus': 'Cost and resilience'},
-                    {'vendor': 'Palo Alto Networks', 'focus': 'Security and operations'},
                 ],
             },
-            'board_recommendation': {'recommendation': 'Evaluate Fortinet and Palo Alto Networks.'},
+            'board_recommendation': {'recommendation': 'Fortinet'},
             'audit_trail': {'timestamp': '2023-10-01T00:00:00Z'},
         },
     })
@@ -847,6 +850,89 @@ def test_non_dev_runtime_requires_registered_active_signing_key(monkeypatch, tmp
     monkeypatch.setenv("SIGNING_PRIVATE_KEY_PEM", active_private_pem)
 
     with pytest.raises(RuntimeError, match="not present in contracts/keys/public_keys.json"):
+        create_app()
+
+
+def test_non_dev_runtime_requires_active_key_valid_from(monkeypatch, tmp_path):
+    source_contracts = Path(__file__).resolve().parents[1] / "contracts"
+    target_contracts = tmp_path / "contracts"
+    shutil.copytree(source_contracts, target_contracts)
+
+    active_private = Ed25519PrivateKey.generate()
+    active_private_pem = active_private.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    active_public_b64 = base64.b64encode(
+        active_private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+    ).decode("utf-8")
+    _write_public_keys(
+        target_contracts / "keys" / "public_keys.json",
+        [{"key_id": "prod-lifecycle-key", "algorithm": "Ed25519", "public_key_b64": active_public_b64}],
+    )
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ADMIN_AUTH_ENABLED", "false")
+    monkeypatch.setenv("DIIAC_STATE_DB", ":memory:")
+    monkeypatch.setenv("SIGNING_ENABLED", "true")
+    monkeypatch.setenv("SIGNING_KEY_ID", "prod-lifecycle-key")
+    monkeypatch.setenv("SIGNING_PRIVATE_KEY_PEM", active_private_pem)
+
+    with pytest.raises(RuntimeError, match="missing valid_from"):
+        create_app()
+
+
+def test_non_dev_runtime_rejects_local_dev_key_ids_in_registry(monkeypatch, tmp_path):
+    source_contracts = Path(__file__).resolve().parents[1] / "contracts"
+    target_contracts = tmp_path / "contracts"
+    shutil.copytree(source_contracts, target_contracts)
+
+    active_private = Ed25519PrivateKey.generate()
+    active_private_pem = active_private.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode("utf-8")
+    active_public_b64 = base64.b64encode(
+        active_private.public_key().public_bytes(
+            encoding=serialization.Encoding.Raw,
+            format=serialization.PublicFormat.Raw,
+        )
+    ).decode("utf-8")
+    _write_public_keys(
+        target_contracts / "keys" / "public_keys.json",
+        [
+            {
+                "key_id": "prod-clean-key",
+                "algorithm": "Ed25519",
+                "public_key_b64": active_public_b64,
+                "valid_from": "2025-01-01T00:00:00+00:00",
+                "valid_to": None,
+            },
+            {
+                "key_id": "ephemeral-local-ed25519",
+                "algorithm": "Ed25519",
+                "public_key_b64": "CBsUYE9HdAsDo8MKSWqMa9PbkCy9eZ0FtpWl2tSUQ6Q=",
+                "valid_from": "2025-01-01T00:00:00+00:00",
+                "valid_to": None,
+            },
+        ],
+    )
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("ADMIN_AUTH_ENABLED", "false")
+    monkeypatch.setenv("DIIAC_STATE_DB", ":memory:")
+    monkeypatch.setenv("SIGNING_ENABLED", "true")
+    monkeypatch.setenv("SIGNING_KEY_ID", "prod-clean-key")
+    monkeypatch.setenv("SIGNING_PRIVATE_KEY_PEM", active_private_pem)
+
+    with pytest.raises(RuntimeError, match="local/ephemeral key ids"):
         create_app()
 
 
@@ -1565,3 +1651,146 @@ def test_vendor_evidence_mismatch_hard_fails_selected_vendor():
     compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx))
     assert compile_res.status_code == 422
     assert "VENDOR_EVIDENCE_MISMATCH" in _hard_gate_codes(compile_res)
+
+
+def test_selected_vendor_requires_canonical_vendor_id():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-selected-vendor-noncanonical"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "hybrid-cloud",
+            "assertions": [
+                "Select the best-fit hybrid cloud operating model for mixed workloads with deterministic governance."
+            ],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin-risk"],
+            "evidence_refs": [
+                "https://csrc.nist.gov/publications/detail/sp/800-207/final?captured_at=2026-02-01T00:00:00Z",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post(
+        "/api/governed-compile",
+        json=_compile_payload(
+            ctx,
+            llm_provider="Copilot",
+            llm_audit_timestamp="2026-03-10T00:00:00+00:00",
+            llm_analysis={
+                "executive_summary": {"summary": "Non-canonical vendor identity gate test."},
+                "vendor_scoring": {
+                    "options": [
+                        {"vendor": "HybridScale Cloud Platform", "focus": "Hybrid operations"},
+                        {"vendor": "ResilienceNet Fabric", "focus": "Resilience"},
+                    ]
+                },
+                "board_recommendation": {"recommendation": "Select HybridScale Cloud Platform."},
+                "audit_trail": {"timestamp": "2026-03-10T00:00:00Z"},
+            },
+        ),
+    )
+    assert compile_res.status_code == 422
+    codes = _hard_gate_codes(compile_res)
+    assert "SELECTED_VENDOR_NOT_CANONICAL" in codes
+    assert "RANKED_OPTION_VENDOR_ID_MISSING" in codes
+
+
+def test_recommended_response_exposes_selected_vendor_id_when_canonical():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-selected-vendor-canonical-id"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.fortinet.com/security/advisory?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/pricing/enterprise?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/operational/sla?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/commercial/contract-terms?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/deployment/runbook?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/products/fortinet-sase?captured_at=2026-02-01T00:00:00Z",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post(
+        "/api/governed-compile",
+        json=_compile_payload(
+            ctx,
+            llm_provider="Copilot",
+            llm_audit_timestamp="2026-03-10T00:00:00+00:00",
+            llm_analysis={
+                "executive_summary": {"summary": "Canonical vendor identity propagation check."},
+                "vendor_scoring": {"options": [{"vendor": "Fortinet", "focus": "security and operations"}]},
+                "board_recommendation": {"recommendation": "Fortinet"},
+                "audit_trail": {"timestamp": "2026-03-10T00:00:00Z"},
+            },
+        ),
+    )
+    assert compile_res.status_code == 201
+    payload = compile_res.get_json()
+    recommendation = payload.get("recommendation", {})
+    decision_summary = payload.get("decision_summary", {})
+    assert recommendation.get("selected_vendor") == "Fortinet"
+    assert recommendation.get("selected_vendor_id") == "fortinet"
+    assert decision_summary.get("selected_vendor_id") == "fortinet"
+
+
+def test_board_report_markdown_includes_human_response_trace_details():
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-human-readable-board-report"
+    role_input = c.post(
+        "/api/human-input/role",
+        json={
+            "execution_context_id": ctx,
+            "role": "cto",
+            "domain": "network",
+            "assertions": ["Must use Fortinet for SD-WAN with <=1% Sev1 increase in 6 months."],
+            "non_negotiables": ["Budget cap GBP 1.8M/year"],
+            "risk_flags": ["vendor-lockin"],
+            "evidence_refs": [
+                "https://www.fortinet.com/security/advisory?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/pricing/enterprise?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/operational/sla?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/commercial/contract-terms?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/deployment/runbook?captured_at=2026-02-01T00:00:00Z",
+                "https://www.fortinet.com/products/fortinet-sase?captured_at=2026-02-01T00:00:00Z",
+                "urn:independent:analyst-report:2026q1",
+            ],
+        },
+    )
+    assert role_input.status_code == 201
+    compile_res = c.post(
+        "/api/governed-compile",
+        json=_compile_payload(
+            ctx,
+            llm_provider="Copilot",
+            llm_audit_timestamp="2026-03-10T00:00:00+00:00",
+            llm_analysis={
+                "executive_summary": {"summary": "Human-readable board markdown trace check."},
+                "vendor_scoring": {"options": [{"vendor": "Fortinet", "focus": "security and operations"}]},
+                "board_recommendation": {"recommendation": "Fortinet"},
+                "audit_trail": {"timestamp": "2026-03-10T00:00:00Z"},
+            },
+        ),
+    )
+    assert compile_res.status_code == 201
+    execution_id = compile_res.get_json()["execution_id"]
+    markdown_res = c.get(f"/executions/{execution_id}/reports/board_report.md")
+    assert markdown_res.status_code == 200
+    markdown_text = markdown_res.data.decode("utf-8")
+    assert "## Human Response Trace" in markdown_text
+    assert "Role: cto" in markdown_text
+    assert "Evidence refs" in markdown_text
+    assert "Selected Vendor" in markdown_text
+    assert "selected_vendor_id=" in markdown_text

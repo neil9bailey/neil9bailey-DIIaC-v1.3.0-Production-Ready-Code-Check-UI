@@ -344,9 +344,36 @@ def test_trust_bundle_contains_validity_window():
     active_key = trust_bundle.get("active_key") or {}
     assert "valid_from" in active_key
     assert "valid_to" in active_key
+    assert active_key.get("valid_from")
     historical_keys = trust_bundle.get("historical_keys") or []
     assert isinstance(historical_keys, list)
     assert all("valid_from" in key and "valid_to" in key for key in historical_keys if isinstance(key, dict))
+
+
+def test_verify_decision_pack_fails_without_key_valid_from(tmp_path):
+    c = client(strict=True, app_env="development")
+    ctx = "ctx-verify-pack-missing-valid-from"
+    assert submit_role(c, ctx, "cto").status_code == 201
+    compile_res = c.post("/api/governed-compile", json=_compile_payload(ctx))
+    assert compile_res.status_code == 201
+    execution_id = compile_res.get_json()["execution_id"]
+
+    pack_dir = _copy_pack_dir(execution_id, tmp_path)
+    trust_bundle_path = pack_dir / "trust_bundle.json"
+    trust_bundle = json.loads(trust_bundle_path.read_text(encoding="utf-8"))
+    signing_key_id = str(trust_bundle.get("signing_key_id", "")).strip()
+    active_key = trust_bundle.get("active_key")
+    if isinstance(active_key, dict):
+        active_key["valid_from"] = None
+    for entry in trust_bundle.get("historical_keys", []):
+        if isinstance(entry, dict) and str(entry.get("key_id", "")).strip() == signing_key_id:
+            entry["valid_from"] = None
+    trust_bundle_path.write_text(json.dumps(trust_bundle, indent=2), encoding="utf-8")
+
+    code, payload = _run_pack_verifier(pack_dir, Path("contracts/keys/public_keys.json"))
+    assert code != 0
+    assert payload["overall"] == "FAIL"
+    assert payload["signature"]["error"] == "missing_key_valid_from"
 
 
 def test_historical_pack_verifies_under_rotated_key_registry(tmp_path):

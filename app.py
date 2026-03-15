@@ -546,6 +546,36 @@ def create_app() -> Flask:
     active_entry = next((entry for entry in normalized_keys if entry.get("key_id") == signing_key_id), None)
     active_key_registered = active_entry is not None
     active_key_matches_public = bool(active_entry and active_entry.get("public_key_b64") == public_key_b64)
+    active_key_valid_from = (
+        str(active_entry.get("valid_from", "")).strip()
+        if isinstance(active_entry, dict) and isinstance(active_entry.get("valid_from"), str)
+        else ""
+    )
+    active_key_valid_to = (
+        str(active_entry.get("valid_to", "")).strip()
+        if isinstance(active_entry, dict) and isinstance(active_entry.get("valid_to"), str)
+        else ""
+    )
+    active_key_validity_window_valid = True
+    if isinstance(active_entry, dict):
+        parsed_active_valid_from = _parse_utc_timestamp(active_key_valid_from) if active_key_valid_from else None
+        parsed_active_valid_to = _parse_utc_timestamp(active_key_valid_to) if active_key_valid_to else None
+        if active_key_valid_to and not active_key_valid_from:
+            active_key_validity_window_valid = False
+        elif active_key_valid_from and parsed_active_valid_from is None:
+            active_key_validity_window_valid = False
+        elif active_key_valid_to and parsed_active_valid_to is None:
+            active_key_validity_window_valid = False
+        elif parsed_active_valid_from and parsed_active_valid_to and parsed_active_valid_to < parsed_active_valid_from:
+            active_key_validity_window_valid = False
+    non_dev_registry_local_key_ids = sorted(
+        {
+            str(entry.get("key_id", "")).strip()
+            for entry in normalized_keys
+            if isinstance(entry, dict)
+            and str(entry.get("key_id", "")).strip() in local_dev_key_ids
+        }
+    )
     runtime_ephemeral_entry: dict[str, Any] | None = None
     if signing_enabled and is_dev_runtime and key_mode == "ephemeral":
         runtime_ephemeral_entry = {
@@ -586,6 +616,9 @@ def create_app() -> Flask:
         and key_mode == "configured"
         and active_key_registered
         and active_key_matches_public
+        and active_key_validity_window_valid
+        and (is_dev_runtime or bool(active_key_valid_from))
+        and (is_dev_runtime or not non_dev_registry_local_key_ids)
         and registered_key_count > 0
         and trust_source in {"managed_signing", "external_trust_registry"}
     )
@@ -599,6 +632,18 @@ def create_app() -> Flask:
     if signing_enabled and active_key_registered and not active_key_matches_public:
         signing_trust_warnings.append(
             "Active signing key entry does not match runtime key material."
+        )
+    if signing_enabled and active_key_registered and not active_key_valid_from:
+        signing_trust_warnings.append(
+            "Active signing key is missing valid_from lifecycle metadata."
+        )
+    if signing_enabled and active_key_registered and not active_key_validity_window_valid:
+        signing_trust_warnings.append(
+            "Active signing key has invalid lifecycle validity window metadata."
+        )
+    if signing_enabled and not is_dev_runtime and non_dev_registry_local_key_ids:
+        signing_trust_warnings.append(
+            "Non-development trust registry contains local/ephemeral key ids that must be removed."
         )
     if signing_enabled and registry_structural_issues:
         signing_trust_warnings.append(
@@ -634,6 +679,30 @@ def create_app() -> Flask:
                 "blocking": True,
             }
         )
+    if signing_enabled and not is_dev_runtime and active_key_registered and not active_key_valid_from:
+        signing_trust_blockers.append(
+            {
+                "code": "MISSING_ACTIVE_KEY_VALID_FROM",
+                "message": f"Signing key '{signing_key_id}' must include valid_from lifecycle metadata in non-development.",
+                "blocking": True,
+            }
+        )
+    if signing_enabled and not is_dev_runtime and active_key_registered and not active_key_validity_window_valid:
+        signing_trust_blockers.append(
+            {
+                "code": "INVALID_ACTIVE_KEY_VALIDITY_WINDOW",
+                "message": f"Signing key '{signing_key_id}' has invalid valid_from/valid_to lifecycle metadata.",
+                "blocking": True,
+            }
+        )
+    if signing_enabled and not is_dev_runtime and non_dev_registry_local_key_ids:
+        signing_trust_blockers.append(
+            {
+                "code": "NON_DEV_DEV_KEY_PRESENT_IN_TRUST_REGISTRY",
+                "message": "Non-development runtime trust registry contains local/ephemeral key ids.",
+                "blocking": True,
+            }
+        )
 
     if signing_enabled and not is_dev_runtime:
         if key_mode != "configured":
@@ -647,6 +716,18 @@ def create_app() -> Flask:
         if not active_key_matches_public:
             raise RuntimeError(
                 f"Signing key '{signing_key_id}' does not match registered public key material."
+            )
+        if not active_key_valid_from:
+            raise RuntimeError(
+                f"Signing key '{signing_key_id}' is missing valid_from lifecycle metadata."
+            )
+        if not active_key_validity_window_valid:
+            raise RuntimeError(
+                f"Signing key '{signing_key_id}' has invalid valid_from/valid_to lifecycle metadata."
+            )
+        if non_dev_registry_local_key_ids:
+            raise RuntimeError(
+                "Non-development runtime trust registry contains local/ephemeral key ids."
             )
 
     profiles = _load_profiles(profiles_dir)
@@ -1549,7 +1630,12 @@ def create_app() -> Flask:
                 elif "recommendation" in section or "decision" in section:
                     rec_text = section.get("recommendation") or section.get("decision") or ""
                     if isinstance(rec_text, str) and rec_text.strip():
-                        options.append({"vendor": rec_text[:120], "focus": "LLM-recommended approach"})
+                        named_vendors = _extract_named_vendors(rec_text)
+                        if named_vendors:
+                            for named_vendor in named_vendors:
+                                options.append({"vendor": named_vendor, "focus": "LLM-recommended approach"})
+                        else:
+                            options.append({"vendor": rec_text[:120], "focus": "LLM-recommended approach"})
                     continue
                 else:
                     continue
@@ -1879,6 +1965,7 @@ def create_app() -> Flask:
                 {
                     "rank": idx,
                     "vendor": row.get("vendor"),
+                    "vendor_id": row.get("vendor_id"),
                     "focus": row.get("focus"),
                     "score": row.get("total"),
                     "security_fit": security_fit,
@@ -2041,15 +2128,60 @@ def create_app() -> Flask:
             lines.append(section.get("content", ""))
             lines.append("")
 
+        human_response_trace = board_report.get("human_response_trace", {})
+        if isinstance(human_response_trace, dict):
+            roles = human_response_trace.get("roles", [])
+            goals = human_response_trace.get("requested_goals", [])
+            regulatory_context = human_response_trace.get("requested_regulatory_context", [])
+            success_targets = human_response_trace.get("requested_success_targets", [])
+            if roles or goals or regulatory_context or success_targets:
+                lines.append("## Human Response Trace")
+                if isinstance(goals, list) and goals:
+                    lines.append("- Requested goals:")
+                    for goal in goals:
+                        lines.append(f"  - {goal}")
+                if isinstance(regulatory_context, list) and regulatory_context:
+                    lines.append("- Requested regulatory context:")
+                    for item in regulatory_context:
+                        lines.append(f"  - {item}")
+                if isinstance(success_targets, list) and success_targets:
+                    lines.append("- Requested success targets:")
+                    for target in success_targets:
+                        lines.append(f"  - {target}")
+                for role_entry in roles if isinstance(roles, list) else []:
+                    if not isinstance(role_entry, dict):
+                        continue
+                    role_name = str(role_entry.get("role", "")).strip() or "unknown"
+                    domain = str(role_entry.get("domain", "")).strip() or "unspecified"
+                    lines.append(f"- Role: {role_name} | domain={domain}")
+                    for field_name, label in [
+                        ("assertions", "Assertions"),
+                        ("non_negotiables", "Non-negotiables"),
+                        ("risk_flags", "Risk flags"),
+                        ("evidence_refs", "Evidence refs"),
+                    ]:
+                        items = role_entry.get(field_name, [])
+                        if not isinstance(items, list) or not items:
+                            continue
+                        lines.append(f"  - {label}:")
+                        for item in items:
+                            lines.append(f"    - {item}")
+                lines.append("")
+
         recs = board_report.get("major_recommendations", [])
         if recs:
             lines.append("## Major Recommendations")
             for rec in recs:
-                lines.append(f"- {rec.get('major_recommendation')}: score={rec.get('score')}")
+                lines.append(
+                    f"- {rec.get('major_recommendation')}: score={rec.get('score')} "
+                    f"| selected_vendor={rec.get('selected_vendor')} "
+                    f"| selected_vendor_id={rec.get('selected_vendor_id')}"
+                )
                 if rec.get("recommended_option_profile"):
                     profile = rec.get("recommended_option_profile", {})
                     lines.append(
-                        f"  - Option profile: {profile.get('vendor')} | focus={profile.get('focus')} | rank={profile.get('rank')}"
+                        f"  - Option profile: {profile.get('vendor')} | vendor_id={profile.get('vendor_id')} "
+                        f"| focus={profile.get('focus')} | rank={profile.get('rank')}"
                     )
                 if rec.get("alternatives"):
                     lines.append(f"  - Alternatives considered: {', '.join(rec.get('alternatives', []))}")
@@ -2078,7 +2210,8 @@ def create_app() -> Flask:
             lines.append("## Ranked Option Detail")
             for option in board_report.get("ranked_options", []):
                 lines.append(
-                    f"- #{option.get('rank')} {option.get('vendor')} | score={option.get('score')} | focus={option.get('focus')}"
+                    f"- #{option.get('rank')} {option.get('vendor')} | vendor_id={option.get('vendor_id')} "
+                    f"| score={option.get('score')} | focus={option.get('focus')}"
                 )
                 lines.append(
                     "  - Fit breakdown: "
@@ -2108,6 +2241,7 @@ def create_app() -> Flask:
             ds = board_report.get("decision_summary", {})
             lines.append("## Decision Summary")
             lines.append(f"- Status: {ds.get('decision_status')}")
+            lines.append(f"- Selected Vendor: {ds.get('selected_vendor')} ({ds.get('selected_vendor_id')})")
             lines.append(f"- Confidence: {ds.get('confidence_level')} ({ds.get('confidence_score')})")
             lines.append(f"- Basis: {ds.get('decision_basis')}")
             if ds.get("control_failure_reasons"):
@@ -2996,6 +3130,7 @@ def create_app() -> Flask:
                 )
             ),
             "selected_vendor": selected["vendor"] if decision_status == "recommended" else None,
+            "selected_vendor_id": selected.get("vendor_id") if decision_status == "recommended" else None,
             "score": selected["total"],
             "alternatives": alternative_vendors,
             "decision_status": decision_status,
@@ -3315,6 +3450,12 @@ def create_app() -> Flask:
         recommendation["claim_ids"] = [e["claim_id"] for e in evidence_entries[:3]]
         recommendation["evidence_ids"] = sorted(set(recommendation["evidence_ids"]))[:6]
         selected_vendor_basis = recommendation["selected_vendor"] or "no approved vendor selection"
+        selected_vendor_id_basis = recommendation.get("selected_vendor_id")
+        selected_vendor_basis_with_id = (
+            f"{selected_vendor_basis} ({selected_vendor_id_basis})"
+            if isinstance(selected_vendor_id_basis, str) and selected_vendor_id_basis.strip()
+            else selected_vendor_basis
+        )
 
         board_report = {
             "execution_id": execution_id,
@@ -3329,6 +3470,7 @@ def create_app() -> Flask:
             "bridge_metadata": bridge_metadata,
             "decision_summary": {
                 "selected_vendor": recommendation["selected_vendor"],
+                "selected_vendor_id": recommendation.get("selected_vendor_id"),
                 "alternatives_considered": recommendation["alternatives"],
                 "confidence_score": recommendation["confidence_score"],
                 "confidence_level": recommendation["confidence_level"],
@@ -3336,12 +3478,12 @@ def create_app() -> Flask:
                 "decision_basis": (
                     (
                         "LLM-analysed content governed by deterministic scoring + profile/policy controls "
-                        f"+ evidence linkage for vendor {selected_vendor_basis}"
+                        f"+ evidence linkage for vendor {selected_vendor_basis_with_id}"
                     )
                     if isinstance(llm_analysis, dict) and llm_analysis
                     else (
                         "Deterministic weighted scoring + profile/policy controls + role evidence "
-                        f"for vendor {selected_vendor_basis}"
+                        f"for vendor {selected_vendor_basis_with_id}"
                     )
                 ),
                 "decision_status": recommendation["decision_status"],
@@ -3377,6 +3519,23 @@ def create_app() -> Flask:
                 "Phase 2 (31-90 days): pilot deployment with zero-downtime controls and security hardening.",
                 "Phase 3 (91-180 days): scaled rollout, assurance audits, and benefits realization tracking.",
             ],
+            "human_response_trace": {
+                "roles": [
+                    {
+                        "role": str(role_item.get("role", "")).strip(),
+                        "domain": str(role_item.get("domain", "")).strip(),
+                        "assertions": _normalize_string_list(role_item.get("assertions")),
+                        "non_negotiables": _normalize_string_list(role_item.get("non_negotiables")),
+                        "risk_flags": _normalize_string_list(role_item.get("risk_flags")),
+                        "evidence_refs": _normalize_string_list(role_item.get("evidence_refs")),
+                    }
+                    for role_item in role_bundle
+                    if isinstance(role_item, dict)
+                ],
+                "requested_goals": requested_goals,
+                "requested_regulatory_context": requested_regulatory_context,
+                "requested_success_targets": requested_success_targets,
+            },
             "llm_provenance": (
                 {
                     "provider": llm_provider,
@@ -3436,6 +3595,32 @@ def create_app() -> Flask:
             )
 
         selected_vendor_canonical, selected_vendor_id, _selected_deprecated = _vendor_from_registry(selected["vendor"])
+        selected_vendor_recommended = bool(recommendation.get("selected_vendor"))
+        ranked_options_missing_vendor_id = [
+            str(option.get("vendor", "")).strip()
+            for option in ranked_options
+            if isinstance(option, dict)
+            and str(option.get("vendor", "")).strip()
+            and (
+                not isinstance(option.get("vendor_id"), str)
+                or not str(option.get("vendor_id", "")).strip()
+            )
+        ]
+        if selected_vendor_recommended and not selected_vendor_id:
+            _add_hard_gate(
+                "SELECTED_VENDOR_NOT_CANONICAL",
+                "Selected vendor must resolve to a canonical vendor_id for decision-grade outputs.",
+                {
+                    "selected_vendor": recommendation.get("selected_vendor"),
+                    "selected_vendor_id": recommendation.get("selected_vendor_id"),
+                },
+            )
+        if selected_vendor_recommended and ranked_options_missing_vendor_id:
+            _add_hard_gate(
+                "RANKED_OPTION_VENDOR_ID_MISSING",
+                "Ranked options must carry canonical vendor_id values for decision-grade outputs.",
+                {"vendors": ranked_options_missing_vendor_id},
+            )
         competitor_primary_claims: list[str] = []
         selected_vendor_misaligned_claims: list[str] = []
         general_scope_primary_claims: list[str] = []
@@ -3511,7 +3696,6 @@ def create_app() -> Flask:
                 {"claim_ids": competitor_primary_claims, "selected_vendor": selected_vendor_canonical},
             )
 
-        selected_vendor_recommended = bool(recommendation.get("selected_vendor"))
         if selected_vendor_id:
             first_party_count = len(
                 [
@@ -3759,6 +3943,29 @@ def create_app() -> Flask:
                 {"stage": "render_reports", "hash": _sha256_text(context_hash + "6"), "status": "PASS"},
             ],
         }
+        historical_keys_for_bundle = [
+            entry
+            for entry in normalized_keys
+            if isinstance(entry, dict)
+            and (is_dev_runtime or str(entry.get("key_id", "")).strip() not in local_dev_key_ids)
+            and (
+                is_dev_runtime
+                or (
+                    isinstance(entry.get("valid_from"), str)
+                    and bool(str(entry.get("valid_from", "")).strip())
+                )
+            )
+        ]
+        active_signing_key_id = (
+            str(active_signing_entry.get("key_id", "")).strip()
+            if isinstance(active_signing_entry, dict)
+            else ""
+        )
+        if active_signing_key_id and not any(
+            isinstance(entry, dict) and str(entry.get("key_id", "")).strip() == active_signing_key_id
+            for entry in historical_keys_for_bundle
+        ):
+            historical_keys_for_bundle = [active_signing_entry, *historical_keys_for_bundle]
 
         artifacts_payloads: dict[str, Any] = {
             "board_report.json": board_report,
@@ -3790,7 +3997,7 @@ def create_app() -> Flask:
                 "signing_mode": signing_mode,
                 "validity_reference_time": "signature_payload.signed_at",
                 "active_key": active_signing_entry,
-                "historical_keys": normalized_keys,
+                "historical_keys": historical_keys_for_bundle,
                 "review_event_refs": review_event_refs,
             },
             "vendor_registry_snapshot.json": {

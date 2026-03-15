@@ -429,6 +429,9 @@ components:
         selected_vendor:
           type: string
           nullable: true
+        selected_vendor_id:
+          type: string
+          nullable: true
         decision_status:
           type: string
         evidence_ids:

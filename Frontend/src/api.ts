@@ -164,6 +164,7 @@ export interface ReviewApprovalEvent {
 export interface RecommendationSemantics {
   major_recommendation?: string;
   selected_vendor?: string | null;
+  selected_vendor_id?: string | null;
   decision_status?: string;
   evidence_ids?: string[];
   requested_assurance_level?: string;
@@ -178,6 +179,7 @@ export interface GovernedCompileResult {
   decision_summary?: {
     decision_status?: string;
     selected_vendor?: string | null;
+    selected_vendor_id?: string | null;
     requested_assurance_level?: string;
     review_state?: ReviewState;
     policy_pack_summary?: Record<string, JsonValue>;

@@ -96,6 +96,13 @@ function resolvePublicKeyB64(publicKey) {
   return null;
 }
 
+function parseIsoTimestamp(value) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+}
+
 function loadBridgeTrustState({ publicKey, keyMode }) {
   const runtimePublicKeyB64 = resolvePublicKeyB64(publicKey);
   const keyRegistryFileExists = fs.existsSync(PUBLIC_KEYS_PATH);
@@ -131,6 +138,8 @@ function loadBridgeTrustState({ publicKey, keyMode }) {
       key_id: keyId,
       algorithm: "Ed25519",
       public_key_b64: publicKeyB64,
+      valid_from: typeof item.valid_from === "string" ? item.valid_from.trim() || null : null,
+      valid_to: typeof item.valid_to === "string" ? item.valid_to.trim() || null : null,
     });
   }
   const activeEntry = normalizedKeys.find((item) => item.key_id === SIGNING_KEY_ID) || null;
@@ -140,6 +149,29 @@ function loadBridgeTrustState({ publicKey, keyMode }) {
       && runtimePublicKeyB64
       && String(activeEntry.public_key_b64).trim() === String(runtimePublicKeyB64).trim()
   );
+  const activeKeyValidFrom = activeEntry && typeof activeEntry.valid_from === "string"
+    ? activeEntry.valid_from.trim()
+    : "";
+  const activeKeyValidTo = activeEntry && typeof activeEntry.valid_to === "string"
+    ? activeEntry.valid_to.trim()
+    : "";
+  let activeKeyValidityWindowValid = true;
+  if (activeEntry) {
+    const parsedFrom = activeKeyValidFrom ? parseIsoTimestamp(activeKeyValidFrom) : null;
+    const parsedTo = activeKeyValidTo ? parseIsoTimestamp(activeKeyValidTo) : null;
+    if (activeKeyValidTo && !activeKeyValidFrom) {
+      activeKeyValidityWindowValid = false;
+    } else if (activeKeyValidFrom && !parsedFrom) {
+      activeKeyValidityWindowValid = false;
+    } else if (activeKeyValidTo && !parsedTo) {
+      activeKeyValidityWindowValid = false;
+    } else if (parsedFrom && parsedTo && parsedTo < parsedFrom) {
+      activeKeyValidityWindowValid = false;
+    }
+  }
+  const nonDevRegistryLocalKeyIds = [...new Set(normalizedKeys
+    .map((item) => String(item.key_id || "").trim())
+    .filter((item) => LOCAL_DEV_KEY_IDS.has(item)))];
   const localOrEphemeralSigning = keyMode !== "configured" || LOCAL_DEV_KEY_IDS.has(SIGNING_KEY_ID);
   let trustSource = "signing_disabled";
   if (!SIGNING_ENABLED) {
@@ -156,6 +188,9 @@ function loadBridgeTrustState({ publicKey, keyMode }) {
       && keyMode === "configured"
       && activeKeyRegistered
       && activeKeyMatchesPublic
+      && activeKeyValidityWindowValid
+      && (IS_DEV_RUNTIME || Boolean(activeKeyValidFrom))
+      && (IS_DEV_RUNTIME || nonDevRegistryLocalKeyIds.length === 0)
       && normalizedKeys.length > 0
       && (trustSource === "managed_signing" || trustSource === "external_trust_registry")
   );
@@ -181,9 +216,39 @@ function loadBridgeTrustState({ publicKey, keyMode }) {
       blocking: true,
     });
   }
+  if (SIGNING_ENABLED && !IS_DEV_RUNTIME && activeKeyRegistered && !activeKeyValidFrom) {
+    trustBlockers.push({
+      code: "MISSING_ACTIVE_KEY_VALID_FROM",
+      message: `Signing key '${SIGNING_KEY_ID}' must include valid_from lifecycle metadata in non-development.`,
+      blocking: true,
+    });
+  }
+  if (SIGNING_ENABLED && !IS_DEV_RUNTIME && activeKeyRegistered && !activeKeyValidityWindowValid) {
+    trustBlockers.push({
+      code: "INVALID_ACTIVE_KEY_VALIDITY_WINDOW",
+      message: `Signing key '${SIGNING_KEY_ID}' has invalid valid_from/valid_to lifecycle metadata.`,
+      blocking: true,
+    });
+  }
+  if (SIGNING_ENABLED && !IS_DEV_RUNTIME && nonDevRegistryLocalKeyIds.length > 0) {
+    trustBlockers.push({
+      code: "NON_DEV_DEV_KEY_PRESENT_IN_TRUST_REGISTRY",
+      message: "Non-development runtime trust registry contains local/ephemeral key ids.",
+      blocking: true,
+    });
+  }
   const trustWarnings = [];
   if (SIGNING_ENABLED && localOrEphemeralSigning) {
     trustWarnings.push("Signing key is local/ephemeral. Configure managed production key material before live deployment.");
+  }
+  if (SIGNING_ENABLED && activeKeyRegistered && !activeKeyValidFrom) {
+    trustWarnings.push("Active signing key is missing valid_from lifecycle metadata.");
+  }
+  if (SIGNING_ENABLED && activeKeyRegistered && !activeKeyValidityWindowValid) {
+    trustWarnings.push("Active signing key has invalid lifecycle validity window metadata.");
+  }
+  if (SIGNING_ENABLED && !IS_DEV_RUNTIME && nonDevRegistryLocalKeyIds.length > 0) {
+    trustWarnings.push("Non-development trust registry contains local/ephemeral key ids that must be removed.");
   }
   if (SIGNING_ENABLED && registryStructuralIssues) {
     trustWarnings.push("Public key registry contains invalid/duplicate entries and should be remediated.");
